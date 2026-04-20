@@ -1,0 +1,704 @@
+import { awardGold } from './economy.js';
+import { saveToStorage } from './storage.js';
+import { getActiveWorld } from '../app.js';
+
+const minigameBoard = document.getElementById('minigame-board');
+
+// --- Arcane Defense Game ---
+function launchArcaneDefenseGame(sectionCards, sectionName, gameName) {
+    const minigameBoard = document.getElementById('minigame-board');
+    if (!minigameBoard) return;
+
+    // Shuffle and pull up to 10 flashcards for the wave
+    let deck = [...sectionCards].sort(() => 0.5 - Math.random()).slice(0, 10);
+    
+    if (deck.length < 1) return alert("You need at least 1 flashcard to defend the circle!");
+
+    let currentIndex = 0;
+    let score = 0;
+    let lives = 3;
+    let currentAnimation;
+
+    // Build the battleground UI using your dark theme colors
+    minigameBoard.innerHTML = `
+        <div id="arcane-defense-container" class="arcane-defense-container">
+    <div id="ad-stats" class="ad-stats">
+        Spirits Banished: <span id="ad-score" class="ad-score-text">0</span> / \ <br>
+        Circle Integrity: <span id="ad-lives">?????????</span>
+    </div>
+    <div id="magic-circle" class="magic-circle">
+        <span class="magic-circle-icon">?????</span>
+    </div>
+    <div id="anomaly" class="anomaly-box">
+        <span id="anomaly-text" class="anomaly-text-inner">Question goes here</span>
+    </div>
+    <input type="text" id="incantation-input" class="incantation-input-box" placeholder="Type the incantation (answer) here..." autocomplete="off">
+</div>
+    `;
+
+    const anomalyElement = document.getElementById('anomaly');
+    const anomalyText = document.getElementById('anomaly-text');
+    const incantationInput = document.getElementById('incantation-input');
+    const scoreEl = document.getElementById('ad-score');
+    const livesEl = document.getElementById('ad-lives');
+    const magicCircle = document.getElementById('magic-circle');
+
+    // Slide up the input box dramatically to start
+    setTimeout(() => { 
+        incantationInput.style.bottom = '15px'; 
+        incantationInput.focus(); 
+    }, 200);
+
+    function spawnNextAnomaly() {
+        if (lives <= 0) {
+            endGame("Your protective circle collapsed!", false);
+            return;
+        }
+
+        if (currentIndex >= deck.length) {
+            endGame("All spirits banished! The circle holds!", true);
+            return;
+        }
+
+        let currentCard = deck[currentIndex];
+        anomalyText.innerText = currentCard.question;
+        incantationInput.value = '';
+        incantationInput.focus();
+
+        // Reset Anomaly position
+        let positionY = -80;
+        anomalyElement.style.top = positionY + 'px';
+        anomalyElement.style.transform = "scale(1)";
+        anomalyElement.style.opacity = "1";
+        
+        // Speed scaling (base speed gets slightly faster each round)
+        let speed = 0.4 + (currentIndex * 0.08); 
+
+        function animateAnomaly() {
+            positionY += speed;
+            anomalyElement.style.top = positionY + 'px';
+
+            // Strike zone: If the spirit breaches the circle (approx Y = 250px down)
+            if (positionY > 250) { 
+                lives--;
+                updateLivesUI();
+                cancelAnimationFrame(currentAnimation);
+                
+                // Circle damage visual effect
+                magicCircle.style.borderColor = "#ff3333";
+                magicCircle.style.boxShadow = "0 0 30px rgba(255, 51, 51, 0.8)";
+                minigameBoard.querySelector('#arcane-defense-container').style.boxShadow = "inset 0 0 50px rgba(255, 51, 51, 0.6)";
+                
+                setTimeout(() => {
+                    magicCircle.style.borderColor = "#ffd700";
+                    magicCircle.style.boxShadow = "0 0 20px rgba(255, 215, 0, 0.4)";
+                    minigameBoard.querySelector('#arcane-defense-container').style.boxShadow = "inset 0 0 20px rgba(0,0,0,0.5)";
+                    currentIndex++;
+                    spawnNextAnomaly();
+                }, 500);
+                return;
+            }
+            currentAnimation = requestAnimationFrame(animateAnomaly);
+        }
+        currentAnimation = requestAnimationFrame(animateAnomaly);
+    }
+
+    function updateLivesUI() {
+        let shields = "";
+        for(let i=0; i<lives; i++) shields += "🛡️";
+        for(let i=lives; i<3; i++) shields += "💀";
+        livesEl.innerText = shields;
+    }
+
+    // Listen for the "Enter" key to cast the spell
+    incantationInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            let typed = incantationInput.value.trim().toLowerCase();
+            let correct = deck[currentIndex].answer.trim().toLowerCase();
+
+            if (typed === correct) {
+                // Banished successfully!
+                cancelAnimationFrame(currentAnimation);
+                score++;
+                scoreEl.innerText = score;
+                awardGold(2); 
+                
+                // Banish animation
+                anomalyElement.style.transform = "scale(1.2) translateY(-20px)";
+                anomalyElement.style.opacity = "0";
+                
+                // Flash input green
+                incantationInput.style.borderColor = '#4cd137';
+                
+                setTimeout(() => {
+                    incantationInput.style.borderColor = '#e94560';
+                    currentIndex++;
+                    spawnNextAnomaly();
+                }, 400);
+            } else {
+                // Wrong incantation! Flash input red
+                incantationInput.style.borderColor = '#ff3333';
+                setTimeout(() => incantationInput.style.borderColor = '#e94560', 300);
+            }
+        }
+    });
+
+    function endGame(message, isVictory) {
+        cancelAnimationFrame(currentAnimation);
+        let goldEarned = score * 3; 
+        if (isVictory) goldEarned += 15; // Bonus for surviving the entire wave
+        
+        // Save the cooldown logic to match your other games
+        const world = getActiveWorld();
+        if (world && world.progress && world.progress[sectionName] && world.progress[sectionName].gameCooldowns) {
+            world.progress[sectionName].gameCooldowns[gameName] = Date.now() + (2 * 60 * 60 * 1000);
+            saveToStorage();
+        }
+
+        minigameBoard.innerHTML = `
+            <div class="minigame-victory-card ${isVictory ? 'victory' : ''}">
+                <h2 class="minigame-victory-title ${isVictory ? 'victory' : ''}">${message}</h2>
+                <p class="minigame-victory-stats">Spirits Banished: ${score} / ${deck.length}</p>
+                <p class="minigame-victory-reward">Gold Earned: ${goldEarned} 🪙</p>
+            </div>
+        `;
+        awardGold(goldEarned);
+    }
+
+    // Begin the trial
+    spawnNextAnomaly();
+}
+
+// --- TRIVIA SHOWDOWN LOGIC ---
+function launchTriviaGame(sectionFlashcards, allWorldFlashcards, sectionName, gameName) {
+    if(!minigameBoard) return;
+    
+    let shuffledDeck = [...sectionFlashcards].sort(() => 0.5 - Math.random());
+    let questionsToPlay = shuffledDeck.slice(0, 10); 
+    
+    let currentIndex = 0;
+    let score = 0;
+    
+    if(document.getElementById('minigame-stats')) document.getElementById('minigame-stats').innerText = `Score: 0 / ${questionsToPlay.length}`;
+    
+    function loadNextQuestion() {
+        if (currentIndex >= questionsToPlay.length) {
+            let goldEarned = score * 3; 
+            minigameBoard.innerHTML = `
+                <div class="minigame-victory-card">
+                    <h2 class="minigame-victory-title">Round Complete!</h2>
+                    <p class="minigame-victory-stats">You scored ${score} out of ${questionsToPlay.length}.</p>
+                    <p class="minigame-victory-reward">Earned: ${goldEarned} 🪙</p>
+                </div>
+            `;
+            awardGold(goldEarned);
+            
+            const world = getActiveWorld();
+            world.progress[sectionName].gameCooldowns[gameName] = Date.now() + (2 * 60 * 60 * 1000);
+            saveToStorage();
+            return;
+        }
+
+        let currentCard = questionsToPlay[currentIndex];
+        
+        let decoyPool = allWorldFlashcards.filter(fc => fc.answer !== currentCard.answer);
+        decoyPool.sort(() => 0.5 - Math.random());
+        let decoys = decoyPool.slice(0, 3).map(fc => fc.answer);
+        
+        while (decoys.length < 3) { decoys.push("Incorrect Data Anomaly " + (decoys.length + 1)); }
+
+        let options = [currentCard.answer, ...decoys];
+        options.sort(() => 0.5 - Math.random()); 
+        
+        minigameBoard.innerHTML = `
+            <div style="width: 100%; padding: 10px;">
+                <div class="trivia-question">${currentCard.question}</div>
+                <div class="trivia-grid">
+                    ${options.map(opt => `<button class="trivia-btn" data-answer="${opt.replace(/"/g, '&quot;')}">${opt}</button>`).join('')}
+                </div>
+            </div>
+        `;
+        
+        let buttons = minigameBoard.querySelectorAll('.trivia-btn');
+        let answered = false;
+        
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (answered) return;
+                answered = true;
+                
+                let clickedAnswer = btn.getAttribute('data-answer');
+                if (clickedAnswer === currentCard.answer) {
+                    btn.classList.add('correct'); score++;
+                    if(document.getElementById('minigame-stats')) document.getElementById('minigame-stats').innerText = `Score: ${score} / ${questionsToPlay.length}`;
+                } else {
+                    btn.classList.add('wrong');
+                    buttons.forEach(b => { if (b.getAttribute('data-answer') === currentCard.answer) b.classList.add('correct'); });
+                }
+                setTimeout(() => { currentIndex++; loadNextQuestion(); }, 1500); 
+            });
+        });
+    }
+    loadNextQuestion(); 
+}
+
+// --- MEMORY MATCH LOGIC ---
+function launchMemoryGame(flashcards, sectionName, gameName) {
+    if(!minigameBoard) return;
+    minigameBoard.innerHTML = '';
+    let shuffledDeck = [...flashcards].sort(() => 0.5 - Math.random()).slice(0, 6);
+    let memoryCards = [];
+
+    shuffledDeck.forEach((fc, index) => {
+        memoryCards.push({ text: fc.question, id: index }); memoryCards.push({ text: fc.answer, id: index });
+    });
+    memoryCards.sort(() => 0.5 - Math.random());
+
+    const grid = document.createElement('div'); grid.className = 'memory-grid';
+    let flippedCards = []; let matchedPairs = 0; let lockBoard = false;
+
+    if(document.getElementById('minigame-stats')) document.getElementById('minigame-stats').innerText = `Matches: 0 / ${shuffledDeck.length}`;
+
+    memoryCards.forEach(data => {
+        const card = document.createElement('div'); card.className = 'memory-card';
+        card.innerHTML = `<div class="memory-card-inner"><div class="memory-card-front">❓</div><div class="memory-card-back">${data.text}</div></div>`;
+
+        card.addEventListener('click', () => {
+            if (lockBoard || card === flippedCards[0] || card.classList.contains('is-matched')) return;
+            card.classList.add('is-flipped'); flippedCards.push({ element: card, id: data.id });
+
+            if (flippedCards.length === 2) {
+                lockBoard = true;
+                if (flippedCards[0].id === flippedCards[1].id) {
+                    setTimeout(() => {
+                        flippedCards[0].element.classList.add('is-matched'); flippedCards[1].element.classList.add('is-matched');
+                        matchedPairs++;
+                        if(document.getElementById('minigame-stats')) document.getElementById('minigame-stats').innerText = `Matches: ${matchedPairs} / ${shuffledDeck.length}`;
+                        awardGold(5);
+                        
+                        if (matchedPairs === shuffledDeck.length) { 
+                            setTimeout(() => alert("Victory! Bonus Gold awarded!"), 500); 
+                            awardGold(25); 
+                            
+                            const world = getActiveWorld();
+                            world.progress[sectionName].gameCooldowns[gameName] = Date.now() + (2 * 60 * 60 * 1000);
+                            saveToStorage();
+                        }
+                        
+                        flippedCards = []; lockBoard = false;
+                    }, 600);
+                } else {
+                    setTimeout(() => {
+                        flippedCards[0].element.classList.remove('is-flipped'); flippedCards[1].element.classList.remove('is-flipped');
+                        flippedCards = []; lockBoard = false;
+                    }, 1200);
+                }
+            }
+        });
+        grid.appendChild(card);
+    });
+    minigameBoard.appendChild(grid);
+}
+
+// --- Flash Match Game ---
+function startFlashMatchGame(sectionName, gameName) {
+    const world = getActiveWorld();
+    const sectionCards = world.flashcards.filter(fc => fc.section === sectionName);
+
+    // Wir brauchen mindestens 2-3 Karten, damit das Mischen Sinn macht
+    if (sectionCards.length < 3) {
+        return alert("Du brauchst mindestens 3 Karteikarten in diesem Abschnitt, um Flash-Match zu spielen!");
+    }
+
+    // Wähle bis zu 6 zufällige Karten für das Match-Spiel aus
+    let pool = [...sectionCards].sort(() => 0.5 - Math.random()).slice(0, 6);
+    let tilesData = [];
+
+    // Teile jede Karteikarte in zwei Kacheln auf: Frage (Q) und Antwort (A)
+    pool.forEach((card, index) => {
+        tilesData.push({ text: card.question, type: 'Q', id: index });
+        tilesData.push({ text: card.answer, type: 'A', id: index });
+    });
+
+    // Mische alle Kacheln kräftig durch
+    tilesData.sort(() => 0.5 - Math.random());
+
+    const minigameBoard = document.getElementById('minigame-board');
+    minigameBoard.innerHTML = '';
+
+    // UI-Setup für den Timer und die verbleibenden Paare
+    const statsEl = document.getElementById('minigame-stats');
+    let matchesMade = 0;
+    const totalPairs = pool.length;
+    let startTime = Date.now();
+    let timerInterval;
+
+    if (statsEl) {
+        statsEl.innerText = `Verbleibende Paare: ${totalPairs} | Zeit: 0s`;
+        
+        timerInterval = setInterval(() => {
+            let elapsed = Math.floor((Date.now() - startTime) / 1000);
+            statsEl.innerText = `Verbleibende Paare: ${totalPairs - matchesMade} | Zeit: ${elapsed}s`;
+        }, 1000);
+    }
+
+    // Container für die Kacheln (Grid)
+    const grid = document.createElement('div');
+    grid.style.display = 'grid';
+    grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(130px, 1fr))';
+    grid.style.gap = '15px';
+    grid.style.width = '100%';
+    grid.style.maxWidth = '750px';
+    grid.style.margin = '0 auto';
+
+    let selectedTile = null;
+    let isProcessing = false;
+
+    tilesData.forEach((data) => {
+        const tile = document.createElement('div');
+        tile.className = 'match-tile';
+        tile.innerText = data.text;
+        
+        // Versteckte Daten für den Abgleich
+        tile.dataset.id = data.id;
+        tile.dataset.type = data.type;
+
+        tile.addEventListener('click', () => {
+            // Ignoriere Klicks, wenn Animationen laufen, die Kachel schon gematched oder bereits ausgewählt ist
+            if (isProcessing || tile.classList.contains('matched') || tile === selectedTile) return;
+
+            // Kachel auswählen
+            tile.classList.add('selected');
+
+            if (!selectedTile) {
+                // Erster Klick: Kachel merken
+                selectedTile = tile;
+            } else {
+                // Zweiter Klick: Kacheln abgleichen
+                isProcessing = true;
+                const id1 = selectedTile.dataset.id;
+                const id2 = tile.dataset.id;
+                const type1 = selectedTile.dataset.type;
+                const type2 = tile.dataset.type;
+
+                // Match-Logik: Gleiche ID, aber unterschiedlicher Typ (Q und A)
+                if (id1 === id2 && type1 !== type2) {
+                    // Match gefunden!
+                    setTimeout(() => {
+                        tile.classList.remove('selected');
+                        selectedTile.classList.remove('selected');
+                        tile.classList.add('matched');
+                        selectedTile.classList.add('matched');
+                        
+                        // Sound-Effekt oder Gold-Logik (Optional)
+                        awardGold(2); 
+
+                        matchesMade++;
+                        selectedTile = null;
+                        isProcessing = false;
+
+                        // Sieg-Logik
+                        if (matchesMade === totalPairs) {
+                            clearInterval(timerInterval);
+                            let timeTaken = Math.floor((Date.now() - startTime) / 1000);
+                            let bonusGold = Math.max(10, 40 - timeTaken); // Schneller = mehr Gold!
+                            
+                            setTimeout(() => {
+                                minigameBoard.innerHTML = `
+                                    <div class="minigame-victory-card">
+    <h2 class="minigame-victory-title">Ritual abgeschlossen!</h2>
+    <p class="minigame-victory-stats">Ben�tigte Zeit: \ Sekunden.</p>
+    <p class="minigame-victory-reward">Verdientes Gold: \ ??</p>
+</div>
+                                `;
+                                awardGold(bonusGold);
+                                
+                                // Cooldown aktivieren (falls in deinem System vorgesehen)
+                                if (gameName) {
+                                    world.progress[sectionName].gameCooldowns[gameName] = Date.now() + (2 * 60 * 60 * 1000); // 2 Stunden Cooldown
+                                    saveToStorage();
+                                }
+                            }, 600);
+                        }
+                    }, 400);
+
+                } else {
+                    // Falsches Match
+                    tile.style.backgroundColor = '#e84118'; // Fehler-Rot
+                    tile.style.borderColor = '#c23616';
+                    selectedTile.style.backgroundColor = '#e84118';
+                    selectedTile.style.borderColor = '#c23616';
+
+                    setTimeout(() => {
+                        // Zurücksetzen
+                        tile.style.backgroundColor = '';
+                        tile.style.borderColor = '';
+                        selectedTile.style.backgroundColor = '';
+                        selectedTile.style.borderColor = '';
+                        
+                        tile.classList.remove('selected');
+                        selectedTile.classList.remove('selected');
+                        
+                        selectedTile = null;
+                        isProcessing = false;
+                    }, 800);
+                }
+            }
+        });
+
+        grid.appendChild(tile);
+    });
+
+    minigameBoard.appendChild(grid);
+}
+
+// --- SPELLWEAVER LOGIC ---
+function launchSpellweaverGame(flashcards, sectionName, gameName) {
+    if(!minigameBoard) return;
+    
+    // Pick 5 random flashcards to decipher
+    let deck = [...flashcards].sort(() => 0.5 - Math.random()).slice(0, 5);
+    let currentIndex = 0;
+    let score = 0;
+    
+    if(document.getElementById('minigame-stats')) document.getElementById('minigame-stats').innerText = `Incantations: 0 / ${deck.length}`;
+    
+    function loadNextSpell() {
+        if (currentIndex >= deck.length) {
+            let goldEarned = score * 5; 
+            minigameBoard.innerHTML = `
+                <div class="minigame-victory-card">
+                    <h2 class="minigame-victory-title">Grimoire Scribed!</h2>
+                    <p class="minigame-victory-stats">You wove ${score} out of ${deck.length} spells correctly.</p>
+                    <p class="minigame-victory-reward">Earned: ${goldEarned} 🪙</p>
+                </div>
+            `;
+            awardGold(goldEarned);
+            
+            const world = getActiveWorld();
+            world.progress[sectionName].gameCooldowns[gameName] = Date.now() + (2 * 60 * 60 * 1000);
+            saveToStorage();
+            return;
+        }
+
+        let currentCard = deck[currentIndex];
+        
+        // Split the answer into individual words and filter out accidental empty spaces
+        let targetWords = currentCard.answer.split(' ').filter(w => w.trim() !== '');
+        
+        // Scramble them to create the clickable runes
+        let scrambledWords = [...targetWords].sort(() => 0.5 - Math.random());
+        
+        const runes = document.querySelectorAll('.rune-btn');
+        let failed = false;
+
+        function updateBar() {
+            if(selectedWords.length === 0) {
+                incantationBar.innerHTML = '<span style="opacity: 0.5;">Select runes to weave the spell...</span>';
+            } else {
+                incantationBar.innerHTML = selectedWords.map(w => `<span style="color: white; font-weight: bold;">${w.word}</span>`).join(' ');
+            }
+        }
+
+        runes.forEach(rune => {
+            rune.addEventListener('click', () => {
+                if(failed) return;
+                
+                let word = rune.getAttribute('data-word');
+                let expectedWord = targetWords[selectedWords.length];
+                
+                if (word === expectedWord) {
+                    // Correct Word Clicked!
+                    rune.classList.add('used');
+                    selectedWords.push({ word: word, element: rune });
+                    updateBar();
+                    
+                    // Check if the entire sentence is complete
+                    if (selectedWords.length === targetWords.length) {
+                        incantationBar.style.borderColor = '#4cd137';
+                        incantationBar.style.color = '#4cd137';
+                        score++;
+                        if(document.getElementById('minigame-stats')) document.getElementById('minigame-stats').innerText = `Incantations: ${score} / ${deck.length}`;
+                        setTimeout(() => { currentIndex++; loadNextSpell(); }, 1200);
+                    }
+                } else {
+                    // Wrong Word! The spell fizzles.
+                    failed = true;
+                    rune.style.backgroundColor = '#ff4757';
+                    rune.style.borderColor = '#ff4757';
+                    incantationBar.style.borderColor = '#ff4757';
+                    
+                    // Reset the board so they can try the sentence again
+                    setTimeout(() => {
+                        selectedWords.forEach(sw => sw.element.classList.remove('used'));
+                        selectedWords = [];
+                        rune.style.backgroundColor = '';
+                        rune.style.borderColor = '';
+                        incantationBar.style.borderColor = '#6c5ce7';
+                        failed = false;
+                        updateBar();
+                    }, 800);
+                }
+            });
+        });
+    }
+    
+    loadNextSpell(); // Start the first round
+}
+
+
+// --- Ritual Alignment Game ---
+function launchRitualAlignmentGame(sectionName, gameName) {
+    const world = getActiveWorld();
+    if (!world.rituals) world.rituals = []; // Failsafe for older worlds
+    const sectionRituals = world.rituals.filter(r => r.section === sectionName);
+    
+    if (sectionRituals.length < 1) return alert("You need at least 1 !RITUAL! in this section to play Ritual Alignment!");
+
+    const minigameBoard = document.getElementById('minigame-board');
+    if (!minigameBoard) return;
+
+    let deck = [...sectionRituals].sort(() => 0.5 - Math.random());
+    let currentIndex = 0;
+    let score = 0;
+    let lives = 3;
+    
+    function loadRitual() {
+        if (lives <= 0) {
+            endGame("The ritual circle shattered!", false);
+            return;
+        }
+        if (currentIndex >= deck.length) {
+            endGame("All rituals perfectly aligned!", true);
+            return;
+        }
+
+        let currentRitual = deck[currentIndex];
+        let correctSteps = currentRitual.steps;
+        // Scramble the steps but keep their original index (ID) to check the answer later
+        let scrambledSteps = [...correctSteps].map((text, id) => ({text, id})).sort(() => 0.5 - Math.random());
+        let slotted = new Array(correctSteps.length).fill(null);
+        
+        minigameBoard.innerHTML = `
+            <div id="ritual-container" class="ritual-container">
+    <div class="ritual-stats">
+        <span>Rituals Aligned: <span class="ritual-score-text">${score}</span> / ${deck.length}</span>
+        <span>Integrity: ${"???".repeat(lives)}${"??".repeat(3-lives)}</span>
+    </div>
+
+    <h2 class="ritual-title">${currentRitual.name}</h2>
+    <p class="ritual-desc">Click the runes below to arrange them in the exact order.</p>
+
+    <div id="ritual-slots" class="ritual-slots-container">
+        ${correctSteps.map((_, i) => `<div class="rune-slot" data-index="${i}"></div>`).join('')}
+    </div>
+
+    <div id="rune-pool" class="rune-pool">
+        ${scrambledSteps.map(step => `<div class="rune-stone" data-id="${step.id}">${step.text}</div>`).join('')}
+    </div>
+
+    <button id="cast-ritual-btn" class="btn-occult cast-ritual-btn hidden">? Cast Ritual ?</button>
+</div>
+        `;
+        const slots = document.querySelectorAll('.rune-slot');
+        const runes = document.querySelectorAll('.rune-stone');
+        const castBtn = document.getElementById('cast-ritual-btn');
+        const container = document.getElementById('ritual-container');
+
+        // Logic for clicking runes in the pool
+        runes.forEach(rune => {
+            rune.addEventListener('click', () => {
+                let firstEmptySlot = slotted.findIndex(s => s === null);
+                if (firstEmptySlot !== -1 && rune.parentElement.id === 'rune-pool') {
+                    slotted[firstEmptySlot] = { id: rune.dataset.id, text: rune.innerText, element: rune };
+                    slots[firstEmptySlot].appendChild(rune);
+                    rune.style.margin = "0"; 
+                    rune.style.width = "100%"; 
+                    checkFull();
+                }
+            });
+        });
+
+        // Logic for clicking a filled slot (returns rune to pool)
+        slots.forEach((slot, index) => {
+            slot.addEventListener('click', () => {
+                if (slotted[index] !== null) {
+                    let rune = slotted[index].element;
+                    rune.style.width = "auto";
+                    document.getElementById('rune-pool').appendChild(rune);
+                    slotted[index] = null;
+                    castBtn.classList.add('hidden'); // Hide cast button if a slot is emptied
+                }
+            });
+        });
+
+        function checkFull() {
+            if (!slotted.includes(null)) castBtn.classList.remove('hidden');
+        }
+
+        castBtn.addEventListener('click', () => {
+            let isCorrect = true;
+            for (let i = 0; i < correctSteps.length; i++) {
+                if (parseInt(slotted[i].id) !== i) {
+                    isCorrect = false;
+                    break;
+                }
+            }
+
+            if (isCorrect) {
+                score++;
+                container.style.boxShadow = "inset 0 0 30px rgba(76, 209, 55, 0.6)";
+                container.style.borderColor = "#4cd137";
+                awardGold(3); 
+                awardInk(1);  
+                setTimeout(() => {
+                    currentIndex++;
+                    loadRitual();
+                }, 800);
+            } else {
+                lives--;
+                container.style.boxShadow = "inset 0 0 30px rgba(233, 69, 96, 0.6)";
+                container.style.borderColor = "#e94560";
+                setTimeout(() => {
+                    if (lives <= 0) loadRitual();
+                    else {
+                        container.style.boxShadow = "none";
+                        container.style.borderColor = "#6c5ce7";
+                        slotted.fill(null);
+                        runes.forEach(rune => {
+                            rune.style.width = "auto";
+                            document.getElementById('rune-pool').appendChild(rune);
+                        });
+                        castBtn.classList.add('hidden');
+                    }
+                }, 800);
+            }
+        });
+    }
+
+    function endGame(message, isVictory) {
+        let goldEarned = score * 5;
+        let inkEarned = score * 2;
+        if (isVictory) { goldEarned += 20; inkEarned += 5; } // Survival bonus
+
+        if (world && world.progress && world.progress[sectionName] && world.progress[sectionName].gameCooldowns) {
+            world.progress[sectionName].gameCooldowns[gameName] = Date.now() + (2 * 60 * 60 * 1000);
+            saveToStorage();
+        }
+
+        minigameBoard.innerHTML = `
+            <div class="minigame-victory-card ${isVictory ? 'victory' : ''}">
+                <h2 class="minigame-victory-title ${isVictory ? 'victory' : ''}">${message}</h2>
+                <p class="minigame-victory-stats">Rituals Aligned: ${score}</p>
+                <p class="minigame-victory-reward">Gold Earned: ${goldEarned} 🪙</p>
+                <p class="minigame-victory-reward" style="color: var(--accent-blue);">Ink Harvested: ${inkEarned} 🖋️</p>
+            </div>
+        `;
+        awardGold(goldEarned);
+        awardInk(inkEarned);
+    }
+
+    loadRitual();
+}
+
+export { launchArcaneDefenseGame, launchTriviaGame, launchMemoryGame, startFlashMatchGame, launchSpellweaverGame, launchRitualAlignmentGame };

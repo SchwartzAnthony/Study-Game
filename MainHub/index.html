@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eranos - Personal Athenaeums</title>
+    <!-- Prevent favicon 404 error -->
+    <link rel="icon" href="data:,">
+
+    <!-- New: Occult fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cormorant+Garamond:wght@300;400;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Fallback: if the CDN is blocked (tracking prevention), try a local copy in assets/ -->
+    <script>
+        (function(){
+            function ensureXLSX() {
+                if (!window.XLSX) {
+                    var s = document.createElement('script');
+                    s.src = 'assets/xlsx.full.min.js';
+                    s.onload = function(){ console.log('Loaded local xlsx fallback'); };
+                    s.onerror = function(){ console.warn('xlsx library not available from CDN or local assets. Excel imports may not work.'); };
+                    document.head.appendChild(s);
+                }
+            }
+            // Defer check a touch so the CDN script has a chance to run (if allowed)
+            if (document.readyState === 'complete') ensureXLSX(); else window.addEventListener('load', ensureXLSX);
+        })();
+    </script>
+</head>
+<body>
+    <div class="container">
+        <!-- GLOBAL HEADER visible everywhere -->
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+            <!-- Spacer to keep title centered -->
+            <div style="width: 250px;"></div>
+
+            <h1 id="app-title-btn" style="cursor: pointer; margin: 0; font-size: 0.9em; font-family: 'Cinzel', serif; color: #ffffff; text-align: center; padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(210, 41, 48, 0.4); box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 0 6px 16px rgba(0, 0, 0, 0.6); background: url(data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAwIDIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjEiIG51bU9jdGF2ZXM9IjMiIHN0aXRjaFRpbGVzPSJzdGl0Y2giLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjbm9pc2UpIiBvcGFjaXR5PSIwLjEyIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIi8+PC9zdmc+), linear-gradient(180deg, #181818, #050505);">Eranos - Personal Athenaeums</h1>
+
+            <div class="economy-controls" style="display: flex; justify-content: flex-end; align-items: center; gap: 15px; font-size: 1.1em; font-weight: bold; width: 250px;">
+                <span style="color: #ff2400;" title="Gold (from Games)">🪙 <span id="gold-count">0</span></span>
+                <span style="color: #d22930;" title="Ink (from Flashcards)">🖋️ <span id="ink-count">0</span></span>
+                <span style="color: #8b1d0c;" title="Paper (from Quizzes & Exams)">📜 <span id="paper-count">0</span></span>
+                
+                <button id="btn-open-store" class="btn-occult">🛒 Store</button>
+            </div>
+        </header>
+
+        <div id="home-screen" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 70vh; gap: 30px;">
+            <div class="card" style="width: 80%; max-width: 1000px; height: 60vh; position: relative; border-radius: 12px; overflow: hidden; padding: 0;">
+                <canvas id="mindmap-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: auto;"></canvas>
+            </div>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; width: 90%; max-width: 900px; z-index: 10;">
+                <div class="card library-choice-card" style="flex: 1; min-width: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; background: url(data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAwIDIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjEiIG51bU9jdGF2ZXM9IjMiIHN0aXRjaFRpbGVzPSJzdGl0Y2giLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjbm9pc2UpIiBvcGFjaXR5PSIwLjEyIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIi8+PC9zdmc+), linear-gradient(180deg, #181818, #050505); border-radius: 8px; text-align: center; color: #ffffff; border: 1px solid rgba(210, 41, 48, 0.4); box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 0 6px 16px rgba(0, 0, 0, 0.6);">
+                    <h3 style="font-family: 'Cinzel', serif; font-size: 1.5em; color: #ffebaa; text-transform: uppercase; margin-bottom: 20px; text-shadow: 0 0 10px rgba(255, 150, 50, 0.5);">personal library</h3>
+                    <p style="font-size: 1.1em; line-height: 1.4; margin-bottom: 25px; color: #e0e0e0; font-family: 'Georgia', serif;">View your collections and manage your created worlds.</p>
+                    <button id="btn-goto-worlds" style="background: linear-gradient(180deg, #c53030, #9b2c2c); color: white; font-family: 'Open Sans', sans-serif; font-size: 1.2em; font-weight: 500; cursor: pointer; padding: 12px 30px; border-radius: 6px; border: 1px solid #742a2a; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); transition: filter 0.2s;">Enter Personal Library</button>
+                </div>
+
+                <div class="card library-choice-card" style="flex: 1; min-width: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; background: url(data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAwIDIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjEiIG51bU9jdGF2ZXM9IjMiIHN0aXRjaFRpbGVzPSJzdGl0Y2giLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjbm9pc2UpIiBvcGFjaXR5PSIwLjEyIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIi8+PC9zdmc+), linear-gradient(180deg, #181818, #050505); border-radius: 8px; text-align: center; color: #ffffff; border: 1px solid rgba(210, 41, 48, 0.4); box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 0 6px 16px rgba(0, 0, 0, 0.6);">
+                    <h3 style="font-family: 'Cinzel', serif; font-size: 1.5em; color: #bbaaff; text-transform: uppercase; margin-bottom: 20px; text-shadow: 0 0 10px rgba(150, 150, 255, 0.5);">universal library</h3>
+                    <p style="font-size: 1.1em; line-height: 1.4; margin-bottom: 25px; color: #e0e0e0; font-family: 'Georgia', serif;">Discover and download public grimoires from other scholars.</p>
+                    <button id="btn-goto-global" style="background: linear-gradient(180deg, #304cb5, #2c299b); color: white; font-family: 'Open Sans', sans-serif; font-size: 1.2em; font-weight: 500; cursor: pointer; padding: 12px 30px; border-radius: 6px; border: 1px solid #2a3474; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); transition: filter 0.2s;">Enter Universal Library</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="universe-screen" class="hidden" style="display: flex; flex-direction: column; min-height: calc(100vh - 100px);">
+            <!-- Hub Controls Moved to Universe screen -->
+            <div class="world-header-controls hub-header-mobile-override" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <button id="btn-back-home" class="btn-occult" style="font-size: 0.9em; display: flex; align-items: center; gap: 5px;"><span>⭠</span> Home</button>
+                <div class="hub-controls" style="display: flex; gap: 10px; align-items: center;">
+                    <select id="hub-selector" style="padding: 10px; border-radius: 5px; background: #202020; color: #e0e0e0; border: 1px solid #8b1919; outline: none;"></select>
+                    <button id="btn-new-hub" class="btn-occult" style="font-size: 1.5em; line-height: 1; padding: 5px 15px;">+</button>
+                    <button id="btn-library-settings" class="btn-occult" style="font-size: 1.5em; line-height: 1; padding: 5px 15px;">⚙️</button>
+                </div>
+            </div>
+            
+            <div id="universe-shelf"></div>
+        </div>
+
+        <div id="hub-screen" class="hidden">
+            <div class="world-header-controls" style="display: flex; justify-content: flex-start; align-items: center; margin-bottom: 20px;">
+                <button id="btn-back-universe" class="btn-occult" style="font-size: 0.9em; display: flex; align-items: center; gap: 5px;"><span>⭠</span> Library</button>
+            </div>
+            
+            <section id="map-section" class="map-carousel hidden">
+                <div class="carousel-header">
+                    <button id="prev-map" class="nav-btn">&lt;</button>
+                    <h2 id="world-title">World Map</h2>
+                    <button id="next-map" class="nav-btn">&gt;</button>
+                    <button id="settings-btn" class="nav-btn" style="margin-left: 15px;">⚙️</button>
+                </div>
+
+               <div id="map-wrapper" style="position: relative; min-height: 250px; border-radius: 8px; padding: 20px; overflow: hidden;">
+                    <svg id="map-svg" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:0; pointer-events:none;"></svg>
+                    <div id="map-container" class="map-container" style="position: relative; z-index: 1;"></div>
+                </div>
+            </section>
+
+            <section class="actions">
+                <div class="card locked" id="training-card">
+                    <h3>Global Training</h3>
+                    <p>Review due flashcards across the entire world.</p>
+                    <button id="btn-global-flashcards">Review <span id="global-fc-count">0</span> Due</button>
+                </div>
+
+                <div class="card locked" id="vault-card">
+                    <h3>Flashcard Vault</h3>
+                    <p>View deck stats and manage burned cards.</p>
+                    <button id="btn-open-vault">Open Vault</button>
+                </div>
+                <div class="card" id="library-card">
+                    <h3>Athenaeum Library</h3>
+                    <p>Access your personal collection of uploaded worlds and modules.</p>
+                      <button id="btn-open-library" class="btn-primary">🛠️ Book Binding</button>
+                </div>
+            </section>
+            <div id="main-hub-bottom-upload" style="text-align: center; margin-top: 40px; padding-bottom: 30px;">
+                <input type="file" id="main-hub-file-upload" accept=".txt, .md" style="display: none;">
+    
+                <button id="main-hub-upload-world-btn" class="btn-occult" style="font-weight: bold; padding: 15px 30px; font-size: 1.1em; border-radius: 8px;">
+                    Edit & Upload New World
+                </button>
+            </div>
+        </div>
+
+        <div id="editor-screen" class="hidden">
+            <header style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+                <div>
+                    <h1 style="margin: 0 0 5px 0;">World Mapper</h1>
+                    <p style="margin: 0; color: #a8b2d1;">Add your syntax to designate sections, flashcards, and exams.</p>
+                </div>
+                <button id="btn-syntax-guide" class="btn-occult">📖 Syntax Guide</button>
+            </header>
+            
+            <div class="editor-toolbar">
+                <span><strong>#</strong> Section</span>
+                <span><strong>!FLASH! Q :: A</strong></span>
+                <span><strong>!RITUAL! Name :: 1 > 2 > 3</strong></span>
+                <span><strong>!EXAM!</strong> Final Exam</span>
+            </div>
+
+            <textarea id="markdown-editor" placeholder="Your file content will appear here..."></textarea>
+            
+            <div class="editor-actions">
+                <button id="btn-cancel-edit" class="btn-secondary">Cancel</button>
+                <button id="btn-save-world" class="btn-primary">Save & Initialize World</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="section-modal" class="modal hidden">
+        <div class="modal-content section-content">
+            <h2 id="section-modal-title">Section Name</h2>
+            
+            <div class="task-list-container">
+                <h3>Quests (Tasks)</h3>
+                <ul id="section-task-list" class="task-list"></ul>
+            </div>
+
+            <div class="section-actions" style="flex-direction: column;">
+                <button id="btn-section-read" class="btn-occult" style="margin-bottom: 10px;">📖 Read Section Text</button>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <button id="btn-section-flashcards" class="btn-primary">🎴 Flashcards (<span id="fc-count">0</span>)</button>
+                    <button id="btn-section-game" class="btn-secondary">🎮 Play Mini-Game</button>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button id="btn-section-quiz" class="btn-secondary">📝 Quiz (<span id="quiz-count">0</span>)</button>
+                    <button id="btn-section-exam" class="btn-secondary">🏆 Exam (<span id="exam-count">0</span>)</button>
+                </div>
+            </div>
+
+            <button id="close-section-modal" class="btn-danger" style="margin-top: 20px;">Return to Map</button>
+        </div>
+    </div>
+
+    <div id="read-modal" class="modal hidden">
+        <div class="modal-content section-content" style="max-width: 700px; width: 95%;">
+            <span id="close-read-modal" class="close-btn">&times;</span>
+            <h2 id="read-modal-title">Reading Material</h2>
+            <div id="read-modal-content" class="read-text-area"></div>
+        </div>
+    </div>
+
+    <div id="assessment-modal" class="modal hidden">
+        <div class="modal-content section-content" style="max-width: 600px; text-align: center;">
+            <span id="close-assessment" class="close-btn">&times;</span>
+            <h2 id="assessment-title">Quiz Mode</h2>
+            <p id="assessment-progress" style="color: #a8b2d1;">Question 1 / 5</p>
+            
+            <div id="assessment-card" class="card" style="margin: 20px 0; font-size: 1.2em; padding: 40px 20px;">
+                <p id="assessment-question">Question goes here</p>
+                <hr style="border-color: rgba(210,41,48,0.3); margin: 20px 0;">
+                <p id="assessment-answer" class="hidden" style="color: #ff2400; font-weight: bold; text-shadow: 0 0 5px rgba(255,36,0,0.5);">Answer goes here</p>
+            </div>
+
+            <button id="btn-show-answer" class="btn-primary">Reveal Answer</button>
+            
+            <div id="grading-buttons" class="hidden" style="display: flex; gap: 10px; justify-content: center;">
+                <button id="btn-grade-wrong" class="btn-danger" style="margin: 0; flex: 1;">❌ Incorrect</button>
+                <button id="btn-grade-right" class="btn-primary" style="margin: 0; flex: 1; background: #4cd137;">✅ Correct</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="flashcard-modal" class="modal hidden">
+        <div class="modal-content section-content" style="max-width: 600px; text-align: center; perspective: 1000px;">
+            <span id="close-flashcard" class="close-btn">&times;</span>
+            <h2 id="fc-title">Flashcards</h2>
+            <p id="fc-progress" style="color: #a8b2d1;">Card 1 / 5</p>
+
+            <div id="fc-card" class="flashcard">
+                <div class="flashcard-inner" id="fc-inner">
+                    <div class="flashcard-front">
+                        <p id="fc-question">Question</p>
+                    </div>
+                    <div class="flashcard-back">
+                        <p id="fc-answer">Answer</p>
+                    </div>
+                </div>
+            </div>
+
+            <button id="btn-flip-fc" class="btn-primary" style="margin-top: 20px; width: 100%; padding: 15px; font-size: 1.2em;">Flip Card</button>
+
+            <div id="fc-grading-buttons" class="hidden" style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                <button id="btn-fc-again" class="btn-danger" style="margin: 0; flex: 1;">Again (1m)</button>
+                <button id="btn-fc-hard" class="btn-secondary" style="margin: 0; flex: 1;">Hard</button>
+                <button id="btn-fc-good" class="btn-primary" style="margin: 0; flex: 1; background: #4cd137;">Good</button>
+                <button id="btn-fc-easy" class="btn-primary" style="margin: 0; flex: 1; background: #00a8ff;">Easy</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="fc-vault-modal" class="modal hidden">
+        <div class="modal-content section-content vault-style" style="max-width: 650px; text-align: left;">
+            <span id="close-vault" class="close-btn" style="z-index: 10;">&times;</span>
+            <h2 style="text-align: center;">Flashcard Vault</h2>
+            
+            <div class="stats-grid" id="vault-stats"></div>
+
+            <h3 style="margin-top: 20px; color: #ffd700; text-align: center;">Burned Cards</h3>
+            <ul id="burned-cards-list" class="task-list" style="max-height: 250px;"></ul>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
+            
+            <span id="close-settings" class="close-btn">&times;</span>
+            <h2>World Settings</h2>
+
+            <div style="margin-bottom: 20px; background: #202020; padding: 15px; border-radius: 8px; border: 1px solid rgba(210,41,48,0.3);">
+                <h3 style="margin-top: 0; font-size: 1.1em; color: #a8b2d1;">Rename World</h3>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="world-rename-input" style="flex: 1; padding: 8px; border-radius: 5px; border: 1px solid rgba(210,41,48,0.3); background: #181818; color: #fff; font-family: 'Cinzel', serif;" placeholder="New World Name">
+                    <button id="btn-rename-world" class="btn-occult" style="padding: 8px 15px;">Rename</button>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px; background: #202020; padding: 15px; border-radius: 8px; border: 1px solid rgba(210,41,48,0.3);">
+                <h3 style="margin-top: 0; font-size: 1.1em; color: #898d83;">Forge a New World</h3>
+                <p style="font-size: 0.9em; margin-bottom: 15px;">Upload a .md or .txt file to map out your study plan.</p>
+                <input type="file" id="fileUpload" accept=".md, .txt" style="margin-bottom: 10px; width: 100%; color: #fff;">
+                <button id="upload-btn" class="btn-occult" style="width: 100%;">Upload & Edit</button>
+            </div>
+            
+            <div style="margin-bottom: 20px; background: #202020; padding: 15px; border-radius: 8px; border: 1px solid rgba(210,41,48,0.3);">
+                <h3 style="margin-top: 0; font-size: 1.1em; color: #a8b2d1;">Map Customization</h3>
+                <label for="bg-upload-input" class="btn-secondary" style="cursor: pointer; padding: 5px 15px; border-radius: 5px; display: inline-block; margin-bottom: 10px;">🗺️ Set Map Background</label>
+                <input type="file" id="bg-upload-input" accept="image/*" class="hidden">
+                <button id="btn-clear-bg" class="btn-danger hidden" style="width: 100%;">Clear Image</button>
+            </div>
+
+            <p>Manage your current loaded world.</p>
+            <button id="btn-reshuffle-map" class="btn-secondary" style="margin-bottom: 10px; width: 100%;">🎲 Reshuffle Map Layout</button>
+            <button id="delete-world-btn" class="btn-danger" style="margin-bottom: 20px; width: 100%;">Delete Current World</button>
+
+            <hr style="border-color: rgba(210,41,48,0.3); margin: 20px 0;">
+            <p style="color: #ff2400; font-weight: bold;">Danger Zone</p>
+            <button id="reset-app-btn" class="btn-danger" style="background: #550000; width: 100%;">Factory Reset</button>
+        </div>
+    </div>
+
+    <!-- REPLACED: Full occult-styled Store Modal (keeps uploads inside modal) -->
+    <div id="store-modal" class="modal hidden">
+        <div class="modal-content section-content occult-modal store-modal-content" style="max-width: 920px;">
+            <span id="close-store" class="close-btn" title="Close">&times;</span>
+
+            <!-- Ornamental header -->
+            <div class="modal-header-ornament" aria-hidden="true">
+                <svg width="180" height="40" viewBox="0 0 180 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 20 C36 -6, 144 -6, 176 20" stroke="#b02a2a" stroke-width="1.6" opacity="0.95" stroke-linecap="round"/>
+                    <circle cx="90" cy="20" r="5" fill="#b02a2a" opacity="0.95"/>
+                </svg>
+            </div>
+
+            <div style="display: flex; justify-content: center; align-items: center; gap: 15px;">
+                <h2 class="occult-title" style="margin: 0;">The Arcanum Emporium</h2>
+                <button id="open-store-settings-btn" class="settings-wheel-btn" aria-label="Store Settings" title="Store Settings">
+                    ⚙️
+                </button>
+            </div>
+            <p class="occult-sub">Unlock forbidden artifacts, rituals and custom rewards. Spend gold, ink, or parchment.</p>
+
+            <div class="shop-grid">
+                <!-- Left: Store items -->
+                <div class="store-items-panel" style="width: 100%;">
+                    <div class="shop-section-title">Featured</div>
+                    <div id="store-items-container" class="store-grid" aria-live="polite">
+                        <!-- store cards injected here by app.js -->
+                    </div>
+
+                    <div class="shop-section-title" style="margin-top:18px;">Arcane Binding</div>
+                    <p class="muted">Trade basic parchment for rare scrolls and effects.</p>
+                    <div class="store-actions" style="margin-top:8px;">
+                        <button id="btn-buy-scroll" class="btn-secondary">🔥 Buy Scroll of Fire (Costs 2 📜)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Store Settings Modal -->
+    <div id="store-settings-modal" class="modal hidden">
+        <div class="modal-content section-content occult-modal store-modal-content" style="max-width: 500px; max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column;">
+            <span id="close-store-settings" class="close-btn" title="Close">&times;</span>
+            <h2 class="occult-title">Arcane Emporium Settings</h2>
+            
+            <aside class="upload-panel" aria-label="Upload and custom rewards" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 400px;">
+                <div class="upload-box">
+                    <h4 style="margin:0 0 6px 0; color:var(--accent-gold);">Import Custom Rewards</h4>
+                    <p class="muted small" style="margin:0 0 8px 0;">Upload an Excel sheet (name | cost | type | description | imageUrl)</p>
+                    <label for="excelUpload" class="upload-btn" tabindex="0" role="button">📜 Upload Excel Rewards</label>
+                    <input type="file" id="excelUpload" accept=".xlsx,.xls" style="display:none;" />
+                </div>
+
+                <div class="uploaded-rewards" style="margin-top:14px; flex: 1; overflow-y: auto; padding-right: 5px;">
+                    <h4 style="color:var(--accent-gold); margin: 0 0 8px 0;">Uploaded Rewards</h4>
+                    <div id="uploaded-rewards-list" class="uploaded-list" role="list">
+                        <!-- uploaded reward cards appended here by app.js -->
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <div id="minigame-modal" class="modal hidden">
+        <div class="modal-content section-content" style="max-width: 800px; text-align: center; background: #0b0b14;">
+            <span id="close-minigame" class="close-btn">&times;</span>
+            <h2 id="minigame-title" style="color: #00a8ff; font-size: 2em; margin-bottom: 5px;">Mini-Game</h2>
+            <p id="minigame-stats" style="color: #ffd700; font-weight: bold; margin-bottom: 20px;">Matches: 0</p>
+            
+            <div id="minigame-board" style="display: flex; justify-content: center; align-items: center; min-height: 300px;">
+                </div>
+        </div>
+    </div>
+
+    <div id="syntax-modal" class="modal hidden">
+        <div class="modal-content section-content" style="max-width: 650px; text-align: left; max-height: 85vh; overflow-y: auto;">
+            <span id="close-syntax" class="close-btn">&times;</span>
+            <h2 style="text-align: center; color: #00a8ff;">Builder's Cheat Sheet</h2>
+            <p style="text-align: center; color: #a8b2d1; margin-bottom: 20px;">Use these exact tags in your text file to generate your world!</p>
+            
+            <div class="syntax-list">
+                <div class="syntax-item">
+                    <code># Level Name</code>
+                    <p>Creates a new Map Node. All standard text written below this header becomes the "Reading Material" for the level.</p>
+                </div>
+                <div class="syntax-item">
+                    <code>- [ ] Task Name</code>
+                    <p>Creates a Quest (Checklist item). Checking these off rewards you with coins!</p>
+                </div>
+                <div class="syntax-item">
+                    <code>!FLASH! Question :: Answer</code>
+                    <p>Generates a Spaced Repetition flashcard. Remember to keep the spaces around the <b>::</b> separator!</p>
+                </div>
+                <div class="syntax-item">
+                    <code>!QUIZZ! Question :: Answer</code>
+                    <p>Creates a Quiz question. You must score 100% on the Quiz to unlock the Exam.</p>
+                </div>
+                <div class="syntax-item">
+                    <code>!EXAM! Question :: Answer</code>
+                    <p>Creates a Final Exam question. Passing this turns your map node green!</p>
+                </div>
+                <div class="syntax-item">
+                    <code>!GAME! Name of Game</code>
+                    <p>Assigns a Mini-Game to the section level.</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 25px; color: #ffd700; text-align: center;">Pro Tips 💡</h3>
+            <ul style="color: #e6e6e6; font-size: 0.95em; line-height: 1.6;">
+                <li>Every 5th section automatically becomes a <b>Diamond Milestone</b>, and the very last section always becomes the <b>Crown Boss Node</b>.</li>
+                <li>To turn a map node completely <b>Gold</b>, you must pass the Exam <i>and</i> successfully burn all the flashcards inside that section!</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="library-modal" class="modal hidden" style="z-index: 10000;">
+        <div class="modal-content section-content library-table-style" style="text-align: center;">
+            <span id="close-library" class="close-btn" style="z-index: 10; color: #ffd700; text-shadow: 0 0 5px #000;">&times;</span>
+            <h2>The Occult Library</h2>
+            <p class="table-desc">Bind magical Parchment, scribe them with Ink, and complete ancient Grimoires!</p>
+            
+            <div id="library-tomes" class="library-grid">
+                </div>
+        </div>
+    </div>
+
+    <div id="game-list-modal" class="modal hidden" style="z-index: 10000;">
+        <div class="modal-content section-content" style="max-width: 500px; text-align: center; background: #0b0b14;">
+            <span id="close-game-list" class="close-btn">&times;</span>
+            <h2 style="color: #ffd700; margin-bottom: 20px;">Arcade Select</h2>
+            <p style="color: #a8b2d1; margin-bottom: 20px;">Choose a game to play. Games go on a 2-hour cooldown after completion!</p>
+            <ul id="game-list-container" style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 15px;">
+                </ul>
+        </div>
+    </div>
+
+    <!-- Library (Universe) Settings Modal -->
+    <div id="library-settings-modal" class="modal hidden">
+        <div class="modal-content section-content" style="max-width: 500px;">
+            <span id="close-library-settings" class="close-btn">&times;</span>
+            <h2 style="color: #ffd700; margin-bottom: 5px;">Library Settings</h2>
+            <p style="color: #a8b2d1; margin-bottom: 20px;">Rename your Books / Hubs.</p>
+            <div id="library-hub-list" style="display: flex; flex-direction: column; gap: 15px;">
+                <!-- Hub list will be injected here by app.js -->
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
