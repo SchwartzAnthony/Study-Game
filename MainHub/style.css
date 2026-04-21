@@ -2402,5 +2402,56 @@ button, .btn-occult, .btn-primary, .btn-secondary, .nav-btn { font-family: 'Cinz
     }
     #hub-selector { font-size: 14px !important; }
     .close-btn { right: 5px !important; top: 5px !important; }
+    
+    /* --- FIX: Hologram boss node was overridden globally --- */
+    .boss-node { width: 35px !important; height: 35px !important; }
+    
+    /* --- FIX: Make Shelf Scrollable and Fit --- */
+    #universe-shelf {
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        justify-content: flex-start !important;
+        border-bottom-width: 15px !important;
+        padding-bottom: 20px !important;
+    }
+    .hub-book {
+        min-width: 40px !important;
+        flex: 0 0 auto !important;
+        height: 140px !important;
+        font-size: 0.7em !important;
+    }
+    
+    /* --- FIX: Action Cards (Training, Vault, Library) Width --- */
+    .actions { 
+        display: flex !important; 
+        flex-direction: column !important; 
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    .card, #training-card, #vault-card, #library-card {
+        width: 100% !important;
+        max-width: 100vw !important;
+        box-sizing: border-box !important;
+        min-width: 0 !important;
+        margin: 5px 0 !important;
+    }
+    
+    /* --- FIX: Settings Wheel Cut off --- */
+    #btn-library-settings, #btn-new-hub {
+        width: auto !important;
+        min-width: 45px !important;
+        font-size: 1.2em !important;
+        flex: 0 0 auto !important;
+    }
+    .hub-controls select {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+    }
+    .hub-controls {
+        flex-wrap: nowrap !important; /* Keep wheel on same line as select */
+        box-sizing: border-box !important;
+        padding: 10px 5px !important;
+    }
 }
 
