@@ -332,7 +332,35 @@ export function initMindMap(appState) {
         camera.zoom = newZoom;
     }, { passive: false });
 
-    // PINCH TO ZOOM SUPPORT
+    // NATIVE SAFARI GESTURE SUPPORT (iOS PWA)
+    let gestureInitialZoom = 1;
+    canvas.addEventListener('gesturestart', function(e) {
+        e.preventDefault();
+        gestureInitialZoom = camera.zoom;
+        isPanning = false;
+        isDragging = false;
+    });
+
+    canvas.addEventListener('gesturechange', function(e) {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        let newZoom = gestureInitialZoom * e.scale;
+        newZoom = Math.max(0.15, Math.min(newZoom, 4.0));
+        
+        const zoomRatio = newZoom / camera.zoom;
+        camera.x = mouseX - (mouseX - camera.x) * zoomRatio;
+        camera.y = mouseY - (mouseY - camera.y) * zoomRatio;
+        camera.zoom = newZoom;
+    });
+
+    canvas.addEventListener('gestureend', function(e) {
+        e.preventDefault();
+    });
+
+    // PINCH TO ZOOM SUPPORT (Android/Other touches)
     let initialPinchDistance = null;
     let initialPinchZoom = null;
 

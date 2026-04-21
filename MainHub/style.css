@@ -2317,7 +2317,7 @@ button, .btn-occult, .btn-primary, .btn-secondary, .nav-btn { font-family: 'Cinz
 
 
 @media (max-width: 600px) {
-  #app-title-btn { font-size: 0.6em !important; padding: 4px 8px !important; margin: 0 auto; width: auto !important; max-width: 90%; }
+  #app-title-btn { font-size: 1.1em !important; padding: 10px 15px !important; margin: 0 auto; width: 100% !important; max-width: 90%; box-sizing: border-box !important; }
 }
 
 #mindmap-canvas { touch-action: none; }
