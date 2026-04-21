@@ -1,0 +1,203 @@
+{
+    "hubs": [
+        {
+            "name": "Physik",
+            "worlds": [
+                {
+                    "name": "Physik01",
+                    "sections": [
+                        "The Alchemist's Study"
+                    ],
+                    "flashcards": [
+                        {
+                            "section": "The Alchemist's Study",
+                            "question": "What in the world",
+                            "answer": "This is golden",
+                            "interval": 0,
+                            "ease": 2.5,
+                            "nextReview": 0,
+                            "burned": false
+                        },
+                        {
+                            "section": "The Alchemist's Study",
+                            "question": "Hello hello",
+                            "answer": "Why so mellow?",
+                            "interval": 0,
+                            "ease": 2.5,
+                            "nextReview": 0,
+                            "burned": false
+                        },
+                        {
+                            "section": "The Alchemist's Study",
+                            "question": "What is 1-2?",
+                            "answer": "That is 1!",
+                            "interval": 0,
+                            "ease": 2.5,
+                            "nextReview": 0,
+                            "burned": false
+                        },
+                        {
+                            "section": "The Alchemist's Study",
+                            "question": "Yes, this is my hobby",
+                            "answer": "Video Games!",
+                            "interval": 0,
+                            "ease": 2.5,
+                            "nextReview": 0,
+                            "burned": false
+                        },
+                        {
+                            "section": "The Alchemist's Study",
+                            "question": "Blue Liquid",
+                            "answer": "Mana Potion",
+                            "interval": 0,
+                            "ease": 2.5,
+                            "nextReview": 0,
+                            "burned": false
+                        },
+                        {
+                            "section": "The Alchemist's Study",
+                            "question": "Red Liquid",
+                            "answer": "Health Potion",
+                            "interval": 0,
+                            "ease": 2.5,
+                            "nextReview": 0,
+                            "burned": false
+                        },
+                        {
+                            "section": "The Alchemist's Study",
+                            "question": "Green Liquid",
+                            "answer": "Stamina Potion",
+                            "interval": 0,
+                            "ease": 2.5,
+                            "nextReview": 0,
+                            "burned": false
+                        }
+                    ],
+                    "quizzes": [
+                        {
+                            "section": "The Alchemist's Study",
+                            "question": "What is 2+2?",
+                            "answer": "4"
+                        }
+                    ],
+                    "exams": [
+                        {
+                            "section": "The Alchemist's Study",
+                            "question": "What is the powerhouse of the cell?",
+                            "answer": "Mitochondria"
+                        }
+                    ],
+                    "tasks": [],
+                    "miniGames": [
+                        {
+                            "section": "The Alchemist's Study",
+                            "name": "Ritual Alignment"
+                        },
+                        {
+                            "section": "The Alchemist's Study",
+                            "name": "Trivia"
+                        },
+                        {
+                            "section": "The Alchemist's Study",
+                            "name": "Memory"
+                        },
+                        {
+                            "section": "The Alchemist's Study",
+                            "name": "Flash-Match"
+                        },
+                        {
+                            "section": "The Alchemist's Study",
+                            "name": "Arcane Defense"
+                        }
+                    ],
+                    "rituals": [
+                        {
+                            "section": "The Alchemist's Study",
+                            "name": "Potion of True Vision",
+                            "steps": [
+                                "Grind Moonflower petals",
+                                "Boil with spring water",
+                                "Stir counter-clockwise",
+                                "Steep under moonlight"
+                            ]
+                        },
+                        {
+                            "section": "The Alchemist's Study",
+                            "name": "Banishing a Poltergeist",
+                            "steps": [
+                                "Draw a salt circle",
+                                "Light black candles",
+                                "Recite the Chant of Severance",
+                                "Command the spirit to leave"
+                            ]
+                        },
+                        {
+                            "section": "The Alchemist's Study",
+                            "name": "Binding a New Grimoire",
+                            "steps": [
+                                "Fold the enchanted parchment",
+                                "Sew the spine with silken thread",
+                                "Coat the leather cover in wax",
+                                "Brand it with your mage sigil"
+                            ]
+                        },
+                        {
+                            "section": "The Alchemist's Study",
+                            "name": "Teleportation Circle Setup",
+                            "steps": [
+                                "Cleanse the stone floor",
+                                "Chalk the outer boundary",
+                                "Draw the geometric anchors",
+                                "Infuse the center with mana"
+                            ]
+                        }
+                    ],
+                    "content": {
+                        "The Alchemist's Study": "Welcome to the Alchemist's Study. A single mistake in the order of operations here could result in losing your eyebrows, or worse, your soul. Review the sequences carefully before attempting to cast.\n"
+                    },
+                    "progress": {
+                        "The Alchemist's Study": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        }
+                    },
+                    "background": null,
+                    "coordinates": [
+                        {
+                            "x": 48.984791528957736,
+                            "y": 69.14917420964385
+                        }
+                    ],
+                    "title": "Physik01"
+                }
+            ],
+            "currentWorldIndex": 0
+        }
+    ],
+    "currentHubIndex": 0,
+    "gold": 0,
+    "ink": 0,
+    "paper": {},
+    "library": [
+        {
+            "unlocked": true,
+            "tome": null
+        },
+        {
+            "unlocked": false,
+            "cost": 250
+        },
+        {
+            "unlocked": false,
+            "cost": 500
+        },
+        {
+            "unlocked": false,
+            "cost": 1000
+        }
+    ],
+    "inventory": [],
+    "customRewards": [],
+    "lastExported": 1776763633729
+}
