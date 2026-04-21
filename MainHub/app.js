@@ -851,7 +851,7 @@ async function bootApp() {
     
     // Attempt Cloud Sync Fetch
     try {
-        const response = await fetch('./saveData.json');
+        const response = await fetch('./saveData.json?t=' + new Date().getTime());
         if (response.ok) {
             const cloudData = await response.json();
             const localDate = appState.lastExported || 0;
