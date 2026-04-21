@@ -2353,17 +2353,47 @@ button, .btn-occult, .btn-primary, .btn-secondary, .nav-btn { font-family: 'Cinz
     body { padding: 4px !important; overflow-x: hidden !important; }
     .container { padding: 4px !important; overflow-x: hidden !important; }
     
+    /* Stack Library Cards vertically but make them horizontal in shape */
+    .library-cards-wrapper {
+        flex-direction: column !important;
+        flex-wrap: nowrap !important;
+        gap: 15px !important;
+        align-items: stretch !important;
+    }
+    
     .library-choice-card { 
         min-width: 0 !important; 
+        max-width: 100% !important;
         width: 100% !important; 
         padding: 15px !important; 
         box-sizing: border-box !important; 
+        flex-direction: row !important; /* Make content horizontal */
+        align-items: center !important;
+        justify-content: space-between !important;
+        text-align: left !important;
+        min-height: 90px !important; /* Ensure same size */
     }
+    
+    /* Hide the paragraph so flat cards fit cleanly */
+    .library-desc { display: none !important; }
+    
+    .library-choice-card h3 {
+        font-size: 1.1em !important;
+        margin-bottom: 0 !important;
+        flex: 1 !important;
+        text-align: left !important;
+    }
+    
     .library-choice-card button { 
-        width: 100% !important; 
-        font-size: 0.9em !important; 
-        padding: 10px !important; 
+        width: 140px !important; /* Make buttons identical in size */
+        font-size: 0.85em !important; 
+        padding: 10px 5px !important; 
         box-sizing: border-box !important; 
+        min-height: 44px !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 10px !important;
     }
     
     h1, .occult-title { font-size: 1.3em !important; letter-spacing: 1px !important; }
@@ -2418,7 +2448,7 @@ button, .btn-occult, .btn-primary, .btn-secondary, .nav-btn { font-family: 'Cinz
     .hub-book {
         min-width: 40px !important;
         flex: 0 0 auto !important;
-        height: 140px !important;
+        height: 280px !important;
         font-size: 0.7em !important;
     }
     
