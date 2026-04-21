@@ -4,7 +4,7 @@ import { getActiveWorld, renderMap } from '../app.js';
 
 // DOM Elements Required
 const editor = document.getElementById('markdown-editor');
-const fileInput = document.getElementById('file-upload');
+const fileInput = document.getElementById('fileUpload');
 const mainHubFileInput = document.getElementById('main-hub-file-upload');
 const editorScreen = document.getElementById('editor-screen');
 const hubScreen = document.getElementById('hub-screen');
