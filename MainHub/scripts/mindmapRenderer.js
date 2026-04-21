@@ -19,7 +19,12 @@ export function initMindMap(appState) {
 
     // Build the graph
     function buildGraph() {
-        camera = { x: 0, y: 0, zoom: 1 };
+        let initialZoom = window.innerWidth <= 768 ? 0.45 : 1;
+        camera = { 
+            zoom: initialZoom, 
+            x: (canvas.width / 2) * (1 - initialZoom), 
+            y: (canvas.height / 2) * (1 - initialZoom) 
+        };
         nodes = [];
         links = [];
         const root = { id: 'root', label: 'Self', x: canvas.width / 2, y: canvas.height / 2, vx: 0, vy: 0, radius: 35, mass: 2, color: '#f39c12', fixed: true };
@@ -285,7 +290,7 @@ export function initMindMap(appState) {
             draggedNode.y = worldPos.y;
             draggedNode.vx = 0;
             draggedNode.vy = 0;
-        } else if (isPanning) {
+        } else if (isPanning && !initialPinchDistance) {
             document.body.style.cursor = 'move';
             camera.x += (mouseX - lastPanX);
             camera.y += (mouseY - lastPanY);
@@ -318,7 +323,7 @@ export function initMindMap(appState) {
 
         const zoomDelta = e.deltaY > 0 ? 0.9 : 1.1;
         let newZoom = camera.zoom * zoomDelta;
-        newZoom = Math.max(0.2, Math.min(newZoom, 4.0));
+        newZoom = Math.max(0.15, Math.min(newZoom, 4.0));
         
         // Keep point under mouse fixed
         const zoomRatio = newZoom / camera.zoom;
@@ -326,6 +331,53 @@ export function initMindMap(appState) {
         camera.y = mouseY - (mouseY - camera.y) * zoomRatio;
         camera.zoom = newZoom;
     }, { passive: false });
+
+    // PINCH TO ZOOM SUPPORT
+    let initialPinchDistance = null;
+    let initialPinchZoom = null;
+
+    canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+            e.preventDefault();
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            initialPinchDistance = Math.sqrt(dx * dx + dy * dy);
+            initialPinchZoom = camera.zoom;
+            isPanning = false; // Disable panning if we're zooming
+            isDragging = false;
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2 && initialPinchDistance) {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            
+            // Calculate center of the pinch
+            const centerClientX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            const centerClientY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+            const mouseX = centerClientX - rect.left;
+            const mouseY = centerClientY - rect.top;
+
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            const currentDistance = Math.sqrt(dx * dx + dy * dy);
+            
+            let newZoom = initialPinchZoom * (currentDistance / initialPinchDistance);
+            newZoom = Math.max(0.15, Math.min(newZoom, 4.0));
+            
+            const zoomRatio = newZoom / camera.zoom;
+            camera.x = mouseX - (mouseX - camera.x) * zoomRatio;
+            camera.y = mouseY - (mouseY - camera.y) * zoomRatio;
+            camera.zoom = newZoom;
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+        if (e.touches.length < 2) {
+            initialPinchDistance = null;
+        }
+    });
 
     // Animation loop
     const homeScreen = document.getElementById('home-screen');
