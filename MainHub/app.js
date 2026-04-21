@@ -827,14 +827,54 @@ if (document.getElementById('reset-app-btn')) {
         if (confirm("WARNING: Delete ALL worlds?")) { if (confirm("ABSOLUTELY sure?")) { localStorage.removeItem('studyQuestData'); location.reload(); } }
     });
 }
-
+if (document.getElementById('btn-export-cloud')) {
+    document.getElementById('btn-export-cloud').addEventListener('click', () => {
+        appState.lastExported = Date.now(); // Stamp it so the phone knows it's the newest!
+        saveToStorage();
+        
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 4));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "saveData.json");
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+        
+        alert("Downloaded 'saveData.json'! Move this file into your MainHub folder and publish it to GitHub to sync your phone.");
+    });
+}
 
 
 // Boot Application
-loadFromStorage();
-// Render uploaded rewards into the store panel (if any were saved)
-try { renderUploadedRewards(); } catch (e) { /* ignore if DOM not ready */ }
-try { initMindMap(appState); } catch(e) { console.error("MindMap init error", e); }
+async function bootApp() {
+    loadFromStorage();
+    
+    // Attempt Cloud Sync Fetch
+    try {
+        const response = await fetch('./saveData.json');
+        if (response.ok) {
+            const cloudData = await response.json();
+            const localDate = appState.lastExported || 0;
+            const cloudDate = cloudData.lastExported || 0;
+            
+            // If cloud data is officially newer than phone data
+            if (cloudDate > localDate) {
+                console.log("Cloud save is newer! Syncing data...");
+                localStorage.setItem('studyQuestData', JSON.stringify(cloudData));
+                location.reload(); // Refresh immediately to apply
+                return;
+            }
+        }
+    } catch(e) {
+        console.log("No newer cloud save found or offline.");
+    }
+    
+    // Render uploaded rewards into the store panel (if any were saved)
+    try { renderUploadedRewards(); } catch (e) { /* ignore if DOM not ready */ }
+    try { initMindMap(appState); } catch(e) { console.error("MindMap init error", e); }
+}
+
+bootApp();
 
 // --- STATIC DOM EVENT BINDINGS ---
 function initStaticListeners() {
