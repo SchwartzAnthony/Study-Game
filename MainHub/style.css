@@ -647,8 +647,10 @@ textarea#markdown-editor { min-height: 420px; width:100%; font-family: 'Cormoran
 /* Responsive adjustments */
 @media (max-width:880px) {
     header { flex-direction:column; align-items:flex-start; gap:12px; }
-    .map-node { width:46px; height:46px; }
-    .boss-node { width:62px; height:62px; }
+    .map-node { width:26px; height:26px; border-width: 2px; }
+    .map-node span { font-size: 0.6rem; }
+    .boss-node { width:35px; height:35px; border-width: 2px; }
+    .milestone-node { width: 30px; height: 30px; border-width: 2px; }
 }
 
 /* final minor tweaks to ensure existing components look cohesive */

@@ -365,7 +365,8 @@ function drawMapLines() {
         if (i === 0) pathData += `${pixelX} ${pixelY}`; else pathData += ` L ${pixelX} ${pixelY}`;
     });
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute('d', pathData); path.setAttribute('stroke', '#a8b2d1'); path.setAttribute('stroke-width', '4'); path.setAttribute('fill', 'none'); path.setAttribute('stroke-dasharray', '8, 8');
+    const strokeWidth = window.innerWidth <= 880 ? '2' : '4';
+    path.setAttribute('d', pathData); path.setAttribute('stroke', '#a8b2d1'); path.setAttribute('stroke-width', strokeWidth); path.setAttribute('fill', 'none'); path.setAttribute('stroke-dasharray', '8, 8');
     svg.appendChild(path);
 }
 window.addEventListener('resize', () => { if (mapSection && !mapSection.classList.contains('hidden')) drawMapLines(); });
