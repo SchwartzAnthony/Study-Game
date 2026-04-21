@@ -297,8 +297,8 @@ function renderMap() {
     const mapWrapper = document.getElementById('map-wrapper'); const btnClearBg = document.getElementById('btn-clear-bg');
     
     if(mapWrapper) {
-        mapWrapper.style.backgroundImage = world.background ? `url(${world.background})` : "url('World_Template.png')";
-        mapWrapper.style.backgroundSize = '100% 100%'; 
+        mapWrapper.style.backgroundImage = world.background ? `url(${world.background})` : "url('TempleTemplate.jpg')";
+        mapWrapper.style.backgroundSize = '100% 100%';
         mapWrapper.style.backgroundPosition = 'center';
         mapWrapper.style.backgroundRepeat = 'no-repeat';
         mapWrapper.style.overflow = 'hidden';
@@ -316,7 +316,7 @@ function renderMap() {
             const node = document.createElement('div'); node.className = 'map-node';
             const isLastNode = index === world.sections.length - 1; const isMilestone = (index + 1) % 5 === 0;
 
-            if (isLastNode) { node.classList.add('boss-node'); node.innerHTML = '👑'; } 
+            if (isLastNode) { node.classList.add('boss-node'); node.innerHTML = '<img src="assets/Hologram.png" style="width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 10px red);" alt="Boss Node" title="Sith Holocron" />'; }
             else {
                 const numberSpan = document.createElement('span'); numberSpan.innerText = index + 1;
                 node.appendChild(numberSpan); if (isMilestone) node.classList.add('milestone-node');
