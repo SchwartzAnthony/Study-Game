@@ -1,6 +1,7 @@
 import { appState } from './state.js';
 import { saveToStorage } from './storage.js';
 import { getActiveWorld, renderMap } from '../app.js';
+import { generateMapCoordinates } from './mapRenderer.js';
 
 // DOM Elements Required
 const editor = document.getElementById('markdown-editor');
@@ -116,8 +117,8 @@ function saveAndProcessWorld() {
         let trimmedLine = line.trim();
         if (trimmedLine === "") return; 
 
-        if (trimmedLine.startsWith('# ')) {
-            currentSection = trimmedLine.replace('# ', '').trim();
+        if (trimmedLine.startsWith('!CHAPTER! ')) {
+            currentSection = trimmedLine.replace('!CHAPTER! ', '').trim();
             newWorld.sections.add(currentSection); 
             newWorld.content[currentSection] = ""; newWorld.progress[currentSection] = { quizPassed: false, examPassed: false, gameCooldowns: {} };
             hasStarted = true; return;
