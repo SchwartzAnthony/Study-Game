@@ -2365,11 +2365,12 @@ button, .btn-occult, .btn-primary, .btn-secondary, .nav-btn { font-family: 'Cinz
         min-width: 0 !important; 
         max-width: 100% !important;
         width: 100% !important; 
-        padding: 15px !important; 
+        padding: 15px 25px !important; /* Increase side padding to keep away from edges */
         box-sizing: border-box !important; 
         flex-direction: row !important; /* Make content horizontal */
         align-items: center !important;
-        justify-content: space-between !important;
+        justify-content: center !important; /* Center together rather than pushing to edges */
+        gap: 15px !important; /* Add consistent gap between title and button */
         text-align: left !important;
         min-height: 90px !important; /* Ensure same size */
     }
@@ -2381,7 +2382,7 @@ button, .btn-occult, .btn-primary, .btn-secondary, .nav-btn { font-family: 'Cinz
         font-size: 1.1em !important;
         margin-bottom: 0 !important;
         flex: 1 !important;
-        text-align: left !important;
+        text-align: center !important; /* Make it centered for better flow */
     }
     
     .library-choice-card button { 
@@ -2393,7 +2394,8 @@ button, .btn-occult, .btn-primary, .btn-secondary, .nav-btn { font-family: 'Cinz
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-left: 10px !important;
+        margin-left: 0 !important;
+        flex: none !important;
     }
     
     h1, .occult-title { font-size: 1.3em !important; letter-spacing: 1px !important; }

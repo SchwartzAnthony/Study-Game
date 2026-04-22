@@ -138,6 +138,7 @@ function saveAndProcessWorld() {
                               trimmedLine.startsWith('- [ ]') || 
                               trimmedLine.startsWith('- [x]');
 
+        // Note: We DO NOT filter !SECTION! here. We leave it inscribed in the raw text. Let the reader split by it dynamically!
         // Only scribe the line into the book if it is normal reading text
         if (!isSyntaxCommand) {
             newWorld.content[currentSection] += line + '\n';

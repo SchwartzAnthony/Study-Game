@@ -23,6 +23,7 @@ const universeScreen = document.getElementById('universe-screen');
 const hubScreen = document.getElementById('hub-screen');
 const editorScreen = document.getElementById('editor-screen');
 const homeScreen = document.getElementById('home-screen');
+const workshopScreen = document.getElementById('workshop-screen');
 const fileInput = document.getElementById('fileUpload');
 const editor = document.getElementById('markdown-editor');
 const mapSection = document.getElementById('map-section');
@@ -37,9 +38,21 @@ if (document.getElementById('btn-goto-worlds')) {
         renderShelf(); // Render the new Universe bookshelf
     });
 }
+if (document.getElementById('btn-goto-workshop')) {
+    document.getElementById('btn-goto-workshop').addEventListener('click', () => {
+        homeScreen.classList.add('hidden');
+        workshopScreen.classList.remove('hidden');
+    });
+}
 if (document.getElementById('btn-back-home')) {
     document.getElementById('btn-back-home').addEventListener('click', () => {
         universeScreen.classList.add('hidden');
+        homeScreen.classList.remove('hidden');
+    });
+}
+if (document.getElementById('btn-back-home-from-workshop')) {
+    document.getElementById('btn-back-home-from-workshop').addEventListener('click', () => {
+        workshopScreen.classList.add('hidden');
         homeScreen.classList.remove('hidden');
     });
 }
@@ -55,6 +68,7 @@ if (document.getElementById('app-title-btn')) {
     document.getElementById('app-title-btn').addEventListener('click', () => {
         universeScreen.classList.add('hidden');
         hubScreen.classList.add('hidden');
+        if (workshopScreen) workshopScreen.classList.add('hidden');
         homeScreen.classList.remove('hidden');
     });
 }
@@ -715,15 +729,119 @@ if (document.getElementById('btn-reshuffle-map')) {
 
 // --- READING VIEWER ---
 const readModal = document.getElementById('read-modal');
-if (document.getElementById('close-read-modal')) {
-    document.getElementById('close-read-modal').addEventListener('click', () => readModal.classList.add('hidden'));
+let currentReadPages = [];
+let currentReadIndex = 0;
+let currentReadSectionTitle = "";
+
+function updateReadModalContent() {
+    const contentEl = document.getElementById('read-modal-content');
+    if(!contentEl) return;
+    contentEl.innerText = currentReadPages[currentReadIndex] || "No text available.";
+    
+    let paginationEl = document.getElementById('read-pagination-controls');
+    let resetBtnContainer = document.getElementById('read-reset-container');
+    
+    if(!paginationEl) {
+        paginationEl = document.createElement('div');
+        paginationEl.id = 'read-pagination-controls';
+        paginationEl.style.display = 'flex';
+        paginationEl.style.justifyContent = 'space-between';
+        paginationEl.style.alignItems = 'center';
+        paginationEl.style.marginTop = '20px';
+        paginationEl.style.paddingTop = '15px';
+        paginationEl.style.borderTop = '1px solid rgba(255,255,255,0.1)';
+        document.querySelector('#read-modal .modal-content').appendChild(paginationEl);
+    }
+    
+    if (!resetBtnContainer) {
+        resetBtnContainer = document.createElement('div');
+        resetBtnContainer.id = 'read-reset-container';
+        resetBtnContainer.style.textAlign = 'center';
+        resetBtnContainer.style.marginTop = '15px';
+        document.querySelector('#read-modal .modal-content').appendChild(resetBtnContainer);
+    }
+    resetBtnContainer.style.display = 'none'; // hide by default
+    
+    if (currentReadPages.length <= 1) {
+        paginationEl.style.display = 'none';
+        resetBtnContainer.style.display = 'none';
+        return;
+    } else {
+        paginationEl.style.display = 'flex';
+        resetBtnContainer.style.display = 'block';
+    }
+    
+    paginationEl.innerHTML = `
+        <button id="read-prev-btn" class="btn-secondary" style="padding: 10px 20px; font-weight: bold; ${currentReadIndex === 0 ? 'opacity:0.5; pointer-events:none;' : ''}">&lt; Prev</button>
+        <span style="font-family: 'Cinzel', serif; color: #a8b2d1; font-weight: bold; font-size: 1.1em;">Part ${currentReadIndex + 1} of ${currentReadPages.length}</span>
+        <button id="read-next-btn" class="btn-primary" style="padding: 10px 20px; font-weight: bold; ${currentReadIndex === currentReadPages.length - 1 ? 'opacity:0.5; pointer-events:none;' : ''}">Next &gt;</button>
+    `;
+    
+    resetBtnContainer.innerHTML = `<button id="btn-read-reset" class="btn-occult" style="font-size:0.8em; padding:10px 20px; width: 100%; box-sizing: border-box; border-color: #8b1d0c;">↺ Reset to Part 1</button>`;
+
+    const prevBtn = document.getElementById('read-prev-btn');
+    const nextBtn = document.getElementById('read-next-btn');
+    const resetBtn = document.getElementById('btn-read-reset');
+
+    if (prevBtn) prevBtn.addEventListener('click', () => {
+        if(currentReadIndex > 0) {
+            currentReadIndex--;
+            saveReadProgress();
+            updateReadModalContent();
+        }
+    });
+
+    if (nextBtn) nextBtn.addEventListener('click', () => {
+        if(currentReadIndex < currentReadPages.length - 1) {
+            currentReadIndex++;
+            saveReadProgress();
+            updateReadModalContent();
+        }
+    });
+
+    if (resetBtn) resetBtn.addEventListener('click', () => {
+        currentReadIndex = 0;
+        saveReadProgress();
+        updateReadModalContent();
+    });
 }
+
+function saveReadProgress() {
+    const world = getActiveWorld();
+    if(!world) return;
+    if(!world.readProgress) world.readProgress = {};
+    world.readProgress[currentReadSectionTitle] = currentReadIndex;
+    saveToStorage();
+}
+
+if (document.getElementById('close-read-modal')) {
+    document.getElementById('close-read-modal').addEventListener('click', () => {
+        readModal.classList.add('hidden');
+        saveReadProgress();
+    });
+}
+
 if (document.getElementById('btn-section-read')) {
     document.getElementById('btn-section-read').addEventListener('click', () => {
         const world = getActiveWorld(); 
         const sectionTitle = document.getElementById('section-modal-title');
-        if(document.getElementById('read-modal-title')) document.getElementById('read-modal-title').innerText = sectionTitle.innerText + " - Notes";
-        if(document.getElementById('read-modal-content')) document.getElementById('read-modal-content').innerText = world.content[sectionTitle.innerText] || "No text available."; 
+        currentReadSectionTitle = sectionTitle.innerText;
+        
+        if(document.getElementById('read-modal-title')) document.getElementById('read-modal-title').innerText = currentReadSectionTitle + " - Notes";
+        
+        let fullText = world.content[currentReadSectionTitle] || "No text available.";
+        // Split text by !SECTION!, clean up empty whitespace
+        currentReadPages = fullText.split('!SECTION!').map(page => page.trim()).filter(page => page.length > 0);
+        if (currentReadPages.length === 0) currentReadPages = ["No text available."];
+        
+        if (world.readProgress && typeof world.readProgress[currentReadSectionTitle] === 'number') {
+            currentReadIndex = world.readProgress[currentReadSectionTitle];
+            if (currentReadIndex >= currentReadPages.length) currentReadIndex = 0;
+        } else {
+            currentReadIndex = 0;
+        }
+        
+        updateReadModalContent();
         if(readModal) readModal.classList.remove('hidden');
     });
 }

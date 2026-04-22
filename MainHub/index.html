@@ -70,9 +70,9 @@
                 </div>
 
                 <div class="card library-choice-card" style="flex: 1; min-width: 300px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 30px; background: url(data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAwIDIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjEiIG51bU9jdGF2ZXM9IjMiIHN0aXRjaFRpbGVzPSJzdGl0Y2giLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjbm9pc2UpIiBvcGFjaXR5PSIwLjEyIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIi8+PC9zdmc+), linear-gradient(180deg, #181818, #050505); border-radius: 8px; text-align: center; color: #ffffff; border: 1px solid rgba(210, 41, 48, 0.4); box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 0 6px 16px rgba(0, 0, 0, 0.6);">
-                    <h3 style="font-family: 'Cinzel', serif; font-size: 1.5em; color: #aaffcc; text-transform: uppercase; margin-bottom: 20px; text-shadow: 0 0 10px rgba(100, 255, 150, 0.5);">library tools</h3>
+                    <h3 style="font-family: 'Cinzel', serif; font-size: 1.5em; color: #aaffcc; text-transform: uppercase; margin-bottom: 20px; text-shadow: 0 0 10px rgba(100, 255, 150, 0.5);">workshop</h3>
                     <p class="library-desc" style="font-size: 1.1em; line-height: 1.4; margin-bottom: 25px; color: #e0e0e0; font-family: 'Georgia', serif;">Pdf to text, formatting tools, and more</p>
-                    <button id="btn-goto-tools" style="background: linear-gradient(180deg, #2b7a4b, #194d2f); color: white; font-family: 'Open Sans', sans-serif; font-size: 1.2em; font-weight: 500; cursor: pointer; padding: 12px 30px; border-radius: 6px; border: 1px solid #1c4228; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); transition: filter 0.2s; width: 100%;">Enter Tool Shed</button>
+                    <button id="btn-goto-workshop" style="background: linear-gradient(180deg, #2b7a4b, #194d2f); color: white; font-family: 'Open Sans', sans-serif; font-size: 1.2em; font-weight: 500; cursor: pointer; padding: 12px 30px; border-radius: 6px; border: 1px solid #1c4228; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); transition: filter 0.2s; width: 100%;">Enter Workshop</button>
                 </div>
             </div>
         </div>
@@ -89,6 +89,28 @@
             </div>
             
             <div id="universe-shelf"></div>
+        </div>
+
+        <div id="workshop-screen" class="hidden" style="display: flex; flex-direction: column; min-height: calc(100vh - 100px);">
+            <div class="world-header-controls hub-header-mobile-override" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <button id="btn-back-home-from-workshop" class="btn-occult" style="font-size: 0.9em; display: flex; align-items: center; gap: 5px;"><span>⭠</span> Home</button>
+                <div class="hub-controls" style="display: flex; gap: 10px; align-items: center;">
+                    <button id="btn-workshop-settings" class="btn-occult" style="font-size: 1.5em; line-height: 1; padding: 5px 15px;">⚙️</button>
+                </div>
+            </div>
+            
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 0 10px;">
+                <div class="card" style="width: 100%; max-width: 600px; padding: 30px; text-align: center; border: 1px solid rgba(100, 255, 150, 0.3); background: url(data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAwIDIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjEiIG51bU9jdGF2ZXM9IjMiIHN0aXRjaFRpbGVzPSJzdGl0Y2giLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjbm9pc2UpIiBvcGFjaXR5PSIwLjEyIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIi8+PC9zdmc+), linear-gradient(180deg, #102015, #050a07);">
+                    <h2 style="font-family: 'Cinzel', serif; color: #aaffcc; margin-bottom: 25px; text-shadow: 0 0 10px rgba(100, 255, 150, 0.4); text-transform: uppercase;">Bookbinding Bench</h2>
+                    <p style="color: #e0e0e0; font-family: 'Georgia', serif; font-size: 1.1em; margin-bottom: 30px;">Process your raw tomes and translate arcane texts into structured grimoires.</p>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 15px; width: 100%;">
+                        <button class="btn-occult" style="width: 100%; padding: 15px; font-size: 1.2em; border-color: #2b7a4b; color: #aaffcc;">Convert PDF to TXT</button>
+                        <button class="btn-occult" style="width: 100%; padding: 15px; font-size: 1.2em; border-color: #2b7a4b; color: #aaffcc;">Convert TXT to Syntax</button>
+                        <button class="btn-occult" style="width: 100%; padding: 15px; font-size: 1.2em; border-color: #2b7a4b; color: #aaffcc;">Edit Syntax Rules</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="hub-screen" class="hidden">
