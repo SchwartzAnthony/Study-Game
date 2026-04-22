@@ -165,8 +165,8 @@ if (document.getElementById('btn-convert-pdf')) {
             progressTitle.style.color = "#aaffcc";
 
             // Prepare download configuration
-            const txtFileName = file.name.replace(/\.pdf$/i, '.txt');
-            const blob = new Blob([fullText], { type: 'text/plain' });
+            const txtFileName = file.name.replace(/\.pdf$/i, '.md');
+            const blob = new Blob([fullText], { type: 'text/markdown' });
             currentDownloadUrl = window.URL.createObjectURL(blob);
             
             // Show download button
@@ -191,7 +191,7 @@ if (document.getElementById('btn-convert-pdf')) {
             progressStatus.innerText = "The arcane glyphs in this PDF are too corrupted to read.";
         } finally {
             // Reset main button
-            pdfUploadBtn.innerText = "Convert PDF to TXT";
+            pdfUploadBtn.innerText = "Convert PDF to MD";
             pdfUploadBtn.style.opacity = "1";
             pdfUploadBtn.style.pointerEvents = "auto";
             e.target.value = ''; // clear input allowing re-upload of same file
@@ -236,53 +236,95 @@ if (document.getElementById('btn-convert-pdf')) {
                 await new Promise(r => setTimeout(r, 50));
                 
                 // --- TXT TO SYNTAX LOGIC ---
-                // 1. Split into lines
-                let lines = text.split(/\r?\n/);
+                let rawLines = text.split(/\r?\n/);
                 
-                // Clean up lines: Remove page numbers and headers/footers
-                // Using basic heuristic: single number lines or very short strings like "Page 1"
-                lines = lines.filter(line => {
+                let lines = [];
+                for(let line of rawLines) {
                     const trimmed = line.trim();
-                    // Remove page numbers (just digits)
-                    if (/^\d+$/.test(trimmed)) return false;
-                    // Remove lines starting with "Page" and digits
-                    if (/^Page\s*\d+$/i.test(trimmed)) return false;
-                    // Optional: remove common table of contents structure (dot leaders "..... 45")
-                    if (/\.{3,}\s*\d+$/.test(trimmed)) return false;
-                    return true;
-                });
-
-                // Re-join and re-split around double lines or more to form paragraphs
-                const cleanedText = lines.join('\n');
-                // Regex matches paragraphs separated by blank lines
-                const paragraphs = cleanedText.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
+                    if (trimmed === "") continue;
+                    if (/^\d+$/.test(trimmed)) continue; // strict page numbers
+                    if (/^Page\s*\d+$/i.test(trimmed)) continue;
+                    if (trimmed.includes("© Fernstudienzentrum")) continue;
+                    if (trimmed.includes("Fernstudienzentrum Hamburg")) continue;
+                    if (trimmed === "©") continue;
+                    if (trimmed.startsWith("MECH 1")) continue;
+                    if (trimmed === "Inhaltsverzeichnis" || trimmed === "Anhang") continue;
+                    if (trimmed.includes("Alle Rechte vorbehalten")) continue; 
+                    if (/\.{4,}/.test(trimmed)) continue; // TOC lines
+                    
+                    lines.push(trimmed);
+                }
 
                 let finalOutput = [];
-                for (let i = 0; i < paragraphs.length; i++) {
-                    let p = paragraphs[i];
-                    
-                    // Progress
-                    if (i % 20 === 0) {
-                        progressBar.style.width = Math.floor(40 + ((i / paragraphs.length) * 50)) + "%";
-                        await new Promise(r => setTimeout(r, 10)); // allow repaint
-                    }
+                let currentBlock = [];
+                let blockType = "none";
+                let haveSeenChapter = false;
 
-                    // Chapter detection (e.g. "1 Was ist Physik?")
-                    // Looks for digit(s), maybe a dot, then a space, and some text at start of paragraph, usually short.
-                    // Or we just check if it starts with "1 " and is relatively short.
-                    const isChapter = /^\d+\.?\s+[A-Za-z]/.test(p) && p.length < 150 && !p.includes('\n');
+                const flushBlock = () => {
+                    if (currentBlock.length > 0) {
+                        const joined = currentBlock.join('\n');
+                        if (blockType === "chapter") {
+                            finalOutput.push(`!CHAPTER! ${joined}`);
+                            haveSeenChapter = true;
+                        } else if (haveSeenChapter && blockType === "section") {
+                            if (joined.length > 5) { // Catch stray empty strings
+                                finalOutput.push(`!SECTION! ${joined}`);
+                            }
+                        }
+                        currentBlock = [];
+                    }
+                };
+
+                for (let i = 0; i < lines.length; i++) {
+                    let line = lines[i];
                     
+                    // Progress UI yielding
+                    if (i % 50 === 0) {
+                        progressBar.style.width = Math.floor(40 + ((i / lines.length) * 50)) + "%";
+                        await new Promise(r => setTimeout(r, 5));
+                    }
+                    
+                    // Is Chapter check (starts with a number, a space, and capital letter)
+                    // We remove the optional dot so things like "1. Nikolaus" aren't caught as chapters
+                    const isChapter = /^\d+\s+[A-Za-z]/.test(line) && line.length < 150;
+
+                    let startNewBlock = false;
+
                     if (isChapter) {
-                        // Use the new chapter syntax
-                        finalOutput.push(`!CHAPTER! ${p}`);
-                    } else {
-                        // Apply !SECTION! to regular paragraphs
-                        const cleanedPara = p.replace(/\s+/g, ' ').trim();
-                        if (cleanedPara) {
-                            finalOutput.push(`!SECTION! ${cleanedPara}`);
+                        startNewBlock = true;
+                        flushBlock();
+                        blockType = "chapter";
+                    } else if (currentBlock.length > 0) {
+                        let prevLine = currentBlock[currentBlock.length - 1];
+                        
+                        // Heuristic A: Did previous line end with a sentence terminator? (. ! ? " ')
+                        const endsWithTerminal = /[.!?]["')]*$/.test(prevLine);
+                        // Heuristic B: Was the previous line noticeably short and didn't end with a hyphen?
+                        const isShort = prevLine.length < 65 && !prevLine.endsWith('-');
+                        
+                        if (blockType === "chapter") {
+                            // Break chapter block if next line is clearly prose or prev line was a complete terminal
+                            if (line.length > 60 || endsWithTerminal) {
+                                startNewBlock = true;
+                            }
+                        } else {
+                            if (endsWithTerminal || isShort) {
+                                startNewBlock = true;
+                            }
                         }
                     }
+
+                    if (startNewBlock && !isChapter) {
+                        flushBlock();
+                        blockType = "section";
+                    } else if (currentBlock.length === 0 && !isChapter) {
+                        blockType = "section";
+                    }
+
+                    currentBlock.push(line);
                 }
+                
+                flushBlock();
 
                 const resultString = finalOutput.join("\n\n");
                 
@@ -290,8 +332,8 @@ if (document.getElementById('btn-convert-pdf')) {
                 progressStatus.innerText = `Scroll forged! ${finalOutput.length} elements detected.`;
 
                 // Prepare Download
-                const txtFileName = "syntax_" + file.name;
-                const blob = new Blob([resultString], { type: "text/plain;charset=utf-8" });
+                const mdFileName = "syntax_" + file.name.replace(/\.md$/i, '') + ".md";
+                const blob = new Blob([resultString], { type: "text/markdown;charset=utf-8" });
                 currentDownloadUrl = window.URL.createObjectURL(blob);
                 
                 btnDownload.innerText = `📥 Download Formatted Syntax`;
@@ -299,7 +341,7 @@ if (document.getElementById('btn-convert-pdf')) {
                     const a = document.createElement('a');
                     a.style.display = 'none';
                     a.href = currentDownloadUrl;
-                    a.download = txtFileName;
+                    a.download = mdFileName;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a); // clean up
@@ -315,7 +357,7 @@ if (document.getElementById('btn-convert-pdf')) {
                 progressBar.style.background = "#ff2400";
                 progressStatus.innerText = "The raw text could not be inscribed with arcane syntax.";
             } finally {
-                txtSyntaxUploadBtn.innerText = "Convert TXT to Syntax";
+                txtSyntaxUploadBtn.innerText = "Convert MD to Syntax";
                 txtSyntaxUploadBtn.style.opacity = "1";
                 txtSyntaxUploadBtn.style.pointerEvents = "auto";
                 e.target.value = '';
