@@ -116,6 +116,8 @@
                         <input type="file" id="pdf-upload-input" accept=".pdf" style="display: none;">
                         
                         <button id="btn-convert-txt-syntax" class="btn-occult" style="width: 100%; padding: 15px; font-size: 1.2em; border-color: #2b7a4b; color: #aaffcc;">Convert TXT to Syntax</button>
+                        <input type="file" id="txt-syntax-upload-input" accept=".txt" style="display: none;">
+                        
                         <button id="btn-edit-syntax-rules" class="btn-occult" style="width: 100%; padding: 15px; font-size: 1.2em; border-color: #2b7a4b; color: #aaffcc;">Edit Syntax Rules</button>
                     </div>
                 </div>
@@ -216,10 +218,30 @@
     </div>
 
     <div id="read-modal" class="modal hidden">
-        <div class="modal-content section-content" style="max-width: 700px; width: 95%;">
-            <span id="close-read-modal" class="close-btn">&times;</span>
-            <h2 id="read-modal-title">Reading Material</h2>
+        <div class="modal-content section-content" style="max-width: 700px; width: 95%; position: relative;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h2 id="read-modal-title" style="margin: 0;">Reading Material</h2>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <button id="toggle-bionic-btn" class="btn-occult" style="font-size: 0.9em; padding: 5px 10px; border-radius: 5px;">Toggle Bionic Reading</button>
+                    <span id="close-read-modal" class="close-btn" style="position: static;">&times;</span>
+                </div>
+            </div>
             <div id="read-modal-content" class="read-text-area"></div>
+        </div>
+    </div>
+
+    <!-- PDF Processing Modal -->
+    <div id="pdf-progress-modal" class="modal hidden" style="z-index: 9999;">
+        <div class="modal-content section-content" style="max-width: 500px; text-align: center; border: 1px solid rgba(100, 255, 150, 0.4); box-shadow: 0 0 30px rgba(0,0,0,0.8), inset 0 0 20px rgba(100, 255, 150, 0.1);">
+            <span id="close-pdf-progress" class="close-btn">&times;</span>
+            <h2 id="pdf-progress-title" style="color: #aaffcc; text-shadow: 0 0 10px rgba(100, 255, 150, 0.5); font-family: 'Cinzel', serif;">Transmuting PDF...</h2>
+            <p id="pdf-progress-status" style="color: #e0e0e0; font-family: 'Georgia', serif; font-size: 1.1em; margin: 20px 0;">Initializing arcane extraction...</p>
+            
+            <div id="pdf-progress-bar-container" style="width: 100%; background: #111; border: 1px solid #2b7a4b; border-radius: 5px; height: 20px; overflow: hidden; margin-bottom: 20px;">
+                <div id="pdf-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #194d2f, #2b7a4b); transition: width 0.2s;"></div>
+            </div>
+
+            <button id="btn-download-pdf-txt" class="btn-primary hidden" style="margin-top: 10px; width: 100%; padding: 15px; font-size: 1.2em; background: linear-gradient(180deg, #2b7a4b, #194d2f); border-color: #1c4228;">📥 Download Translated Grimoire</button>
         </div>
     </div>
 

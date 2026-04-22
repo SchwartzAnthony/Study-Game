@@ -2365,38 +2365,39 @@ button, .btn-occult, .btn-primary, .btn-secondary, .nav-btn { font-family: 'Cinz
         min-width: 0 !important; 
         max-width: 100% !important;
         width: 100% !important; 
-        padding: 15px 25px !important; /* Increase side padding to keep away from edges */
+        padding: 15px 15px !important; /* Decrease side padding */
         box-sizing: border-box !important; 
         flex-direction: row !important; /* Make content horizontal */
         align-items: center !important;
-        justify-content: center !important; /* Center together rather than pushing to edges */
-        gap: 15px !important; /* Add consistent gap between title and button */
+        justify-content: space-between !important; /* Push elements apart */
+        gap: 10px !important; 
         text-align: left !important;
-        min-height: 90px !important; /* Ensure same size */
+        min-height: 90px !important;
     }
     
     /* Hide the paragraph so flat cards fit cleanly */
     .library-desc { display: none !important; }
     
     .library-choice-card h3 {
-        font-size: 0.95em !important; /* Smaller text so it fits */
+        font-size: 1.05em !important; 
         margin-bottom: 0 !important;
-        flex: 1 1 0% !important; /* Proper flex shrinkage */
-        text-align: left !important; /* Re-align left so it doesn't push the gap right */
-        padding-right: 10px !important;
+        flex: 1 1 auto !important; 
+        text-align: left !important; 
+        padding-right: 5px !important;
     }
     
     .library-choice-card button { 
-        width: 115px !important; /* Compact the button size heavily */
-        max-width: 45% !important; /* Ensure it never claims more than half the box */
-        font-size: 0.75em !important; 
-        line-height: 1.2 !important;
-        padding: 8px 5px !important; 
+        width: auto !important;
+        max-width: 55% !important; 
+        font-size: 0.8em !important; 
+        line-height: 1.25 !important;
+        padding: 10px !important; 
         box-sizing: border-box !important; 
         min-height: 44px !important;
         display: flex;
         align-items: center;
         justify-content: center;
+        text-align: center !important;
         margin-left: 0 !important;
         flex: none !important;
         white-space: normal !important; /* Let text wrap infinitely if needed */

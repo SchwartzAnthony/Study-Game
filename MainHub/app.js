@@ -77,25 +77,72 @@ if (document.getElementById('app-title-btn')) {
 if (document.getElementById('btn-convert-pdf')) {
     const pdfUploadBtn = document.getElementById('btn-convert-pdf');
     const pdfUploadInput = document.getElementById('pdf-upload-input');
+    const txtSyntaxUploadBtn = document.getElementById('btn-convert-txt-syntax');
+    const txtSyntaxUploadInput = document.getElementById('txt-syntax-upload-input');
+    const progressModal = document.getElementById('pdf-progress-modal');
+    const progressStatus = document.getElementById('pdf-progress-status');
+    const progressBar = document.getElementById('pdf-progress-bar');
+    const progressTitle = document.getElementById('pdf-progress-title');
+    const btnDownload = document.getElementById('btn-download-pdf-txt');
+    const closeProgress = document.getElementById('close-pdf-progress');
     
-    pdfUploadBtn.addEventListener('click', () => {
+    let currentDownloadUrl = null;
+
+    if (closeProgress) {
+        closeProgress.addEventListener('click', () => {
+            progressModal.classList.add('hidden');
+        });
+    }
+
+    pdfUploadBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        // Prevent double-clicking which queues multiple file choosers on iOS
+        pdfUploadBtn.style.pointerEvents = "none";
         pdfUploadInput.click();
+        setTimeout(() => { pdfUploadBtn.style.pointerEvents = "auto"; }, 1000);
     });
 
     pdfUploadInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
+        // Reset and Show Modal
+        if(currentDownloadUrl) {
+            window.URL.revokeObjectURL(currentDownloadUrl);
+            currentDownloadUrl = null;
+        }
+        btnDownload.classList.add('hidden');
+        progressTitle.innerText = "Transmuting PDF...";
+        progressTitle.style.color = "#aaffcc";
+        progressStatus.innerText = "Closing file viewer & initializing arcane extraction...";
+        progressBar.style.width = "0%";
+        progressBar.style.background = "linear-gradient(90deg, #194d2f, #2b7a4b)";
+        progressModal.classList.remove('hidden');
+
         pdfUploadBtn.innerText = "Converting... ⏳";
         pdfUploadBtn.style.opacity = "0.7";
         pdfUploadBtn.style.pointerEvents = "none";
 
         try {
+            // Wait a healthy half second to GUARANTEE the iOS file picker animates completely away! 
+            await new Promise(r => setTimeout(r, 600)); 
+            
             const arrayBuffer = await file.arrayBuffer();
+            progressStatus.innerText = "Deciphering the tome structure...";
+            await new Promise(r => setTimeout(r, 50));
+            
             const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
             let fullText = '';
 
             for (let i = 1; i <= pdf.numPages; i++) {
+                // Update UI Per Page
+                progressStatus.innerText = `Scribing Page ${i} of ${pdf.numPages}...`;
+                let pct = Math.floor((i / pdf.numPages) * 100);
+                progressBar.style.width = `${pct}%`;
+                
+                // Yield to main thread so progress bar visibly moves
+                await new Promise(r => setTimeout(r, 10)); 
+
                 const page = await pdf.getPage(i);
                 const textContent = await page.getTextContent();
                 
@@ -113,31 +160,168 @@ if (document.getElementById('btn-convert-pdf')) {
                 fullText += pageText + '\n\n';
             }
 
-            // Create and trigger download of txt
+            progressStatus.innerText = "Binding complete! The grimoire is ready.";
+            progressTitle.innerText = "Tome Translated";
+            progressTitle.style.color = "#aaffcc";
+
+            // Prepare download configuration
             const txtFileName = file.name.replace(/\.pdf$/i, '.txt');
             const blob = new Blob([fullText], { type: 'text/plain' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = txtFileName;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
+            currentDownloadUrl = window.URL.createObjectURL(blob);
             
-            alert(`Successfully converted ${file.name}! The file has been downloaded.`);
+            // Show download button
+            btnDownload.onclick = () => {
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = currentDownloadUrl;
+                a.download = txtFileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a); // clean up
+                progressModal.classList.add('hidden'); // auto-hide modal after download
+            };
+            
+            btnDownload.classList.remove('hidden');
 
         } catch (error) {
             console.error("PDF Parsing Error: ", error);
-            alert("Failed to parse the PDF document.");
+            progressTitle.innerText = "Transmutation Failed";
+            progressTitle.style.color = "#ff2400";
+            progressBar.style.background = "#ff2400";
+            progressStatus.innerText = "The arcane glyphs in this PDF are too corrupted to read.";
         } finally {
-            // Reset button
+            // Reset main button
             pdfUploadBtn.innerText = "Convert PDF to TXT";
             pdfUploadBtn.style.opacity = "1";
             pdfUploadBtn.style.pointerEvents = "auto";
-            e.target.value = ''; // clear input
+            e.target.value = ''; // clear input allowing re-upload of same file
         }
     });
+
+    if (txtSyntaxUploadBtn && txtSyntaxUploadInput) {
+        txtSyntaxUploadBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            txtSyntaxUploadBtn.style.pointerEvents = "none";
+            txtSyntaxUploadInput.click();
+            setTimeout(() => { txtSyntaxUploadBtn.style.pointerEvents = "auto"; }, 1000);
+        });
+
+        txtSyntaxUploadInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (currentDownloadUrl) {
+                window.URL.revokeObjectURL(currentDownloadUrl);
+                currentDownloadUrl = null;
+            }
+
+            btnDownload.classList.add('hidden');
+            progressTitle.innerText = "Transmuting Syntax...";
+            progressTitle.style.color = "#aaffcc";
+            progressStatus.innerText = "Preparing text purification...";
+            progressBar.style.width = "0%";
+            progressBar.style.background = "linear-gradient(90deg, #194d2f, #2b7a4b)";
+            progressModal.classList.remove('hidden');
+
+            txtSyntaxUploadBtn.innerText = "Converting... ⏳";
+            txtSyntaxUploadBtn.style.opacity = "0.7";
+            txtSyntaxUploadBtn.style.pointerEvents = "none";
+            
+            try {
+                await new Promise(r => setTimeout(r, 600)); 
+
+                const text = await file.text();
+                progressStatus.innerText = "Applying syntactic purifications (Chapters, Sections, cleanup)...";
+                progressBar.style.width = "40%";
+                await new Promise(r => setTimeout(r, 50));
+                
+                // --- TXT TO SYNTAX LOGIC ---
+                // 1. Split into lines
+                let lines = text.split(/\r?\n/);
+                
+                // Clean up lines: Remove page numbers and headers/footers
+                // Using basic heuristic: single number lines or very short strings like "Page 1"
+                lines = lines.filter(line => {
+                    const trimmed = line.trim();
+                    // Remove page numbers (just digits)
+                    if (/^\d+$/.test(trimmed)) return false;
+                    // Remove lines starting with "Page" and digits
+                    if (/^Page\s*\d+$/i.test(trimmed)) return false;
+                    // Optional: remove common table of contents structure (dot leaders "..... 45")
+                    if (/\.{3,}\s*\d+$/.test(trimmed)) return false;
+                    return true;
+                });
+
+                // Re-join and re-split around double lines or more to form paragraphs
+                const cleanedText = lines.join('\n');
+                // Regex matches paragraphs separated by blank lines
+                const paragraphs = cleanedText.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
+
+                let finalOutput = [];
+                for (let i = 0; i < paragraphs.length; i++) {
+                    let p = paragraphs[i];
+                    
+                    // Progress
+                    if (i % 20 === 0) {
+                        progressBar.style.width = Math.floor(40 + ((i / paragraphs.length) * 50)) + "%";
+                        await new Promise(r => setTimeout(r, 10)); // allow repaint
+                    }
+
+                    // Chapter detection (e.g. "1 Was ist Physik?")
+                    // Looks for digit(s), maybe a dot, then a space, and some text at start of paragraph, usually short.
+                    // Or we just check if it starts with "1 " and is relatively short.
+                    const isChapter = /^\d+\.?\s+[A-Za-z]/.test(p) && p.length < 150 && !p.includes('\n');
+                    
+                    if (isChapter) {
+                        // Use the new chapter syntax
+                        finalOutput.push(`!CHAPTER! ${p}`);
+                    } else {
+                        // Apply !SECTION! to regular paragraphs
+                        const cleanedPara = p.replace(/\s+/g, ' ').trim();
+                        if (cleanedPara) {
+                            finalOutput.push(`!SECTION! ${cleanedPara}`);
+                        }
+                    }
+                }
+
+                const resultString = finalOutput.join("\n\n");
+                
+                progressBar.style.width = "100%";
+                progressStatus.innerText = `Scroll forged! ${finalOutput.length} elements detected.`;
+
+                // Prepare Download
+                const txtFileName = "syntax_" + file.name;
+                const blob = new Blob([resultString], { type: "text/plain;charset=utf-8" });
+                currentDownloadUrl = window.URL.createObjectURL(blob);
+                
+                btnDownload.innerText = `📥 Download Formatted Syntax`;
+                btnDownload.onclick = () => {
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = currentDownloadUrl;
+                    a.download = txtFileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a); // clean up
+                    progressModal.classList.add('hidden'); // auto-hide
+                };
+                
+                btnDownload.classList.remove('hidden');
+
+            } catch (error) {
+                console.error("Syntax Conversion Error: ", error);
+                progressTitle.innerText = "Transmutation Failed";
+                progressTitle.style.color = "#ff2400";
+                progressBar.style.background = "#ff2400";
+                progressStatus.innerText = "The raw text could not be inscribed with arcane syntax.";
+            } finally {
+                txtSyntaxUploadBtn.innerText = "Convert TXT to Syntax";
+                txtSyntaxUploadBtn.style.opacity = "1";
+                txtSyntaxUploadBtn.style.pointerEvents = "auto";
+                e.target.value = '';
+            }
+        });
+    }
 }
 
 if(document.getElementById('upload-btn')) document.getElementById('upload-btn').addEventListener('click', loadFileToEditor);
@@ -799,11 +983,36 @@ const readModal = document.getElementById('read-modal');
 let currentReadPages = [];
 let currentReadIndex = 0;
 let currentReadSectionTitle = "";
+let bionicReadingEnabled = false;
+
+function applyBionicReading(text) {
+    if (!text) return "";
+    return text.split(/(\s+)/).map(word => {
+        if (/^\s+$/.test(word)) return word; // Preserve whitespace exactly
+        const alphaMatch = word.match(/[a-zA-ZÀ-ÿ0-9]+/g);
+        if(!alphaMatch) return word; 
+        
+        return word.replace(/[a-zA-ZÀ-ÿ0-9]+/, (match) => {
+            let splitIndex = Math.ceil(match.length / 2);
+            if (match.length === 3) splitIndex = 1;
+            const boldPart = match.substring(0, splitIndex);
+            const normalPart = match.substring(splitIndex);
+            return `<strong style="color: #fff; font-weight: 800;">${boldPart}</strong>${normalPart}`;
+        });
+    }).join("");
+}
 
 function updateReadModalContent() {
     const contentEl = document.getElementById('read-modal-content');
     if(!contentEl) return;
-    contentEl.innerText = currentReadPages[currentReadIndex] || "No text available.";
+    
+    let baseText = currentReadPages[currentReadIndex] || "No text available.";
+    
+    if (bionicReadingEnabled) {
+        contentEl.innerHTML = applyBionicReading(baseText);
+    } else {
+        contentEl.innerText = baseText; // Reverts back to safe text execution
+    }
     
     let paginationEl = document.getElementById('read-pagination-controls');
     let resetBtnContainer = document.getElementById('read-reset-container');
@@ -879,6 +1088,16 @@ function saveReadProgress() {
     if(!world.readProgress) world.readProgress = {};
     world.readProgress[currentReadSectionTitle] = currentReadIndex;
     saveToStorage();
+}
+
+if (document.getElementById('toggle-bionic-btn')) {
+    document.getElementById('toggle-bionic-btn').addEventListener('click', () => {
+        bionicReadingEnabled = !bionicReadingEnabled;
+        const btn = document.getElementById('toggle-bionic-btn');
+        btn.style.color = bionicReadingEnabled ? "#aaffcc" : "";
+        btn.style.borderColor = bionicReadingEnabled ? "#aaffcc" : "";
+        updateReadModalContent(); // Refresh the viewer
+    });
 }
 
 if (document.getElementById('close-read-modal')) {
