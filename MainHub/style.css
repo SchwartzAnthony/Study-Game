@@ -2411,6 +2411,20 @@ button, .btn-occult, .btn-primary, .btn-secondary, .nav-btn { font-family: 'Cinz
     }
     .economy-controls span { margin: 2px !important; }
     
+    .header-action-buttons {
+        width: 100% !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        gap: 10px !important;
+        margin-top: 5px !important;
+        order: 10 !important; /* Push beneath resources on very small screens */
+    }
+    .header-action-buttons button {
+        flex: 1 1 0 !important;
+        width: 50% !important;
+        margin: 0 !important;
+    }
+    
     .modal-content, .vault-style, .modal-content.section-content { 
         width: 96% !important; 
         max-width: 96% !important; 

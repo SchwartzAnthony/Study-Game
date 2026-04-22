@@ -39,16 +39,19 @@
         <!-- GLOBAL HEADER visible everywhere -->
         <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;" class="main-header">
             <!-- Spacer to keep title centered -->
-            <div class="header-spacer" style="width: 250px;"></div>
+            <div class="header-spacer" style="flex: 1; max-width: 350px;"></div>
 
             <h1 id="app-title-btn" style="cursor: pointer; margin: 0; font-size: 0.9em; font-family: 'Cinzel', serif; color: #ffffff; text-align: center; padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(210, 41, 48, 0.4); box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 0 6px 16px rgba(0, 0, 0, 0.6); background: url(data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAwIDIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjEiIG51bU9jdGF2ZXM9IjMiIHN0aXRjaFRpbGVzPSJzdGl0Y2giLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjbm9pc2UpIiBvcGFjaXR5PSIwLjEyIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIi8+PC9zdmc+), linear-gradient(180deg, #181818, #050505);">Eranos - Personal Athenaeums</h1>
 
-            <div class="economy-controls" style="display: flex; justify-content: flex-end; align-items: center; gap: 15px; font-size: 1.1em; font-weight: bold; width: 250px;">
+            <div class="economy-controls" style="display: flex; justify-content: flex-end; align-items: center; gap: 15px; font-size: 1.1em; font-weight: bold; flex: 1;">
                 <span style="color: #ff2400;" title="Gold (from Games)">🪙 <span id="gold-count">0</span></span>
                 <span style="color: #d22930;" title="Ink (from Flashcards)">🖋️ <span id="ink-count">0</span></span>
                 <span style="color: #8b1d0c;" title="Paper (from Quizzes & Exams)">📜 <span id="paper-count">0</span></span>
                 
-                <button id="btn-open-store" class="btn-occult">🛒 Store</button>
+                <div class="header-action-buttons" style="display: flex; gap: 10px;">
+                    <button id="btn-open-library" class="btn-occult">📜 Scrolls</button>
+                    <button id="btn-open-store" class="btn-occult">🛒 Store</button>
+                </div>
             </div>
         </header>
 
@@ -143,11 +146,6 @@
                     <h3>Flashcard Vault</h3>
                     <p>View deck stats and manage burned cards.</p>
                     <button id="btn-open-vault">Open Vault</button>
-                </div>
-                <div class="card" id="library-card">
-                    <h3>Athenaeum Library</h3>
-                    <p>Access your personal collection of uploaded worlds and modules.</p>
-                      <button id="btn-open-library" class="btn-primary">🛠️ Book Binding</button>
                 </div>
             </section>
             <div id="main-hub-bottom-upload" style="text-align: center; margin-top: 40px; padding-bottom: 30px;">
