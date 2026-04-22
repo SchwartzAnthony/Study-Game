@@ -146,6 +146,58 @@ if (document.getElementById('btn-convert-pdf')) {
                 const page = await pdf.getPage(i);
                 const textContent = await page.getTextContent();
                 
+                let pageImages = [];
+                try {
+                    const ops = await page.getOperatorList();
+                    for (let j = 0; j < ops.fnArray.length; j++) {
+                        if (ops.fnArray[j] === pdfjsLib.OPS.paintImageXObject || ops.fnArray[j] === pdfjsLib.OPS.paintJpegXObject) {
+                            const objId = ops.argsArray[j][0];
+                            const img = page.objs.get(objId);
+                            
+                            if (img && img.data && img.width && img.height) {
+                                const canvas = document.createElement('canvas');
+                                canvas.width = img.width;
+                                canvas.height = img.height;
+                                const ctx = canvas.getContext('2d');
+                                
+                                let imgData = null;
+                                const totalPixels = img.width * img.height;
+                                
+                                if (img.data.length === totalPixels * 4) {
+                                    imgData = new ImageData(new Uint8ClampedArray(img.data), img.width, img.height);
+                                } else if (img.data.length === totalPixels * 3) {
+                                    const rgba = new Uint8ClampedArray(totalPixels * 4);
+                                    for (let k = 0, l = 0; k < img.data.length; k += 3, l += 4) {
+                                        rgba[l] = img.data[k];
+                                        rgba[l+1] = img.data[k+1];
+                                        rgba[l+2] = img.data[k+2];
+                                        rgba[l+3] = 255;
+                                    }
+                                    imgData = new ImageData(rgba, img.width, img.height);
+                                } else if (img.data.length === totalPixels) { // Grayscale
+                                    const rgba = new Uint8ClampedArray(totalPixels * 4);
+                                    for (let k = 0, l = 0; k < img.data.length; k += 1, l += 4) {
+                                        rgba[l] = img.data[k];
+                                        rgba[l+1] = img.data[k];
+                                        rgba[l+2] = img.data[k];
+                                        rgba[l+3] = 255;
+                                    }
+                                    imgData = new ImageData(rgba, img.width, img.height);
+                                }
+                                
+                                if (imgData) {
+                                    ctx.putImageData(imgData, 0, 0);
+                                    // Embed image as base64 Markdown string!
+                                    // Scale quality slightly to prevent massive file bloat
+                                    pageImages.push(`\n!IMAGE! ${canvas.toDataURL('image/jpeg', 0.85)}\n`);
+                                }
+                            }
+                        }
+                    }
+                } catch(e) {
+                    console.warn(`Could not parse images on page ${i}`, e);
+                }
+                
                 // Construct strings ensuring lines stay somewhat intact
                 let lastY = -1;
                 let pageText = '';
@@ -155,6 +207,11 @@ if (document.getElementById('btn-convert-pdf')) {
                     }
                     pageText += item.str;
                     lastY = item.transform[5];
+                }
+                
+                // Add embedded images at the end of the page text
+                if (pageImages.length > 0) {
+                    pageText += '\n\n' + pageImages.join('\n\n') + '\n\n';
                 }
                 
                 fullText += pageText + '\n\n';
@@ -266,6 +323,8 @@ if (document.getElementById('btn-convert-pdf')) {
                         if (blockType === "chapter") {
                             finalOutput.push(`!CHAPTER! ${joined}`);
                             haveSeenChapter = true;
+                        } else if (blockType === "image") {
+                            finalOutput.push(joined); // Keep !IMAGE! natively
                         } else if (haveSeenChapter && blockType === "section") {
                             if (joined.length > 5) { // Catch stray empty strings
                                 finalOutput.push(`!SECTION! ${joined}`);
@@ -287,6 +346,7 @@ if (document.getElementById('btn-convert-pdf')) {
                     // Is Chapter check (starts with a number, a space, and capital letter)
                     // We remove the optional dot so things like "1. Nikolaus" aren't caught as chapters
                     const isChapter = /^\d+\s+[A-Za-z]/.test(line) && line.length < 150;
+                    const isImageLine = line.startsWith('!IMAGE!');
 
                     let startNewBlock = false;
 
@@ -294,27 +354,35 @@ if (document.getElementById('btn-convert-pdf')) {
                         startNewBlock = true;
                         flushBlock();
                         blockType = "chapter";
+                    } else if (isImageLine) {
+                        startNewBlock = true;
+                        flushBlock();
+                        blockType = "image";
                     } else if (currentBlock.length > 0) {
                         let prevLine = currentBlock[currentBlock.length - 1];
                         
-                        // Heuristic A: Did previous line end with a sentence terminator? (. ! ? " ')
-                        const endsWithTerminal = /[.!?]["')]*$/.test(prevLine);
-                        // Heuristic B: Was the previous line noticeably short and didn't end with a hyphen?
-                        const isShort = prevLine.length < 65 && !prevLine.endsWith('-');
-                        
-                        if (blockType === "chapter") {
-                            // Break chapter block if next line is clearly prose or prev line was a complete terminal
-                            if (line.length > 60 || endsWithTerminal) {
-                                startNewBlock = true;
-                            }
+                        if (blockType === "image") {
+                            startNewBlock = true; 
                         } else {
-                            if (endsWithTerminal || isShort) {
-                                startNewBlock = true;
+                            // Heuristic A: Did previous line end with a sentence terminator? (. ! ? " ')
+                            const endsWithTerminal = /[.!?]["')]*$/.test(prevLine);
+                            // Heuristic B: Was the previous line noticeably short and didn't end with a hyphen?
+                            const isShort = prevLine.length < 65 && !prevLine.endsWith('-');
+                            
+                            if (blockType === "chapter") {
+                                // Break chapter block if next line is clearly prose or prev line was a complete terminal
+                                if (line.length > 60 || endsWithTerminal) {
+                                    startNewBlock = true;
+                                }
+                            } else {
+                                if (endsWithTerminal || isShort) {
+                                    startNewBlock = true;
+                                }
                             }
                         }
                     }
 
-                    if (startNewBlock && !isChapter) {
+                    if (startNewBlock && !isChapter && !isImageLine) {
                         flushBlock();
                         blockType = "section";
                     } else if (currentBlock.length === 0 && !isChapter) {
@@ -1050,10 +1118,38 @@ function updateReadModalContent() {
     
     let baseText = currentReadPages[currentReadIndex] || "No text available.";
     
-    if (bionicReadingEnabled) {
-        contentEl.innerHTML = applyBionicReading(baseText);
+    // Parse out !IMAGE! data tags to display images seamlessly inline
+    let formattedHTML = "";
+    
+    if (baseText.includes("!IMAGE!")) {
+        const segments = baseText.split(/!IMAGE!\s*(data:image\/[^ \n]+)/); // Split strictly on our injected base64 pattern
+        for (let i = 0; i < segments.length; i++) {
+            if (i % 2 === 0) { 
+                // Regular Text
+                const textPart = segments[i].trim();
+                if (textPart.length > 0) {
+                    if (bionicReadingEnabled) {
+                        formattedHTML += applyBionicReading(textPart);
+                    } else {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerText = textPart;
+                        formattedHTML += tempDiv.innerHTML;
+                    }
+                    formattedHTML += "<br/><br/>";
+                }
+            } else {
+                // Image Data URI
+                formattedHTML += `<div style="text-align:center; margin: 15px 0;"><img src="${segments[i]}" style="max-width: 100%; border-radius: 8px; border: 1px solid #1c4228; box-shadow: 0 4px 8px rgba(0,0,0,0.5);"></div>`;
+            }
+        }
+        contentEl.innerHTML = formattedHTML;
     } else {
-        contentEl.innerText = baseText; // Reverts back to safe text execution
+        // Safe Text fallback when no images
+        if (bionicReadingEnabled) {
+            contentEl.innerHTML = applyBionicReading(baseText);
+        } else {
+            contentEl.innerText = baseText; 
+        }
     }
     
     let paginationEl = document.getElementById('read-pagination-controls');
