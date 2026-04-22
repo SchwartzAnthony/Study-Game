@@ -17,6 +17,10 @@
 
     <link rel="stylesheet" href="style.css?v=2.2">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
     <!-- Fallback: if the CDN is blocked (tracking prevention), try a local copy in assets/ -->
     <script>
         (function(){
@@ -108,9 +112,11 @@
                     <p style="color: #e0e0e0; font-family: 'Georgia', serif; font-size: 1.1em; margin-bottom: 30px;">Process your raw tomes and translate arcane texts into structured grimoires.</p>
                     
                     <div style="display: flex; flex-direction: column; gap: 15px; width: 100%;">
-                        <button class="btn-occult" style="width: 100%; padding: 15px; font-size: 1.2em; border-color: #2b7a4b; color: #aaffcc;">Convert PDF to TXT</button>
-                        <button class="btn-occult" style="width: 100%; padding: 15px; font-size: 1.2em; border-color: #2b7a4b; color: #aaffcc;">Convert TXT to Syntax</button>
-                        <button class="btn-occult" style="width: 100%; padding: 15px; font-size: 1.2em; border-color: #2b7a4b; color: #aaffcc;">Edit Syntax Rules</button>
+                        <button id="btn-convert-pdf" class="btn-occult" style="width: 100%; padding: 15px; font-size: 1.2em; border-color: #2b7a4b; color: #aaffcc;">Convert PDF to TXT</button>
+                        <input type="file" id="pdf-upload-input" accept=".pdf" style="display: none;">
+                        
+                        <button id="btn-convert-txt-syntax" class="btn-occult" style="width: 100%; padding: 15px; font-size: 1.2em; border-color: #2b7a4b; color: #aaffcc;">Convert TXT to Syntax</button>
+                        <button id="btn-edit-syntax-rules" class="btn-occult" style="width: 100%; padding: 15px; font-size: 1.2em; border-color: #2b7a4b; color: #aaffcc;">Edit Syntax Rules</button>
                     </div>
                 </div>
             </div>

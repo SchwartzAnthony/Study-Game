@@ -2379,16 +2379,19 @@ button, .btn-occult, .btn-primary, .btn-secondary, .nav-btn { font-family: 'Cinz
     .library-desc { display: none !important; }
     
     .library-choice-card h3 {
-        font-size: 1.1em !important;
+        font-size: 0.95em !important; /* Smaller text so it fits */
         margin-bottom: 0 !important;
-        flex: 1 !important;
-        text-align: center !important; /* Make it centered for better flow */
+        flex: 1 1 0% !important; /* Proper flex shrinkage */
+        text-align: left !important; /* Re-align left so it doesn't push the gap right */
+        padding-right: 10px !important;
     }
     
     .library-choice-card button { 
-        width: 140px !important; /* Make buttons identical in size */
-        font-size: 0.85em !important; 
-        padding: 10px 5px !important; 
+        width: 115px !important; /* Compact the button size heavily */
+        max-width: 45% !important; /* Ensure it never claims more than half the box */
+        font-size: 0.75em !important; 
+        line-height: 1.2 !important;
+        padding: 8px 5px !important; 
         box-sizing: border-box !important; 
         min-height: 44px !important;
         display: flex;
@@ -2396,6 +2399,9 @@ button, .btn-occult, .btn-primary, .btn-secondary, .nav-btn { font-family: 'Cinz
         justify-content: center;
         margin-left: 0 !important;
         flex: none !important;
+        white-space: normal !important; /* Let text wrap infinitely if needed */
+        word-wrap: break-word !important;
+        text-align: center !important;
     }
     
     h1, .occult-title { font-size: 1.3em !important; letter-spacing: 1px !important; }

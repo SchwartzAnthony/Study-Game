@@ -73,6 +73,73 @@ if (document.getElementById('app-title-btn')) {
     });
 }
 
+// --- WORKSHOP PDF CONVERSION ---
+if (document.getElementById('btn-convert-pdf')) {
+    const pdfUploadBtn = document.getElementById('btn-convert-pdf');
+    const pdfUploadInput = document.getElementById('pdf-upload-input');
+    
+    pdfUploadBtn.addEventListener('click', () => {
+        pdfUploadInput.click();
+    });
+
+    pdfUploadInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        pdfUploadBtn.innerText = "Converting... ⏳";
+        pdfUploadBtn.style.opacity = "0.7";
+        pdfUploadBtn.style.pointerEvents = "none";
+
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+            let fullText = '';
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                
+                // Construct strings ensuring lines stay somewhat intact
+                let lastY = -1;
+                let pageText = '';
+                for (let item of textContent.items) {
+                    if (lastY !== -1 && Math.abs(item.transform[5] - lastY) > 5) {
+                        pageText += '\n'; // Add newline if Y coordinate changes significantly
+                    }
+                    pageText += item.str;
+                    lastY = item.transform[5];
+                }
+                
+                fullText += pageText + '\n\n';
+            }
+
+            // Create and trigger download of txt
+            const txtFileName = file.name.replace(/\.pdf$/i, '.txt');
+            const blob = new Blob([fullText], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = txtFileName;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            alert(`Successfully converted ${file.name}! The file has been downloaded.`);
+
+        } catch (error) {
+            console.error("PDF Parsing Error: ", error);
+            alert("Failed to parse the PDF document.");
+        } finally {
+            // Reset button
+            pdfUploadBtn.innerText = "Convert PDF to TXT";
+            pdfUploadBtn.style.opacity = "1";
+            pdfUploadBtn.style.pointerEvents = "auto";
+            e.target.value = ''; // clear input
+        }
+    });
+}
+
 if(document.getElementById('upload-btn')) document.getElementById('upload-btn').addEventListener('click', loadFileToEditor);
 if(document.getElementById('prev-map')) document.getElementById('prev-map').addEventListener('click', () => changeWorld(-1));
 if(document.getElementById('next-map')) document.getElementById('next-map').addEventListener('click', () => changeWorld(1));
