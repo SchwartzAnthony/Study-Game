@@ -1402,7 +1402,107 @@ async function bootApp() {
             
             // If cloud data is officially newer than phone data
             if (cloudDate > localDate) {
-                console.log("Cloud save is newer! Syncing data...");
+                console.log("Cloud save is newer! Syncing and Merging data...");
+
+                // Detect if this is a completely fresh browser / new player vs the owner restoring their save
+                let isNewPlayer = false;
+                if (localDate === 0 && cloudDate > 0) {
+                    isNewPlayer = !confirm("Found a pre-existing cloud save!\n\nAre you the creator syncing your personal content? (Click OK)\n\nOR are you a new player wanting to start fresh using these worlds? (Click Cancel)");
+                }
+
+                if (isNewPlayer) {
+                    // --- WIPE PROGRESS: New Player Mode ---
+                    // Give them the uploaded worlds/text/sections, but reset all economy, items, and progress!
+                    cloudData.gold = 0;
+                    cloudData.ink = 0;
+                    cloudData.inventory = [];
+                    cloudData.library = [];
+                    cloudData.paper = {};
+                    
+                    if (cloudData.hubs) {
+                        cloudData.hubs.forEach(hub => {
+                            if (hub.worlds) {
+                                hub.worlds.forEach(w => {
+                                    // Reset section progress (quizzes, exams, games)
+                                    if (w.progress) {
+                                        Object.keys(w.progress).forEach(secKey => {
+                                            w.progress[secKey] = { quizPassed: false, examPassed: false, gameCooldowns: {} };
+                                        });
+                                    }
+                                    // Reset Flashcard SRS memory
+                                    if (w.flashcards) {
+                                        w.flashcards.forEach(f => {
+                                            f.interval = 0; f.ease = 2.5; f.nextReview = 0; f.burned = false;
+                                        });
+                                    }
+                                    // Reset checkable tasks
+                                    if (w.tasks) {
+                                        w.tasks.forEach(t => t.completed = false);
+                                    }
+                                });
+                            }
+                        });
+                    }
+                    cloudData.lastExported = Date.now(); // Stamp to prevent re-asking on this device
+                } else {
+                    // --- MERGE PC CONTENT WITH PHONE PROGRESS (For the Owner) ---
+                    // Keep the phone's economy & inventory if they are greater, preserving accomplishments
+                    cloudData.gold = Math.max(appState.gold || 0, cloudData.gold || 0);
+                cloudData.ink = Math.max(appState.ink || 0, cloudData.ink || 0);
+                
+                // For paper/inventory, union them or prefer the phone if it has more
+                cloudData.paper = (Object.keys(appState.paper || {}).length > Object.keys(cloudData.paper || {}).length) ? appState.paper : cloudData.paper;
+                cloudData.inventory = ((appState.inventory || []).length > (cloudData.inventory || []).length) ? appState.inventory : cloudData.inventory;
+                cloudData.library = ((appState.library || []).length > (cloudData.library || []).length) ? appState.library : cloudData.library;
+
+                // Merge Worlds progress: keep progress for existing worlds
+                if (cloudData.hubs && appState.hubs) {
+                    cloudData.hubs.forEach((cloudHub, hIndex) => {
+                        const localHub = appState.hubs[hIndex];
+                        if (localHub) {
+                            cloudHub.worlds.forEach((cloudWorld) => {
+                                const localWorld = localHub.worlds.find(lw => lw.name === cloudWorld.name);
+                                if (localWorld) {
+                                    // Retain section progress (exams, quizzes, etc) by merging keys
+                                    if (cloudWorld.progress && localWorld.progress) {
+                                        Object.keys(localWorld.progress).forEach(secKey => {
+                                            // Only overwrite if the section still exists in the freshly parsed PC content
+                                            if (cloudWorld.progress[secKey]) {
+                                                cloudWorld.progress[secKey] = localWorld.progress[secKey];
+                                            }
+                                        });
+                                    }
+                                    
+                                    // Retain Flashcard SRS data
+                                    if (cloudWorld.flashcards && localWorld.flashcards) {
+                                        cloudWorld.flashcards.forEach(cf => {
+                                            const lf = localWorld.flashcards.find(f => f.question === cf.question);
+                                            if (lf) {
+                                                cf.interval = lf.interval;
+                                                cf.ease = lf.ease;
+                                                cf.nextReview = lf.nextReview;
+                                                cf.burned = lf.burned;
+                                            }
+                                        });
+                                    }
+                                    
+                                    // Retain Task completions
+                                    if (cloudWorld.tasks && localWorld.tasks) {
+                                        cloudWorld.tasks.forEach(ct => {
+                                            const lt = localWorld.tasks.find(t => t.text === ct.text);
+                                            if (lt) {
+                                                ct.completed = lt.completed;
+                                            }
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+                
+                } // Close the 'else' block for the owner
+
                 localStorage.setItem('studyQuestData', JSON.stringify(cloudData));
                 location.reload(); // Refresh immediately to apply
                 return;
