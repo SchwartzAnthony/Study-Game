@@ -1412,6 +1412,85 @@ if (document.getElementById('btn-export-cloud')) {
 }
 
 
+if (document.getElementById('btn-force-sync')) {
+    document.getElementById('btn-force-sync').addEventListener('click', async () => {
+        try {
+            // Force fetch bypasses browser cache using a timestamp
+            const response = await fetch('./saveData.json?t=' + new Date().getTime(), { cache: 'no-store' });
+            if (response.ok) {
+                const cloudData = await response.json();
+                const confirmSync = confirm("Force sync your phone from the cloud?\nThis will bring in your PC worlds while keeping your phone's economy and progress.");
+                
+                if (confirmSync) {
+                    console.log("Forced Sync! Merging data...");
+                    // MERGE PC CONTENT WITH PHONE PROGRESS (For the Owner)
+                    cloudData.gold = Math.max(appState.gold || 0, cloudData.gold || 0);
+                    cloudData.ink = Math.max(appState.ink || 0, cloudData.ink || 0);
+                    cloudData.paper = (Object.keys(appState.paper || {}).length > Object.keys(cloudData.paper || {}).length) ? appState.paper : cloudData.paper;
+                    cloudData.inventory = ((appState.inventory || []).length > (cloudData.inventory || []).length) ? appState.inventory : cloudData.inventory;
+                    cloudData.library = ((appState.library || []).length > (cloudData.library || []).length) ? appState.library : cloudData.library;
+
+                    // Merge Worlds progress: keep progress for existing worlds
+                    if (cloudData.hubs && appState.hubs) {
+                        cloudData.hubs.forEach((cloudHub, hIndex) => {
+                            const localHub = appState.hubs[hIndex];
+                            if (localHub) {
+                                cloudHub.worlds.forEach((cloudWorld) => {
+                                    const localWorld = localHub.worlds.find(lw => lw.name === cloudWorld.name);
+                                    if (localWorld) {
+                                        // Retain section progress (exams, quizzes, etc) by merging keys
+                                        if (cloudWorld.progress && localWorld.progress) {
+                                            Object.keys(localWorld.progress).forEach(secKey => {
+                                                if (cloudWorld.progress[secKey]) {
+                                                    cloudWorld.progress[secKey] = localWorld.progress[secKey];
+                                                }
+                                            });
+                                        }
+                                        
+                                        // Retain Flashcard SRS data
+                                        if (cloudWorld.flashcards && localWorld.flashcards) {
+                                            cloudWorld.flashcards.forEach(cf => {
+                                                const lf = localWorld.flashcards.find(f => f.question === cf.question);
+                                                if (lf) {
+                                                    cf.interval = lf.interval; 
+                                                    cf.ease = lf.ease; 
+                                                    cf.nextReview = lf.nextReview; 
+                                                    cf.burned = lf.burned;
+                                                }
+                                            });
+                                        }
+                                        
+                                        // Retain Task completions
+                                        if (cloudWorld.tasks && localWorld.tasks) {
+                                            cloudWorld.tasks.forEach(ct => {
+                                                const lt = localWorld.tasks.find(t => t.text === ct.text);
+                                                if (lt) {
+                                                    ct.completed = lt.completed;
+                                                }
+                                            });
+                                        }
+                                    }
+                                });
+                            }
+                        });
+                    }
+
+                    // Fix any corrupted lastExported timestamps
+                    cloudData.lastExported = Date.now();
+                    localStorage.setItem('studyQuestData', JSON.stringify(cloudData));
+                    alert("Sync Successful! Reloading app...");
+                    location.reload(); 
+                }
+            } else {
+                alert("Could not load saveData.json. Make sure you pushed it to GitHub!");
+            }
+        } catch(e) {
+            console.error(e);
+            alert("Network error or saveData.json is missing.");
+        }
+    });
+}
+
 // Boot Application
 async function bootApp() {
     loadFromStorage();

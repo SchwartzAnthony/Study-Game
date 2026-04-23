@@ -877,37 +877,17 @@ button:hover {
     padding: 5px 10px;
     border-radius: 4px;
     
-    /* THE FIX: Allow long text to wrap into multiple lines! */
+    /* THE FIX: Allow long text to wrap into multiple lines safely on iOS! */
     white-space: normal; 
-    width: max-content;
-    max-width: 130px; 
+    width: 130px; 
     text-align: center;
+    word-wrap: break-word; /* Prevents overflow */
     
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s;
     z-index: 100; /* Forces it to display over EVERYTHING else */
     box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-}
-
-.map-node:hover::before {
-    opacity: 1;
-
-    /* THE FIX: Allow long text to wrap into multiple lines! */
-    white-space: normal; 
-    width: max-content;
-    max-width: 130px; 
-    text-align: center;
-    
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s;
-    z-index: 100; /* Forces it to display over EVERYTHING else */
-    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-}
-
-.map-node:hover::before {
-    opacity: 1;
 }
 
 .map-node:hover::before {
@@ -1295,8 +1275,9 @@ button:hover {
     /* Force exact pixel sizes so it ignores the massive 3em Crown font */
     font-size: 14px !important; 
     line-height: 1.3;
-    width: max-content;
-    max-width: 150px;
+    width: 150px;
+    word-wrap: break-word;
+    text-align: center;
 }
 
 /* --- Fix: Force hovered buttons to the absolute front layer --- */
