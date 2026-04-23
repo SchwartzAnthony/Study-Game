@@ -278,13 +278,24 @@
     
     <!-- Full Screen Speed Read Display -->
     <div id="speed-read-display" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #050505; z-index: 10000; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; text-align: center;">
-        <div id="sr-text-box" style="font-family: 'Georgia', serif; color: #fff; line-height: 1.3; margin-bottom: 50px; transition: font-size 0.2s; width: 100%; max-width: 90vw;">
-            <!-- Text chunks will cycle here -->
+        
+        <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; width: 100%;">
+            <div id="sr-text-box" style="font-family: 'Georgia', serif; color: #fff; line-height: 1.3; transition: font-size 0.2s; width: 100%; max-width: 90vw;">
+                <!-- Text chunks will cycle here -->
+            </div>
         </div>
         
-        <div style="width: 100%; display: flex; justify-content: center; gap: 20px;">
-            <button id="btn-sr-stop" class="btn-danger" style="padding: 15px 40px; font-size: 1.2em; border-radius: 8px;">Stop Reading</button>
+        <div style="width: 100%; display: flex; justify-content: center; padding-bottom: 40px;">
+            <button id="btn-sr-stop" style="padding: 10px 30px; font-size: 1.1em; border-radius: 8px; font-family: 'Cinzel', serif; background-color: #2a0a0a; color: #a4a4a4; border: 1px solid rgba(255, 50, 50, 0.2); cursor: pointer; transition: all 0.2s; width: auto; max-width: 200px; display: inline-block;">Stop Reading</button>
         </div>
+        <style>
+            #btn-sr-stop:hover {
+                background-color: #ff3333 !important;
+                color: #ffffff !important;
+                border-color: #ff3333 !important;
+                box-shadow: 0 0 15px rgba(255, 51, 51, 0.6);
+            }
+        </style>
     </div>
 
     <!-- PDF Processing Modal -->

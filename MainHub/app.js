@@ -1680,24 +1680,34 @@ if (srStartBtn) {
                 // Show visual feedback on screen without stuttering
                 const floater = document.createElement('div');
                 floater.innerHTML = "+1 Gold, +1 Ink, +1 Generic Scroll";
-                floater.style.position = "absolute";
-                floater.style.top = "10%";
+                floater.style.position = "fixed";
+                floater.style.bottom = "20%"; // Pop up lower on the screen
+                floater.style.left = "50%";
+                floater.style.transform = "translateX(-50%)"; // Center it horizontally
                 floater.style.color = "#ffebaa";
+                floater.style.backgroundColor = "rgba(20, 20, 20, 0.8)";
+                floater.style.padding = "10px 20px";
+                floater.style.borderRadius = "10px";
+                floater.style.border = "1px solid rgba(255, 215, 0, 0.4)";
                 floater.style.fontFamily = "'Cinzel', serif";
                 floater.style.textShadow = "0 0 10px rgba(255, 200, 50, 0.8)";
                 floater.style.fontWeight = "bold";
                 floater.style.fontSize = "1.2em";
                 floater.style.pointerEvents = "none";
-                floater.style.transition = "all 2s ease-out";
+                floater.style.transition = "all 1s ease-in-out";
                 floater.style.opacity = "1";
                 document.getElementById('speed-read-display').appendChild(floater);
                 
                 // Animate floating up and fading
                 setTimeout(() => {
-                    floater.style.top = "0%";
-                    floater.style.opacity = "0";
+                    floater.style.bottom = "30%";
                 }, 50);
-                setTimeout(() => floater.remove(), 2050);
+                
+                // Disappear after 3 seconds
+                setTimeout(() => {
+                    floater.style.opacity = "0";
+                }, 2000); // 2s mark start fading
+                setTimeout(() => floater.remove(), 3000); // 3s explicitly remove
             }
             
             const chunkText = chunkWords.join(' ');
