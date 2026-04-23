@@ -2273,7 +2273,7 @@ button:hover {
     .card { width: 95% !important; margin: 10px auto; }
     
     /* Specifically target the mindmap container to prevent padding breaking the canvas */
-    #home-screen .card:first-child { 
+    #home-screen > .card:first-child { 
         padding: 0 !important; 
         height: 50vh !important; 
         min-height: 300px;
