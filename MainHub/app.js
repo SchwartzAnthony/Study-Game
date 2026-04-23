@@ -669,6 +669,30 @@ function renderMap() {
     if(document.getElementById('btn-global-flashcards')) document.getElementById('btn-global-flashcards').onclick = () => startFlashcards('Global', globalDueCards, "Entire World");
 
     if(worldTitle) worldTitle.innerText = world.name;
+
+    // Evaluate Speed Read button status
+    const speedReadBtn = document.getElementById('btn-speed-read');
+    if (speedReadBtn) {
+        let hasContent = false;
+        if (world && world.content) {
+            for (let secTitle in world.content) {
+                if (world.content[secTitle] && world.content[secTitle].trim() !== "") {
+                    hasContent = true; 
+                    break;
+                }
+            }
+        }
+        
+        if (hasContent) {
+            speedReadBtn.style.opacity = '1';
+            speedReadBtn.style.pointerEvents = 'auto';
+            speedReadBtn.style.filter = 'none';
+        } else {
+            speedReadBtn.style.opacity = '0.4';
+            speedReadBtn.style.pointerEvents = 'none';
+            speedReadBtn.style.filter = 'grayscale(100%)';
+        }
+    }
     const mapWrapper = document.getElementById('map-wrapper'); const btnClearBg = document.getElementById('btn-clear-bg');
     
     if(mapWrapper) {
@@ -1529,7 +1553,183 @@ function initStaticListeners() {
 
     const buyScrollBtn = document.getElementById('btn-buy-scroll');
     if (buyScrollBtn) buyScrollBtn.addEventListener('click', () => tradeForSpecialPaper('Scroll of Fire', 2));
+
+    const speedReadBtn = document.getElementById('btn-speed-read');
+    if (speedReadBtn) {
+        speedReadBtn.addEventListener('click', () => {
+            const world = getActiveWorld();
+            if (!world || !world.content || world.sections.length === 0) return;
+
+            let allTextContent = [];
+            world.sections.forEach(secName => {
+                let secText = world.content[secName] || "";
+                if (secText.trim()) {
+                    // Filter out !IMAGE! data tags for RSVP reader
+                    secText = secText.replace(/!IMAGE!\s*(data:image\/[^ \n]+)/g, '[Image Reference Skipped]');
+                    allTextContent.push(`\n\n=== ${secName.toUpperCase()} ===\n\n` + secText.trim());
+                }
+            });
+
+            if (allTextContent.length === 0) {
+                alert("No readable text found in this world.");
+                return;
+            }
+
+            // Combine into one master string
+            const combinedText = allTextContent.join('\n');
+            const wordsList = combinedText.match(/\S+/g) || [];
+            
+            if (wordsList.length === 0) {
+                alert("No readable text found in this world.");
+                return;
+            }
+
+            // Expose globally to interval runner
+            window.speedReadWords = wordsList;
+            window.speedReadIndex = 0;
+            window.speedReadWordsSinceReward = 0;
+
+            const srModal = document.getElementById('speed-read-modal');
+            const srDisplay = document.getElementById('speed-read-display');
+            const srSettings = document.getElementById('speed-read-settings');
+            
+            // Show Modal into configuration state
+            if (srModal) srModal.classList.remove('hidden');
+            if (srSettings) srSettings.style.display = 'flex';
+            if (srDisplay) srDisplay.classList.add('hidden');
+        });
+    }
 }
+
+// --- SPEED READ LOGIC ---
+let speedReadInterval = null;
+
+const srSpeedSlider = document.getElementById('sr-speed-slider');
+const srSizeSlider = document.getElementById('sr-size-slider');
+const srChunkSlider = document.getElementById('sr-chunk-slider');
+
+if (srSpeedSlider) {
+    srSpeedSlider.addEventListener('input', (e) => {
+        document.getElementById('sr-speed-val').innerText = e.target.value;
+    });
+}
+if (srSizeSlider) {
+    srSizeSlider.addEventListener('input', (e) => {
+        document.getElementById('sr-size-val').innerText = e.target.value + 'px';
+        document.getElementById('sr-text-box').style.fontSize = e.target.value + 'px';
+    });
+}
+if (srChunkSlider) {
+    srChunkSlider.addEventListener('input', (e) => {
+        document.getElementById('sr-chunk-val').innerText = e.target.value;
+    });
+}
+
+const srStartBtn = document.getElementById('btn-sr-start');
+const srStopBtn = document.getElementById('btn-sr-stop');
+const srCloseBtn = document.getElementById('close-speed-read-modal');
+
+if (srCloseBtn) {
+    srCloseBtn.addEventListener('click', stopSpeedReadAndClose);
+}
+
+if (srStartBtn) {
+    srStartBtn.addEventListener('click', () => {
+        const srSettings = document.getElementById('speed-read-settings');
+        const srDisplay = document.getElementById('speed-read-display');
+        const srModal = document.getElementById('speed-read-modal');
+        
+        if (srModal) srModal.classList.add('hidden');
+        if (srDisplay) srDisplay.classList.remove('hidden');
+        
+        const wpm = parseInt(srSpeedSlider.value) || 300;
+        const chunkSize = parseInt(srChunkSlider.value) || 2;
+        const useBionic = document.getElementById('sr-bionic-toggle') ? document.getElementById('sr-bionic-toggle').checked : false;
+        
+        // Calculate milliseconds per interval: (60,000 ms / WPM) * Chunk Size
+        const msPerChunk = (60000 / wpm) * chunkSize;
+        
+        const textBox = document.getElementById('sr-text-box');
+        
+        speedReadInterval = setInterval(() => {
+            if (!window.speedReadWords || window.speedReadIndex >= window.speedReadWords.length) {
+                // Done Reading
+                stopSpeedRead();
+                textBox.innerHTML = "<span style='color: #4CAF50;'>End of Text</span>";
+                return;
+            }
+            
+            // Extract the chunk of words
+            const chunkWords = window.speedReadWords.slice(window.speedReadIndex, window.speedReadIndex + chunkSize);
+            window.speedReadIndex += chunkSize;
+            
+            // Standard reading page length is about 250 words
+            window.speedReadWordsSinceReward += chunkWords.length;
+            if (window.speedReadWordsSinceReward >= 250) {
+                window.speedReadWordsSinceReward -= 250;
+                
+                // Silent Reward for 1 "Page" read
+                appState.ink = (appState.ink || 0) + 1;
+                appState.gold = (appState.gold || 0) + 1;
+                if (!appState.paper) appState.paper = {};
+                appState.paper['Generic Scroll'] = (appState.paper['Generic Scroll'] || 0) + 1;
+                
+                saveToStorage();
+                updateEconomyUI();
+                
+                // Show visual feedback on screen without stuttering
+                const floater = document.createElement('div');
+                floater.innerHTML = "+1 Gold, +1 Ink, +1 Generic Scroll";
+                floater.style.position = "absolute";
+                floater.style.top = "10%";
+                floater.style.color = "#ffebaa";
+                floater.style.fontFamily = "'Cinzel', serif";
+                floater.style.textShadow = "0 0 10px rgba(255, 200, 50, 0.8)";
+                floater.style.fontWeight = "bold";
+                floater.style.fontSize = "1.2em";
+                floater.style.pointerEvents = "none";
+                floater.style.transition = "all 2s ease-out";
+                floater.style.opacity = "1";
+                document.getElementById('speed-read-display').appendChild(floater);
+                
+                // Animate floating up and fading
+                setTimeout(() => {
+                    floater.style.top = "0%";
+                    floater.style.opacity = "0";
+                }, 50);
+                setTimeout(() => floater.remove(), 2050);
+            }
+            
+            const chunkText = chunkWords.join(' ');
+            if (useBionic) {
+                textBox.innerHTML = applyBionicReading(chunkText);
+            } else {
+                textBox.innerText = chunkText;
+            }
+        }, msPerChunk);
+    });
+}
+
+if (srStopBtn) {
+    srStopBtn.addEventListener('click', () => {
+        stopSpeedRead();
+        document.getElementById('speed-read-modal').classList.remove('hidden');
+        document.getElementById('speed-read-display').classList.add('hidden');
+    });
+}
+
+function stopSpeedRead() {
+    if (speedReadInterval) {
+        clearInterval(speedReadInterval);
+        speedReadInterval = null;
+    }
+}
+
+function stopSpeedReadAndClose() {
+    stopSpeedRead();
+    document.getElementById('speed-read-modal').classList.add('hidden');
+}
+
 initStaticListeners();
 
 
