@@ -439,6 +439,15 @@
                 <button id="btn-clear-bg" class="btn-danger hidden" style="width: 100%;">Clear Image</button>
             </div>
 
+            <div style="margin-bottom: 20px; background: #202020; padding: 15px; border-radius: 8px; border: 1px solid rgba(162,155,254,0.35);">
+                <h3 style="margin-top: 0; font-size: 1.1em; color: #a29bfe;">🤖 KI-Lernkarten (OpenAI)</h3>
+                <p style="font-size: 0.9em; margin-bottom: 10px; color: #b9becb;">Aktiviere KI-generierte deutsche Abitur-Lernkarten beim PDF-Import. Der Schlüssel wird nur lokal gespeichert.</p>
+                <input type="password" id="openai-key-input" placeholder="sk-proj-..." autocomplete="off" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid rgba(162,155,254,0.4); background: #181818; color: #fff; font-family: 'Cinzel', serif; margin-bottom: 8px; box-sizing: border-box;">
+                <button id="btn-save-openai-key" class="btn-occult" style="width: 100%; margin-bottom: 6px;">💾 Schlüssel speichern</button>
+                <button id="btn-clear-openai-key" class="btn-danger" style="width: 100%; margin-bottom: 6px; display:none;">🗑️ Schlüssel löschen</button>
+                <p id="openai-key-status" style="font-size: 0.85em; margin: 0; min-height: 1.2em;"></p>
+            </div>
+
             <p>Manage your current loaded world.</p>
             <button id="btn-reshuffle-map" class="btn-secondary" style="margin-bottom: 10px; width: 100%;">🎲 Reshuffle Map Layout</button>
 
@@ -899,7 +908,7 @@
         </div>
     </div>
 
-    <script type="module" src="app.js?v=2.3"></script>
+    <script type="module" src="app.js?v=3.0"></script>
 </body>
 </html>
 

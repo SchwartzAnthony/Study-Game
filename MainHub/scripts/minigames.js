@@ -307,7 +307,7 @@ function startFlashMatchGame(sectionName, gameName) {
 
     // Wir brauchen mindestens 2-3 Karten, damit das Mischen Sinn macht
     if (sectionCards.length < 3) {
-        return alert("Du brauchst mindestens 3 Karteikarten in diesem Abschnitt, um Flash-Match zu spielen!");
+        return alert("You need at least 3 flashcards in this section to play Flash Match!");
     }
 
     // Wähle bis zu 6 zufällige Karten für das Match-Spiel aus

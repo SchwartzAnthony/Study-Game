@@ -1,11 +1,38 @@
 const STOP_WORDS = new Set([
+    // English
     'the','a','an','and','or','but','if','then','than','that','this','these','those','is','are','was','were','be','been','being',
     'to','of','in','on','for','from','by','with','without','as','at','into','over','under','between','through','during','before','after',
     'it','its','they','them','their','he','she','his','her','you','your','we','our','i','me','my','mine','ours','yours','theirs',
     'can','could','should','would','may','might','must','will','shall','do','does','did','done','have','has','had','having',
     'not','no','yes','also','very','more','most','less','least','such','many','much','some','any','each','every','all','both',
     'up','down','out','off','again','further','once','here','there','when','where','why','how','what','which','who','whom',
-    'about','above','below','because','while','until','against','among','within','across','per','via','etc'
+    'about','above','below','because','while','until','against','among','within','across','per','via','etc',
+    // German articles, pronouns, prepositions, conjunctions, common verbs
+    'der','die','das','dem','den','des','ein','eine','einer','eines','einem','einen',
+    'ich','du','er','sie','wir','ihr','mich','mir','dich','dir','ihn','ihm','sich','man',
+    'und','oder','aber','denn','weil','dass','wenn','als','wie','damit','doch','auch','noch',
+    'ist','sind','war','waren','wird','werden','hat','haben','hatte','hatten','sein','kann',
+    'mit','von','aus','bei','nach','seit','vor','bis','auf','aus','fur','fuer','ueber','unter',
+    'nicht','sehr','mehr','weniger','dann','also','hier','dort','jetzt','wieder','dabei','jedoch',
+    'daher','schon','kein','keine','nur','nun','mal','bitte','zwar','immer','alle','alles',
+    'diese','dieser','diesem','diesen','dieses','jede','jeden','jedem','jedes','jeder',
+    'zum','zur','ins','ans','ums','vom','beim','einem','einer','eines',
+    'durch','ohne','gegen','statt','wegen','trotz','wahrend','weil','obwohl',
+    // German question words
+    'warum','wieso','weshalb','welche','welcher','welches','welchem','welchen',
+    'wann','wer','wen','wem','wessen','wodurch','womit','worin','woraus','woran',
+    'deshalb','darum','trotzdem','somit','folglich','hierbei','hierdurch','hierfür',
+    // German verbs that get misidentified as subjects
+    'gibt','liegt','stellt','führt','macht','nimmt','setzt','folgt','nennt','zeigt',
+    'heißt','heisst','lautet','befindet','ergibt','besteht','gilt','besagt','zeigen',
+    'werden','können','müssen','sollen','dürfen','wollen','mögen','möchten',
+    'muss','soll','darf','will','mag','kann','war','wäre','sei','wird','wurde',
+    'habe','hast','habt','hatte','hatte','hätte','bist','sind','waren','wären',
+    // German adjectives that are too generic
+    'eigene','eigener','eigenes','eigenem','eigenen','gleiche','gleicher','solche',
+    'große','kleinen','große','wichtig','wichtige','neue','neuer','alten','alte',
+    // Page/section noise for German textbooks
+    'mech','seite','seiten','abbildung','kapitel','abschnitt','lektion','ubung','aufgabe'
 ]);
 
 const GAME_POOL = [
@@ -29,10 +56,18 @@ function isNoiseLine(line) {
     if (/^\d+$/.test(line)) return true;
     if (/^page\s*\d+(\s*of\s*\d+)?$/i.test(line)) return true;
     if (/^table of contents$/i.test(line)) return true;
+    if (/^(inhalts|inhaltsverzeichnis|vorwort|impressum|literatur)/i.test(line)) return true;
     if (/^contents$/i.test(line)) return true;
     if (/^[ivxlcdm]+$/i.test(line)) return true;
     if (/^copyright|all rights reserved|isbn/i.test(line)) return true;
+    if (/^©/.test(line)) return true;
     if (/^[-_~*=]{4,}$/.test(line)) return true;
+    if (/\.{5,}/.test(line)) return true;
+    if (/^\d{3,}[A-Z]\d+$/.test(line)) return true;
+    // Page-header noise: "4 MECH 1", "12 MECH 1", "8 MECH 1" etc. (page number + course code)
+    if (/^\d{1,3}\s+[A-Z]{2,6}\s+\d{1,2}$/.test(line)) return true;
+    // Very short all-digit-and-letter formula/noise: "5 M", "1 M", "100 M 100 M ⋅ S 100 S"
+    if (/^[\d\s\+\-\*\/=⋅\.MmKkGgSs,]{1,40}$/.test(line) && !/[a-zA-ZÄÖÜäöüß]{4,}/.test(line)) return true;
     return false;
 }
 
@@ -250,7 +285,7 @@ function buildSectionsFromPages(pages, progressCb) {
             if (!line || isNoiseLine(line)) continue;
 
             const score = headingScore(line, page.lines[i].height, medianHeight);
-            const isHeading = score >= 4 || (/^(chapter|unit|module|lesson|part)\s+\d+/i.test(line));
+            const isHeading = score >= 5 || (/^(chapter|unit|module|lesson|part|kapitel|abschnitt|lektion)\s+[\divx]/i.test(line));
 
             if (isHeading && line.length <= 120) {
                 if (paragraphBuffer.length) {
@@ -293,7 +328,17 @@ function buildSectionsFromPages(pages, progressCb) {
         }
     });
 
-    return sections.filter(s => s.paragraphs.length > 0);
+    // Prune sections whose only content is the "No clear text" placeholder — absorb their title into the previous section
+    const pruned = [];
+    sections.forEach(section => {
+        const isPlaceholderOnly = section.paragraphs.length === 1 && /^No clear text was detected/i.test(section.paragraphs[0]);
+        if (isPlaceholderOnly && pruned.length > 0) {
+            pruned[pruned.length - 1].paragraphs.push(`(Sub-topic: ${section.title})`);
+        } else {
+            pruned.push(section);
+        }
+    });
+    return pruned.filter(s => s.paragraphs.length > 0);
 }
 
 function topKeywords(text, maxWords = 18) {
@@ -322,12 +367,21 @@ function buildStudyPack(section, allText) {
     const quizzes = [];
     const exams = [];
 
-    const definitionRegex = /^([A-Z][A-Za-z0-9\-\s]{2,50})\s+(is|are|refers to|means)\s+(.{20,240})$/;
+    const definitionRegex = /^([A-Z][A-Za-zÄÖÜäöüß0-9\-\s]{2,50})\s+(is|are|refers to|means|ist|sind|bezeichnet|beschreibt|bedeutet|nennt man|heißt|heisst)\s+(.{20,240})$/;
     for (const sentence of sentences) {
         if (flashcards.length >= 8) break;
         const plain = sentence.replace(/\s+/g, ' ').trim();
         const matched = plain.match(definitionRegex);
         if (matched) {
+            const subject = matched[1].trim();
+            const subjectWords = subject.toLowerCase().split(/\s+/).filter(Boolean);
+            // Skip if: whole phrase is a stop word, first word is a stop word, subject has OCR artifacts, or too many words
+            if (
+              STOP_WORDS.has(subject.toLowerCase()) ||
+              STOP_WORDS.has(subjectWords[0]) ||
+              subjectWords.length > 3 ||
+              /\s-\s/.test(subject) // OCR hyphenation artifact
+            ) continue;
             flashcards.push({
                 q: sanitizeQaPart(`What is ${matched[1].trim()}?`, 120),
                 a: sanitizeQaPart(matched[3], 240)
@@ -375,10 +429,133 @@ function buildStudyPack(section, allText) {
     };
 }
 
+// ---------------------------------------------------------------------------
+// GPT-POWERED GERMAN CONTENT GENERATION
+// ---------------------------------------------------------------------------
+
+async function generateContentWithGPT(sectionTitle, sectionText, apiKey) {
+    const text = sectionText.slice(0, 4000);
+    const prompt =
+`Du bist ein KI-Lernassistent für das deutsche Abitur. Analysiere den folgenden Studientext und erstelle hochwertige Lernmaterialien auf Deutsch.
+
+Abschnitt: "${sectionTitle}"
+
+Text:
+${text}
+
+Erstelle NUR Zeilen in folgendem EXAKTEN Format — keine Einleitungen, keine anderen Zeilen:
+
+!FLASH! Frage :: Antwort
+(7–10 Karteikarten: Definitionen, Formeln, Gesetze, Zusammenhänge – Abitur-relevant)
+
+!QUIZZ! Frage :: Antwort
+(4–6 Quizfragen zur Wissensüberprüfung)
+
+!EXAM! Frage :: Ausführliche Antwort
+(2–3 Abitur-Prüfungsfragen mit vollständiger Begründung)
+
+Regeln:
+- Ausschließlich Deutsch
+- Kein " :: " innerhalb der Frage oder Antwort — nur als Trennzeichen
+- Formeln schreiben wie: F = m × a, v = s/t, a = Δv/Δt
+- Nur !FLASH!/!QUIZZ!/!EXAM! Zeilen ausgeben`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [{ role: 'user', content: prompt }],
+            max_tokens: 2000,
+            temperature: 0.25
+        })
+    });
+
+    if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        throw new Error(`OpenAI ${response.status}: ${errText.slice(0, 120)}`);
+    }
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || '';
+}
+
+function parseGPTContentLines(gptText) {
+    const flashcards = [], quizzes = [], exams = [];
+    for (const rawLine of String(gptText || '').split('\n')) {
+        const line = rawLine.trim();
+        if (!line || !/^!(FLASH|QUIZZ?|EXAM)!/i.test(line)) continue;
+        const afterTag = line.replace(/^!(?:FLASH|QUIZZ?|EXAM)!\s*/i, '');
+        const sepIdx = afterTag.indexOf(' :: ');
+        if (sepIdx === -1) continue;
+        const q = sanitizeQaPart(afterTag.slice(0, sepIdx), 220);
+        const a = sanitizeQaPart(afterTag.slice(sepIdx + 4), 300);
+        if (!q || !a) continue;
+        if (/^!FLASH!/i.test(line)) flashcards.push({ q, a });
+        else if (/^!QUIZZ?!/i.test(line)) quizzes.push({ q, a });
+        else if (/^!EXAM!/i.test(line)) exams.push({ q, a });
+    }
+    return { flashcards, quizzes, exams };
+}
+
+async function buildStudyPacksWithGPT(sections, apiKey, progressCb) {
+    const results = new Array(sections.length);
+    const BATCH = 3; // parallel calls per round
+
+    for (let i = 0; i < sections.length; i += BATCH) {
+        const slice = sections.slice(i, Math.min(i + BATCH, sections.length));
+        const batchResults = await Promise.all(slice.map(async (section, batchIdx) => {
+            const idx = i + batchIdx;
+            const rawText = section.paragraphs.join(' ');
+            progressCb(
+                `KI analysiert Abschnitt ${idx + 1}/${sections.length}: „${section.title.slice(0, 45)}"…`,
+                75 + Math.floor((idx / sections.length) * 20)
+            );
+
+            try {
+                const gptText = await generateContentWithGPT(section.title, rawText, apiKey);
+                const parsed = parseGPTContentLines(gptText);
+
+                // Fall back to local heuristics if GPT returned nothing useful
+                if (parsed.flashcards.length === 0 && parsed.quizzes.length === 0) {
+                    return buildStudyPack(section, rawText);
+                }
+
+                const gameCount = rawText.length > 1800 ? 4 : 3;
+                const keywords = topKeywords(rawText, 6);
+                const ritualCore = keywords.slice(0, 3).map(w => `Erkenne ${w}`).join(' > ');
+
+                return {
+                    flashcards: parsed.flashcards.slice(0, 12),
+                    quizzes: parsed.quizzes.slice(0, 6),
+                    exams: parsed.exams.slice(0, 3),
+                    games: GAME_POOL.slice(0, gameCount),
+                    ritual: {
+                        name: `${section.title} – Wiederholungsritual`,
+                        steps: ritualCore || `Lese ${section.title} > Kernbegriffe nennen > Zusammenfassung schreiben`
+                    },
+                    keywords
+                };
+            } catch (err) {
+                progressCb(`GPT-Fehler bei „${section.title.slice(0, 30)}" → lokale Methode`, undefined);
+                return buildStudyPack(section, rawText);
+            }
+        }));
+
+        batchResults.forEach((result, batchIdx) => { results[i + batchIdx] = result; });
+
+        // Small pause between batches to stay within rate limits
+        if (i + BATCH < sections.length) await new Promise(r => setTimeout(r, 350));
+    }
+    return results;
+}
+
 function composeSyntax(worldName, sections, packs) {
     const out = [];
-    out.push(`!CHAPTER! ${sanitizeQaPart(worldName, 80)}`);
-    out.push(`This world was auto-forged offline from a PDF source. Review each generated card and refine where needed.`);
+    // Do NOT emit a top-level !CHAPTER! worldName — that creates an empty section node
+    // with no flashcards, making the Flashcards button permanently disabled for that node.
 
     sections.forEach((section, idx) => {
         out.push('');
@@ -423,20 +600,27 @@ function buildOwlTips(worldName, sections, packs) {
     ];
 }
 
-export async function forgeWorldFromPdf(file, progressCb = () => {}) {
+export async function forgeWorldFromPdf(file, progressCb = () => {}, apiKey = '') {
     const worldName = file.name.replace(/\.pdf$/i, '').trim() || 'Auto Forged World';
 
-    progressCb('Opening PDF and extracting text layers (OCR fallback enabled when needed)...', 5);
+    progressCb('Öffne PDF und extrahiere Text (OCR-Fallback aktiv)…', 5);
     const pages = await extractPdfPages(file, progressCb);
 
-    progressCb('Detecting chapters and section boundaries...', 60);
+    progressCb('Erkenne Kapitel und Abschnittsgrenzen…', 60);
     const sections = buildSectionsFromPages(pages, progressCb);
 
-    progressCb('Generating flashcards, quizzes, rituals, and game seeds...', 82);
-    const packs = sections.map((section, idx) => {
-        const textScope = sections.slice(Math.max(0, idx - 1), idx + 1).map(s => s.paragraphs.join(' ')).join(' ');
-        return buildStudyPack(section, textScope);
-    });
+    let packs;
+    const useGPT = apiKey && apiKey.startsWith('sk-');
+    if (useGPT) {
+        progressCb(`Generiere deutsche Abitur-Lernkarten mit KI (${sections.length} Abschnitte)…`, 75);
+        packs = await buildStudyPacksWithGPT(sections, apiKey, progressCb);
+    } else {
+        progressCb('Generiere Lernkarten (offline, kein API-Schlüssel)…', 82);
+        packs = sections.map((section, idx) => {
+            const textScope = sections.slice(Math.max(0, idx - 1), idx + 1).map(s => s.paragraphs.join(' ')).join(' ');
+            return buildStudyPack(section, textScope);
+        });
+    }
 
     const syntax = composeSyntax(worldName, sections, packs);
     const owlTips = buildOwlTips(worldName, sections, packs);
@@ -449,7 +633,7 @@ export async function forgeWorldFromPdf(file, progressCb = () => {}) {
         exams: packs.reduce((sum, p) => sum + p.exams.length, 0)
     };
 
-    progressCb('Auto-forge complete.', 100);
+    progressCb(useGPT ? 'KI-Forge abgeschlossen.' : 'Auto-Forge abgeschlossen.', 100);
 
     return {
         worldName,

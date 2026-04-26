@@ -478,6 +478,9 @@ if (mainHubUploadBtn && mainHubFileInput) {
             // Switch screens
             document.getElementById('hub-screen').classList.add('hidden');
             document.getElementById('editor-screen').classList.remove('hidden');
+            // Close owl panel so it doesn't cover the Save button
+            const owlPanelEl = document.getElementById('owl-panel');
+            if (owlPanelEl) owlPanelEl.classList.add('hidden');
             
             // Reset the input so you can upload the same file again later if needed
             mainHubFileInput.value = ''; 

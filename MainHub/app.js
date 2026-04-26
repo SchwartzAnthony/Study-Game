@@ -19,6 +19,14 @@ function sanitizeRewardImages() {
     }
 }
 
+function showToast(message, duration = 3000) {
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(30,20,60,0.97);border:2px solid rgba(162,155,254,0.7);border-radius:16px;padding:24px 36px;z-index:99999;text-align:center;font-family:Cinzel,serif;color:#e0d6ff;font-size:1.1em;letter-spacing:1px;box-shadow:0 0 48px rgba(162,155,254,0.4);max-width:90vw;';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.transition = 'opacity 0.7s'; toast.style.opacity = '0'; setTimeout(() => toast.remove(), 700); }, duration);
+}
+
 // UI Elements
 const universeScreen = document.getElementById('universe-screen');
 const hubScreen = document.getElementById('hub-screen');
@@ -293,7 +301,7 @@ if (document.getElementById('btn-convert-pdf')) {
                 const forged = await forgeWorldFromPdf(file, (status, pct) => {
                     progressStatus.innerText = status;
                     progressBar.style.width = `${Math.max(0, Math.min(100, pct || 0))}%`;
-                });
+                }, localStorage.getItem('openai_api_key') || '');
 
                 progressStatus.innerText = 'Injecting generated syntax into a new world...';
                 progressBar.style.width = '96%';
@@ -918,7 +926,7 @@ function renderMap() {
                     const previousSectionName = world.sections[index - 1];
                     const requiresExam = (world.exams || []).some(exam => exam.section === previousSectionName);
                     const gateLabel = requiresExam ? 'Exam' : 'Quiz';
-                    alert(`🔒 Arcane Seal! You must pass the ${gateLabel} in "${previousSectionName}" first.`);
+                    showToast(`🔒 Arcane Seal! You must pass the ${gateLabel} in "${previousSectionName}" first.`, 4000);
                 };
             } else {
                 if (isSectionClearedForProgression(world, sectionName)) {
@@ -1119,7 +1127,7 @@ function startFlashcards(mode, cards, contextName) {
 
 function loadFlashcard() {
     if (currentFcIndex >= fcQueue.length) {
-        alert(`Scribing Complete! You generated Ink!`); saveToStorage(); renderMap(); if(fcModal) fcModal.classList.add('hidden');
+        showToast('✨ Scribing Complete! You generated Ink!'); saveToStorage(); renderMap(); if(fcModal) fcModal.classList.add('hidden');
         if (fcContext !== 'Entire World') openSectionModal(fcContext); return;
     }
     if(document.getElementById('fc-progress')) document.getElementById('fc-progress').innerText = `Incantation ${currentFcIndex + 1} of ${fcQueue.length}`;
@@ -1134,6 +1142,7 @@ if(fcInner) fcInner.addEventListener('click', () => { if (!fcInner.classList.con
 
 function gradeCard(quality) {
     let card = fcQueue[currentFcIndex];
+    if (!card) return; // guard: grading buttons shown after queue exhausted
 
     // --- STREAK TRACKING ---
     const today = new Date().toDateString();
@@ -1302,7 +1311,7 @@ function saveChronicle() {
     const text = editorEl.value.trim();
 
     if (text.length < 30) {
-        alert("Your chronicle is too brief. Write at least a few sentences to seal it.");
+        showToast("Chronik zu kurz — schreibe mindestens ein paar Sätze.");
         return;
     }
 
@@ -1337,7 +1346,7 @@ function saveChronicle() {
         countEl.innerText = newCount;
     }
 
-    alert(`📜 Chronicle sealed! You wove ${detectedTerms.length} concept(s) into your story and earned ${inkEarned} 🖋️ Ink.`);
+    showToast(`📜 Chronik versiegelt! ${detectedTerms.length} Konzept(e) verwoben — +${inkEarned} 🖋️ Tinte`);
 }
 
 function openPastChronicles() {
@@ -1462,19 +1471,19 @@ function startMiniGame(gameName, sectionName) {
     const sectionFlashcards = world.flashcards.filter(fc => fc.section === sectionName);
 
     if (gameName.toLowerCase() === 'memory') {
-        if (sectionFlashcards.length < 2) return alert("You need at least 2 Flashcards in this section to play Memory Match!");
+        if (sectionFlashcards.length < 2) { showToast('Mindestens 2 Karten benötigt für Memory Match!'); return; }
         if(sectionModal) sectionModal.classList.add('hidden'); 
         if(minigameModal) minigameModal.classList.remove('hidden');
         if(document.getElementById('minigame-title')) document.getElementById('minigame-title').innerText = "Memory Match";
         launchMemoryGame(sectionFlashcards, sectionName, gameName);
     } else if (gameName.toLowerCase() === 'trivia') {
-        if (sectionFlashcards.length < 4) return alert("You need at least 4 Flashcards in this section to play Trivia Showdown!");
+        if (sectionFlashcards.length < 4) { showToast('Mindestens 4 Karten benötigt für Trivia Showdown!'); return; }
         if(sectionModal) sectionModal.classList.add('hidden'); 
         if(minigameModal) minigameModal.classList.remove('hidden');
         if(document.getElementById('minigame-title')) document.getElementById('minigame-title').innerText = "Trivia Showdown";
         launchTriviaGame(sectionFlashcards, world.flashcards, sectionName, gameName);
     } else if (gameName.toLowerCase() === 'spellweaver') {
-        if (sectionFlashcards.length < 1) return alert("You need at least 1 Flashcard in this section to play Spellweaver!");
+        if (sectionFlashcards.length < 1) { showToast('Mindestens 1 Karte benötigt für Spellweaver!'); return; }
         if(sectionModal) sectionModal.classList.add('hidden'); 
         if(minigameModal) minigameModal.classList.remove('hidden');
         if(document.getElementById('minigame-title')) document.getElementById('minigame-title').innerText = "Spellweaver";
@@ -1486,7 +1495,7 @@ function startMiniGame(gameName, sectionName) {
         if(document.getElementById('minigame-title')) document.getElementById('minigame-title').innerText = "Flash Match";
         startFlashMatchGame(sectionName, gameName);
     } else if (gameName.toLowerCase() === 'arcane defense' || gameName.toLowerCase() === 'arcane-defense') {
-        if (sectionFlashcards.length < 1) return alert("You need at least 1 Flashcard in this section to play Arcane Defense!");
+        if (sectionFlashcards.length < 1) { showToast('Mindestens 1 Karte benötigt für Arcane Defense!'); return; }
         if(sectionModal) sectionModal.classList.add('hidden'); 
         if(minigameModal) minigameModal.classList.remove('hidden');
         if(document.getElementById('minigame-title')) document.getElementById('minigame-title').innerText = "Arcane Defense";
@@ -1497,25 +1506,25 @@ function startMiniGame(gameName, sectionName) {
         if(document.getElementById('minigame-title')) document.getElementById('minigame-title').innerText = "Ritual Alignment";
         launchRitualAlignmentGame(sectionName, gameName);
     } else if (gameName.toLowerCase() === 'cloze' || gameName.toLowerCase() === 'cloze trial') {
-        if (sectionFlashcards.length < 1) return alert("You need at least 1 Flashcard to play the Cloze Trial!");
+        if (sectionFlashcards.length < 1) { showToast('Mindestens 1 Karte benötigt für den Cloze Trial!'); return; }
         if(sectionModal) sectionModal.classList.add('hidden');
         if(minigameModal) minigameModal.classList.remove('hidden');
         if(document.getElementById('minigame-title')) document.getElementById('minigame-title').innerText = "Cloze Trial";
         launchClozeGame(sectionFlashcards, sectionName, gameName);
     } else if (gameName.toLowerCase() === 'true/false blitz' || gameName.toLowerCase() === 'true-false blitz' || gameName.toLowerCase() === 'blitz') {
-        if (sectionFlashcards.length < 2) return alert("You need at least 2 Flashcards to play True/False Blitz!");
+        if (sectionFlashcards.length < 2) { showToast('Mindestens 2 Karten benötigt für True/False Blitz!'); return; }
         if(sectionModal) sectionModal.classList.add('hidden');
         if(minigameModal) minigameModal.classList.remove('hidden');
         if(document.getElementById('minigame-title')) document.getElementById('minigame-title').innerText = "True/False Blitz";
         launchTrueFalseBlitz(sectionFlashcards, sectionName, gameName);
     } else if (gameName.toLowerCase() === 'glimpse & recall' || gameName.toLowerCase() === 'glimpse and recall' || gameName.toLowerCase() === 'glimpse') {
-        if (sectionFlashcards.length < 1) return alert("You need at least 1 Flashcard to play Glimpse & Recall!");
+        if (sectionFlashcards.length < 1) { showToast('Mindestens 1 Karte benötigt für Glimpse & Recall!'); return; }
         if(sectionModal) sectionModal.classList.add('hidden');
         if(minigameModal) minigameModal.classList.remove('hidden');
         if(document.getElementById('minigame-title')) document.getElementById('minigame-title').innerText = "Glimpse & Recall";
         launchGlimpseRecall(sectionFlashcards, sectionName, gameName);
     } else {
-        alert(`The game "${gameName}" is currently under construction!`);
+        showToast(`Das Spiel „${gameName}" ist noch in Entwicklung!`);
     }   
 }
 
@@ -1525,6 +1534,7 @@ let testQueue = [], currentTestIndex = 0, correctScore = 0, testType = "", curre
 if(document.getElementById('close-assessment')) document.getElementById('close-assessment').addEventListener('click', () => assessmentModal.classList.add('hidden'));
 
 function startAssessment(type, questions, sectionName) {
+    if (!questions || questions.length === 0) { showToast(`Keine ${type}-Fragen für diesen Abschnitt verfügbar.`); return; }
     testType = type; testQueue = questions; currentTestSection = sectionName; currentTestIndex = 0; correctScore = 0;
     if(document.getElementById('assessment-title')) document.getElementById('assessment-title').innerText = `${type} Mode: ${sectionName}`;
     if(sectionModal) sectionModal.classList.add('hidden'); 
@@ -1550,17 +1560,22 @@ if(document.getElementById('btn-grade-right')) document.getElementById('btn-grad
 if(document.getElementById('btn-grade-wrong')) document.getElementById('btn-grade-wrong').addEventListener('click', () => gradeQuestion(false));
 
 function finishAssessment() {
-    const isPerfect = (correctScore === testQueue.length); const world = getActiveWorld();
+    // Capture state before any resets so alerts always show the correct totals
+    const total = testQueue.length;
+    const finalScore = correctScore;
+    const finalType = testType;
+    const finalSection = currentTestSection;
+    const isPerfect = (finalScore === total); const world = getActiveWorld();
     if (isPerfect) {
-        if (testType === 'Quiz' && !world.progress[currentTestSection].quizPassed) { 
-            world.progress[currentTestSection].quizPassed = true; awardPaper('Blank Quiz Parchment');
+        if (finalType === 'Quiz' && !world.progress[finalSection].quizPassed) { 
+            world.progress[finalSection].quizPassed = true; awardPaper('Blank Quiz Parchment');
         }
-        if (testType === 'Exam' && !world.progress[currentTestSection].examPassed) { 
-            world.progress[currentTestSection].examPassed = true; awardPaper('Rare Exam Parchment');
+        if (finalType === 'Exam' && !world.progress[finalSection].examPassed) { 
+            world.progress[finalSection].examPassed = true; awardPaper('Rare Exam Parchment');
         }
-        saveToStorage(); renderMap(); alert(`Perfect Score! You passed the ${testType}!`);
-    } else alert(`You got ${correctScore} out of ${testQueue.length}. Try again!`);
-    if(assessmentModal) assessmentModal.classList.add('hidden'); openSectionModal(currentTestSection); 
+        saveToStorage(); renderMap(); showToast(`🏆 Perfect Score! You passed the ${finalType}!`);
+    } else showToast(`You got ${finalScore} out of ${total}. Try again!`);
+    if(assessmentModal) assessmentModal.classList.add('hidden'); openSectionModal(finalSection); 
 }
 
 // --- BACKGROUND, SETTINGS & READ NOTES ---
@@ -2485,6 +2500,17 @@ if (document.getElementById('settings-btn')) {
                 document.getElementById('world-rename-input').value = world.name || world.title || "";
             }
             refreshDeletePageOptions();
+            // Populate OpenAI key field
+            const keyInput = document.getElementById('openai-key-input');
+            const keyStatus = document.getElementById('openai-key-status');
+            const clearBtn = document.getElementById('btn-clear-openai-key');
+            const savedKey = localStorage.getItem('openai_api_key') || '';
+            if (keyInput) keyInput.value = savedKey;
+            if (keyStatus) {
+                keyStatus.textContent = savedKey ? '✓ API-Schlüssel gespeichert — KI-Generierung aktiv beim nächsten PDF-Import.' : 'Kein Schlüssel gespeichert — Offline-Methode wird verwendet.';
+                keyStatus.style.color = savedKey ? '#a29bfe' : '#888';
+            }
+            if (clearBtn) clearBtn.style.display = savedKey ? 'block' : 'none';
         }
     });
 }
@@ -2499,12 +2525,40 @@ if (document.getElementById('btn-rename-world')) {
             if (typeof renderMap === 'function') renderMap();
             if (typeof renderShelf === 'function') renderShelf();
             if (typeof initMindMap === 'function') initMindMap(appState);
-            alert("World renamed successfully!");
+            showToast("Welt erfolgreich umbenannt!");
         }
     });
 }
 if (document.getElementById('close-settings')) {
     document.getElementById('close-settings').addEventListener('click', () => { if(settingsModal) settingsModal.classList.add('hidden') });
+}
+
+// --- OpenAI API key save / clear ---
+if (document.getElementById('btn-save-openai-key')) {
+    document.getElementById('btn-save-openai-key').addEventListener('click', () => {
+        const keyInput = document.getElementById('openai-key-input');
+        const keyStatus = document.getElementById('openai-key-status');
+        const clearBtn = document.getElementById('btn-clear-openai-key');
+        const val = (keyInput?.value || '').trim();
+        if (!val || !val.startsWith('sk-')) {
+            if (keyStatus) { keyStatus.textContent = '✗ Ungültiger Schlüssel — muss mit sk- beginnen.'; keyStatus.style.color = '#ff5e5e'; }
+            return;
+        }
+        localStorage.setItem('openai_api_key', val);
+        if (keyStatus) { keyStatus.textContent = '✓ Gespeichert — nächster PDF-Import nutzt KI.'; keyStatus.style.color = '#a29bfe'; }
+        if (clearBtn) clearBtn.style.display = 'block';
+    });
+}
+if (document.getElementById('btn-clear-openai-key')) {
+    document.getElementById('btn-clear-openai-key').addEventListener('click', () => {
+        localStorage.removeItem('openai_api_key');
+        const keyInput = document.getElementById('openai-key-input');
+        const keyStatus = document.getElementById('openai-key-status');
+        const clearBtn = document.getElementById('btn-clear-openai-key');
+        if (keyInput) keyInput.value = '';
+        if (keyStatus) { keyStatus.textContent = 'Schlüssel gelöscht — Offline-Methode wird verwendet.'; keyStatus.style.color = '#888'; }
+        if (clearBtn) clearBtn.style.display = 'none';
+    });
 }
 if (document.getElementById('delete-page-btn')) {
     document.getElementById('delete-page-btn').addEventListener('click', () => {
