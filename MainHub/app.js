@@ -1185,8 +1185,17 @@ function loadFlashcard() {
         if (fcContext !== 'Entire World') openSectionModal(fcContext); return;
     }
     if(document.getElementById('fc-progress')) document.getElementById('fc-progress').innerText = `Incantation ${currentFcIndex + 1} of ${fcQueue.length}`;
-    if(document.getElementById('fc-question')) document.getElementById('fc-question').innerText = fcQueue[currentFcIndex].question;
-    if(document.getElementById('fc-answer')) document.getElementById('fc-answer').innerText = fcQueue[currentFcIndex].answer;
+    const card = fcQueue[currentFcIndex];
+    const qEl  = document.getElementById('fc-question');
+    const aEl  = document.getElementById('fc-answer');
+    if (qEl) {
+        if (card.imageData) {
+            qEl.innerHTML = `<img src="${card.imageData}" style="max-width:100%;max-height:220px;object-fit:contain;border-radius:6px;border:1px solid rgba(255,255,255,0.1);"><br>${card.question ? `<span style="font-size:0.85em;color:#aaa;">${card.question}</span>` : ''}`;
+        } else {
+            qEl.innerText = card.question;
+        }
+    }
+    if (aEl) aEl.innerText = card.answer;
     if(fcInner) fcInner.classList.remove('is-flipped'); if(btnFlipFc) btnFlipFc.classList.remove('hidden'); if(fcGradingBtns) fcGradingBtns.classList.add('hidden');
 }
 
@@ -1612,10 +1621,19 @@ function startAssessment(type, questions, sectionName) {
 }
 function loadQuestion() {
     if(document.getElementById('assessment-progress')) document.getElementById('assessment-progress').innerText = `Question ${currentTestIndex + 1} of ${testQueue.length}`;
-    if(document.getElementById('assessment-question')) document.getElementById('assessment-question').innerText = testQueue[currentTestIndex].question;
-    if(document.getElementById('assessment-answer')) document.getElementById('assessment-answer').innerText = testQueue[currentTestIndex].answer;
-    if(document.getElementById('assessment-answer')) document.getElementById('assessment-answer').classList.add('hidden'); 
-    if(document.getElementById('btn-show-answer')) document.getElementById('btn-show-answer').classList.remove('hidden'); 
+    const q    = testQueue[currentTestIndex];
+    const qEl  = document.getElementById('assessment-question');
+    const aEl  = document.getElementById('assessment-answer');
+    if (qEl) {
+        if (q.imageData) {
+            qEl.innerHTML = `<img src="${q.imageData}" style="max-width:100%;max-height:220px;object-fit:contain;border-radius:6px;border:1px solid rgba(255,255,255,0.1);"><br>${q.question ? `<span style="font-size:0.85em;color:#aaa;">${q.question}</span>` : ''}`;
+        } else {
+            qEl.innerText = q.question;
+        }
+    }
+    if (aEl) aEl.innerText = q.answer;
+    if (aEl) aEl.classList.add('hidden');
+    if(document.getElementById('btn-show-answer')) document.getElementById('btn-show-answer').classList.remove('hidden');
     if(document.getElementById('grading-buttons')) document.getElementById('grading-buttons').classList.add('hidden');
 }
 if(document.getElementById('btn-show-answer')) {
