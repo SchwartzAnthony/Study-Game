@@ -61,6 +61,10 @@ function isNoiseLine(line) {
     if (/^[ivxlcdm]+$/i.test(line)) return true;
     if (/^copyright|all rights reserved|isbn/i.test(line)) return true;
     if (/^©/.test(line)) return true;
+    // Student-note / preamble lines that sometimes survive front-matter filtering
+    if (/studenten(erklärung|erklaerung|hinweis|ausgabe|version)?/i.test(line)) return true;
+    if (/hinweis für (studenten|schüler|lernende)/i.test(line)) return true;
+    if (/erklärung für (studenten|schüler)/i.test(line)) return true;
     if (/^[-_~*=]{4,}$/.test(line)) return true;
     if (/\.{5,}/.test(line)) return true;
     if (/^\d{3,}[A-Z]\d+$/.test(line)) return true;
@@ -68,6 +72,32 @@ function isNoiseLine(line) {
     if (/^\d{1,3}\s+[A-Z]{2,6}\s+\d{1,2}$/.test(line)) return true;
     // Very short all-digit-and-letter formula/noise: "5 M", "1 M", "100 M 100 M ⋅ S 100 S"
     if (/^[\d\s\+\-\*\/=⋅\.MmKkGgSs,]{1,40}$/.test(line) && !/[a-zA-ZÄÖÜäöüß]{4,}/.test(line)) return true;
+    return false;
+}
+
+// Returns true if this page looks like a cover page, TOC, imprint, or other front matter
+// that should be skipped before the first real chapter.
+function isFrontMatterPage(lines) {
+    if (!lines || lines.length === 0) return true;
+    const texts = lines.map(l => cleanLine(l.text)).filter(Boolean);
+    if (texts.length === 0) return true;
+
+    // Hard keywords that mark whole pages as front matter
+    const frontMatterKeywords = /^(inhaltsverzeichnis|table of contents|contents|vorwort|preface|impressum|imprint|widmung|dedication|abstract|zusammenfassung|literaturverzeichnis|bibliography|isbn|herausgeber|verlag|autoren|autor\b|authors?\b|studenten|studentenausgabe|hinweis für studenten|hinweis an den|erklärung für studenten|note for students|student.?s? note|liebe studenten|für die schüler|schülerausgabe)/i;
+    if (texts.some(t => frontMatterKeywords.test(t))) return true;
+
+    // If any line contains a student-note phrase anywhere (not just at start), treat the whole page as front matter
+    const studentNotePattern = /studenten(erklärung|erklaerung|hinweis|ausgabe|version|auflage)?|hinweis für (studenten|schüler|lernende)|erklärung für (studenten|schüler)|für (studenten|schüler|lernende) (gilt|wichtig|bitte|hinweis|beachte)/i;
+    if (texts.some(t => studentNotePattern.test(t))) return true;
+
+    // TOC detection: many lines matching "some text .... N" pattern
+    const tocLineCount = texts.filter(t => /\.{3,}\s*\d{1,3}\s*$/.test(t) || /\s{2,}\d{1,3}\s*$/.test(t)).length;
+    if (tocLineCount >= 3) return true;
+
+    // Very sparse content pages (cover, title pages) — fewer than 4 non-noise lines
+    const substantialLines = texts.filter(t => t.length > 20 && /[a-zA-ZÄÖÜäöüß]{4,}/.test(t));
+    if (substantialLines.length < 3) return true;
+
     return false;
 }
 
@@ -237,9 +267,16 @@ function buildSectionsFromPages(pages, progressCb) {
     // Pre-heading text will flow into the first real section once a heading is encountered.
     // If the entire PDF has no detectable headings it will fall into the first auto-named section below.
 
+    // Skip front-matter pages (cover, TOC, imprint, etc.) until the first real chapter begins.
+    // Once a real section has started we stop skipping regardless.
+    let firstChapterFound = false;
+
     for (let p = 0; p < pages.length; p++) {
         const page = pages[p];
         progressCb(`Structuring chapter flow (${p + 1} / ${pages.length})...`, 55 + Math.floor(((p + 1) / pages.length) * 20));
+
+        // Skip this page if we haven't started a real chapter yet and it looks like front matter
+        if (!firstChapterFound && isFrontMatterPage(page.lines)) continue;
 
         if (page.images.length > 0 && current) {
             current.images.push(...page.images.slice(0, 2));
@@ -260,12 +297,14 @@ function buildSectionsFromPages(pages, progressCb) {
                 } else {
                     paragraphBuffer = []; // discard pre-heading noise
                 }
+                firstChapterFound = true;
                 beginSection(titleCaseFromLine(line));
                 continue;
             }
 
             // If no section exists yet, create one from this first line of real content
             if (!current) {
+                firstChapterFound = true;
                 beginSection(titleCaseFromLine(line.slice(0, 60)));
             }
 

@@ -535,6 +535,27 @@ if(document.getElementById('next-map')) document.getElementById('next-map').addE
 
 // --- SAVE, LOAD & MIGRATE SYSTEM ---
 
+// Removes unwanted sections (student notes, TOC pages, etc.) from all worlds in saved data.
+const JUNK_SECTION_PATTERN = /studenten(erkl[äa]rung|erklaerung|hinweis|ausgabe|version)?|hinweis f[üu]r (studenten|sch[üu]ler|lernende)|erkl[äa]rung f[üu]r (studenten|sch[üu]ler)|studentenausgabe|sch[üu]lerausgabe/i;
+
+function purgeJunkSections() {
+    let dirty = false;
+    appState.hubs.forEach(hub => {
+        hub.worlds.forEach(world => {
+            const junk = new Set((world.sections || []).filter(s => JUNK_SECTION_PATTERN.test(s)));
+            if (junk.size === 0) return;
+            world.sections = (world.sections || []).filter(s => !junk.has(s));
+            world.flashcards = (world.flashcards || []).filter(fc => !junk.has(fc.section));
+            world.quizzes = (world.quizzes || []).filter(q => !junk.has(q.section));
+            world.exams = (world.exams || []).filter(e => !junk.has(e.section));
+            world.miniGames = (world.miniGames || []).filter(g => !junk.has(g.section));
+            junk.forEach(s => { if (world.progress) delete world.progress[s]; });
+            world.coordinates = generateMapCoordinates(world.sections.length);
+            dirty = true;
+        });
+    });
+    if (dirty) saveToStorage();
+}
 
 function loadFromStorage() {
     const savedData = localStorage.getItem('studyQuestData');
@@ -579,6 +600,7 @@ function loadFromStorage() {
             updateHubDropdown();
             // sanitize any stored uploaded reward images (fixes malformed data URLs from older saves)
             sanitizeRewardImages();
+            purgeJunkSections();
             if (appState.hubs.length > 0 && appState.hubs[appState.currentHubIndex].worlds.length > 0) {
                 if(document.getElementById('training-card')) document.getElementById('training-card').classList.remove('locked');
                 if(document.getElementById('vault-card')) document.getElementById('vault-card').classList.remove('locked');
@@ -1187,6 +1209,22 @@ if(document.getElementById('btn-fc-hard')) document.getElementById('btn-fc-hard'
 if(document.getElementById('btn-fc-good')) document.getElementById('btn-fc-good').onclick = () => gradeCard(2); 
 if(document.getElementById('btn-fc-easy')) document.getElementById('btn-fc-easy').onclick = () => gradeCard(3);
 
+if(document.getElementById('btn-remove-fc')) {
+    document.getElementById('btn-remove-fc').addEventListener('click', () => {
+        const card = fcQueue[currentFcIndex];
+        if (!card) return;
+        const world = getActiveWorld();
+        if (world) {
+            const idx = world.flashcards.indexOf(card);
+            if (idx !== -1) world.flashcards.splice(idx, 1);
+        }
+        fcQueue.splice(currentFcIndex, 1);
+        saveToStorage();
+        showToast('🗑️ Karte gelöscht.');
+        loadFlashcard();
+    });
+}
+
 // --- FLASHCARD VAULT ---
 const fcVaultModal = document.getElementById('fc-vault-modal');
 if(document.getElementById('close-vault')) document.getElementById('close-vault').addEventListener('click', () => fcVaultModal.classList.add('hidden'));
@@ -1559,6 +1597,25 @@ if(document.getElementById('btn-show-answer')) {
 function gradeQuestion(isCorrect) { if (isCorrect) correctScore++; currentTestIndex++; if (currentTestIndex < testQueue.length) loadQuestion(); else finishAssessment(); }
 if(document.getElementById('btn-grade-right')) document.getElementById('btn-grade-right').addEventListener('click', () => gradeQuestion(true)); 
 if(document.getElementById('btn-grade-wrong')) document.getElementById('btn-grade-wrong').addEventListener('click', () => gradeQuestion(false));
+
+if(document.getElementById('btn-remove-question')) {
+    document.getElementById('btn-remove-question').addEventListener('click', () => {
+        const q = testQueue[currentTestIndex];
+        if (!q) return;
+        const world = getActiveWorld();
+        if (world) {
+            const arr = testType === 'Quiz' ? (world.quizzes || []) : (world.exams || []);
+            const idx = arr.indexOf(q);
+            if (idx !== -1) arr.splice(idx, 1);
+        }
+        testQueue.splice(currentTestIndex, 1);
+        saveToStorage();
+        showToast('🗑️ Frage gelöscht.');
+        if (testQueue.length === 0) { finishAssessment(); return; }
+        if (currentTestIndex >= testQueue.length) currentTestIndex = testQueue.length - 1;
+        loadQuestion();
+    });
+}
 
 function finishAssessment() {
     // Capture state before any resets so alerts always show the correct totals
