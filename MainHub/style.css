@@ -111,6 +111,22 @@
     border-color: rgba(120,98,62,0.35);
 }
 
+.vibe-mini-controls {
+    position: fixed;
+    left: 14px;
+    bottom: 148px;
+    z-index: 10005;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.vibe-mini-btn {
+    font-size: 0.66em;
+    padding: 7px 10px;
+    letter-spacing: 0.5px;
+}
+
 @media (max-width: 700px) {
     .vibe-audio-toggle {
         left: 10px;
@@ -123,6 +139,19 @@
 
     .vibe-mute-toggle {
         bottom: 82px;
+    }
+
+    .vibe-mini-controls {
+        left: 10px;
+        bottom: 164px;
+        gap: 5px;
+        max-width: calc(100vw - 20px);
+        flex-wrap: wrap;
+    }
+
+    .vibe-mini-btn {
+        font-size: 0.64em;
+        padding: 7px 9px;
     }
 }
 

@@ -2962,9 +2962,25 @@ let vibeFallbackHoverPool = [];
 let vibeFallbackClickIndex = 0;
 let vibeFallbackHoverIndex = 0;
 let vibeSessionId = 0;
+let vibeTrackAudio = null;
+let vibeTrackIndex = 0;
+let vibeLoopTrack = false;
+let vibeManualPaused = false;
 
 const VIBE_SCALE = [130.81, 155.56, 174.61, 196.00, 233.08, 261.63]; // C minor-ish
 const VIBE_GAIN_MULT = 2.2;
+const VIBE_PLAYLIST = [
+    'assets/Spiritual Moment - Sith Meditation - A Dark Atmospheric Ambient Journey - Deep and Mysterious Sith Ambient Music (1970)/01. Spiritual Moment - Samsara.m4a',
+    'assets/Spiritual Moment - Sith Meditation - A Dark Atmospheric Ambient Journey - Deep and Mysterious Sith Ambient Music (1970)/02. Spiritual Moment - Mandala.m4a',
+    'assets/Spiritual Moment - Sith Meditation - A Dark Atmospheric Ambient Journey - Deep and Mysterious Sith Ambient Music (1970)/03. Spiritual Moment - Vipassana.m4a',
+    'assets/Spiritual Moment - Sith Meditation - A Dark Atmospheric Ambient Journey - Deep and Mysterious Sith Ambient Music (1970)/04. Spiritual Moment - Arhat.m4a',
+    'assets/Spiritual Moment - Sith Meditation - A Dark Atmospheric Ambient Journey - Deep and Mysterious Sith Ambient Music (1970)/05. Spiritual Moment - Aten.m4a',
+    'assets/Spiritual Moment - Sith Meditation - A Dark Atmospheric Ambient Journey - Deep and Mysterious Sith Ambient Music (1970)/06. Spiritual Moment - Bhavana.m4a',
+    'assets/Spiritual Moment - Sith Meditation - A Dark Atmospheric Ambient Journey - Deep and Mysterious Sith Ambient Music (1970)/07. Spiritual Moment - Mysticism.m4a',
+    'assets/Spiritual Moment - Sith Meditation - A Dark Atmospheric Ambient Journey - Deep and Mysterious Sith Ambient Music (1970)/08. Spiritual Moment - Moksha.m4a',
+    'assets/Spiritual Moment - Sith Meditation - A Dark Atmospheric Ambient Journey - Deep and Mysterious Sith Ambient Music (1970)/09. Spiritual Moment - Samatha.m4a',
+    'assets/Spiritual Moment - Sith Meditation - A Dark Atmospheric Ambient Journey - Deep and Mysterious Sith Ambient Music (1970)/10. Spiritual Moment - Sangha.m4a'
+].map((p) => encodeURI(p));
 
 function _isAmbienceEnabled() {
     return vibeEnabled && !vibeMutedAll;
@@ -2972,6 +2988,70 @@ function _isAmbienceEnabled() {
 
 function _isSfxEnabled() {
     return !vibeMutedAll;
+}
+
+function initVibeTrackPlayer() {
+    if (vibeTrackAudio) return;
+    vibeTrackAudio = new Audio();
+    vibeTrackAudio.preload = 'auto';
+    vibeTrackAudio.volume = 0.8;
+    vibeTrackAudio.addEventListener('ended', () => {
+        if (!_isAmbienceEnabled()) return;
+        if (vibeLoopTrack) {
+            vibeTrackAudio.currentTime = 0;
+            vibeTrackAudio.play().catch(() => {});
+            return;
+        }
+        nextVibeTrack(true);
+    });
+}
+
+function loadVibeTrack(index) {
+    if (!VIBE_PLAYLIST.length) return;
+    initVibeTrackPlayer();
+    const len = VIBE_PLAYLIST.length;
+    vibeTrackIndex = ((index % len) + len) % len;
+    vibeTrackAudio.src = VIBE_PLAYLIST[vibeTrackIndex];
+    vibeTrackAudio.load();
+    updateVibePlaybackUI();
+}
+
+function playVibeTrack() {
+    if (!_isAmbienceEnabled()) return;
+    if (!VIBE_PLAYLIST.length) return;
+    initVibeTrackPlayer();
+    if (!vibeTrackAudio.src) loadVibeTrack(vibeTrackIndex);
+    vibeTrackAudio.play().then(() => {
+        vibeStarted = true;
+        updateVibePlaybackUI();
+    }).catch(() => {});
+}
+
+function pauseVibeTrack() {
+    if (!vibeTrackAudio) return;
+    vibeTrackAudio.pause();
+    updateVibePlaybackUI();
+}
+
+function nextVibeTrack(autoPlay = false) {
+    if (!VIBE_PLAYLIST.length) return;
+    const shouldPlay = autoPlay || (_isAmbienceEnabled() && !vibeManualPaused);
+    loadVibeTrack(vibeTrackIndex + 1);
+    if (shouldPlay) playVibeTrack();
+}
+
+function updateVibePlaybackUI() {
+    const playBtn = document.getElementById('vibe-play-toggle');
+    const loopBtn = document.getElementById('vibe-loop-btn');
+    const playing = !!(vibeTrackAudio && !vibeTrackAudio.paused && !_isAmbienceEnabled() === false);
+    if (playBtn) {
+        playBtn.innerHTML = playing ? '⏸ Pause' : '▶ Play';
+        playBtn.classList.toggle('off', !playing);
+    }
+    if (loopBtn) {
+        loopBtn.innerHTML = vibeLoopTrack ? '🔁 Loop: ON' : '🔁 Loop: OFF';
+        loopBtn.classList.toggle('off', !vibeLoopTrack);
+    }
 }
 
 function ensureVibeAudio() {
@@ -3156,42 +3236,9 @@ function playUiTone(freq, duration = 0.06, type = 'triangle', volume = 0.018) {
 
 function startVibeMusic(sessionId = vibeSessionId) {
     if (!_isAmbienceEnabled()) return;
-    if (!ensureVibeAudio()) return;
-    if (vibeMusicInterval) return;
-
-    ensureVibeAudioRunning().then((ok) => {
-        if (!_isAmbienceEnabled() || sessionId !== vibeSessionId) return;
-        if (!ok || !vibeAudioCtx || !vibeMasterGain) {
-            startFallbackAmbience(sessionId);
-            return;
-        }
-        if (vibeMusicInterval) return;
-
-        vibeStarted = true;
-
-        vibeDroneOsc = vibeAudioCtx.createOscillator();
-        vibeDroneGain = vibeAudioCtx.createGain();
-        vibeDroneOsc.type = 'sine';
-        vibeDroneOsc.frequency.value = 65.41; // C2
-        vibeDroneGain.gain.value = 0.07;
-        vibeDroneOsc.connect(vibeDroneGain);
-        vibeDroneGain.connect(vibeMasterGain);
-        vibeDroneOsc.start();
-
-        let step = 0;
-        vibeMusicInterval = setInterval(() => {
-            if (!_isAmbienceEnabled() || !vibeAudioCtx) return;
-
-            const root = VIBE_SCALE[step % VIBE_SCALE.length];
-            const accent = VIBE_SCALE[(step + 3) % VIBE_SCALE.length];
-
-            playUiTone(root, 0.24, 'sine', 0.04);
-            if (step % 2 === 0) playUiTone(accent * 0.5, 0.20, 'triangle', 0.025);
-            if (step % 4 === 0) playUiTone(root * 2, 0.10, 'square', 0.015);
-
-            step++;
-        }, 650);
-    });
+    if (sessionId !== vibeSessionId) return;
+    vibeStarted = true;
+    playVibeTrack();
 }
 
 function stopVibeMusic() {
@@ -3209,6 +3256,7 @@ function stopVibeMusic() {
         vibeDroneGain = null;
     }
     stopFallbackAmbience();
+    pauseVibeTrack();
 }
 
 function updateVibeToggleUI() {
@@ -3236,9 +3284,11 @@ function setMuteAll(nextMuted) {
         vibeStarted = false;
         stopVibeMusic();
     } else if (vibeEnabled) {
+        vibeManualPaused = false;
         startVibeMusic(vibeSessionId);
         playUiTone(392.0, 0.09, 'triangle', 0.10);
     }
+    updateVibePlaybackUI();
 }
 
 function setVibeEnabled(nextEnabled) {
@@ -3249,13 +3299,14 @@ function setVibeEnabled(nextEnabled) {
     updateVibeToggleUI();
 
     if (_isAmbienceEnabled()) {
+        vibeManualPaused = false;
         startVibeMusic(vibeSessionId);
         playUiTone(261.63, 0.12, 'triangle', 0.12); // audible confirmation ping
-        startFallbackAmbience(vibeSessionId);
     } else {
         vibeStarted = false;
         stopVibeMusic();
     }
+    updateVibePlaybackUI();
 }
 
 function spawnButtonRipple(target, clientX, clientY) {
@@ -3302,6 +3353,21 @@ function initGameVibeSystem() {
     }
     updateMuteToggleUI();
 
+    let controls = document.getElementById('vibe-mini-controls');
+    if (!controls) {
+        controls = document.createElement('div');
+        controls.id = 'vibe-mini-controls';
+        controls.className = 'vibe-mini-controls';
+        controls.innerHTML = '<button id="vibe-play-toggle" class="vibe-audio-toggle vibe-mini-btn" type="button">▶ Play</button>'
+            + '<button id="vibe-skip-btn" class="vibe-audio-toggle vibe-mini-btn" type="button">⏭ Skip</button>'
+            + '<button id="vibe-loop-btn" class="vibe-audio-toggle vibe-mini-btn" type="button">🔁 Loop: OFF</button>';
+        document.body.appendChild(controls);
+    }
+
+    initVibeTrackPlayer();
+    if (!vibeTrackAudio || !vibeTrackAudio.src) loadVibeTrack(vibeTrackIndex);
+    updateVibePlaybackUI();
+
     if (floatingToggle.dataset.vibeBound !== '1') {
         floatingToggle.addEventListener('click', () => setVibeEnabled(!vibeEnabled));
         floatingToggle.dataset.vibeBound = '1';
@@ -3312,6 +3378,42 @@ function initGameVibeSystem() {
         muteToggle.dataset.vibeMuteBound = '1';
     }
 
+    const playBtn = document.getElementById('vibe-play-toggle');
+    const skipBtn = document.getElementById('vibe-skip-btn');
+    const loopBtn = document.getElementById('vibe-loop-btn');
+    if (playBtn && playBtn.dataset.vibePlayBound !== '1') {
+        playBtn.addEventListener('click', () => {
+            if (vibeMutedAll) return;
+            if (!vibeEnabled) setVibeEnabled(true);
+            if (vibeTrackAudio && !vibeTrackAudio.paused) {
+                vibeManualPaused = true;
+                pauseVibeTrack();
+                vibeStarted = false;
+            } else {
+                vibeManualPaused = false;
+                startVibeMusic(vibeSessionId);
+            }
+            updateVibePlaybackUI();
+        });
+        playBtn.dataset.vibePlayBound = '1';
+    }
+    if (skipBtn && skipBtn.dataset.vibeSkipBound !== '1') {
+        skipBtn.addEventListener('click', () => {
+            if (vibeMutedAll) return;
+            nextVibeTrack(true);
+            vibeStarted = true;
+            vibeManualPaused = false;
+        });
+        skipBtn.dataset.vibeSkipBound = '1';
+    }
+    if (loopBtn && loopBtn.dataset.vibeLoopBound !== '1') {
+        loopBtn.addEventListener('click', () => {
+            vibeLoopTrack = !vibeLoopTrack;
+            updateVibePlaybackUI();
+        });
+        loopBtn.dataset.vibeLoopBound = '1';
+    }
+
     if (document.body.dataset.vibeUnlockBound !== '1') {
         const unlock = () => {
             if (!_isAmbienceEnabled()) return;
@@ -3319,10 +3421,9 @@ function initGameVibeSystem() {
             ensureVibeAudioRunning().then((ok) => {
                 if (!_isAmbienceEnabled() || unlockSession !== vibeSessionId) return;
                 if (!ok) {
-                    startFallbackAmbience(unlockSession);
                     playFallbackClick(false);
                 } else {
-                    startVibeMusic(unlockSession);
+                    if (!vibeManualPaused) startVibeMusic(unlockSession);
                     playUiTone(329.63, 0.12, 'triangle', 0.14);
                 }
             });
@@ -3344,7 +3445,7 @@ function initGameVibeSystem() {
 
         if (_isSfxEnabled()) {
             playUiTone(220 + Math.random() * 140, 0.07, 'triangle', 0.06);
-            if (_isAmbienceEnabled() && !vibeStarted) startVibeMusic(vibeSessionId);
+            if (_isAmbienceEnabled() && !vibeStarted && !vibeManualPaused) startVibeMusic(vibeSessionId);
         }
     }, true);
 
