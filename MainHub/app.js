@@ -2446,6 +2446,36 @@ function renderLibrarySettings() {
 
 // --- SETTINGS & RESET ---
 const settingsModal = document.getElementById('settings-modal');
+
+function refreshDeletePageOptions() {
+    const select = document.getElementById('delete-page-select');
+    const btn = document.getElementById('delete-page-btn');
+    const world = getActiveWorld();
+    if (!select) return;
+
+    select.innerHTML = '';
+
+    if (!world || !Array.isArray(world.sections) || world.sections.length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.innerText = 'No pages available';
+        select.appendChild(option);
+        select.disabled = true;
+        if (btn) btn.disabled = true;
+        return;
+    }
+
+    world.sections.forEach((sectionName, index) => {
+        const option = document.createElement('option');
+        option.value = sectionName;
+        option.innerText = `${index + 1}. ${sectionName}`;
+        select.appendChild(option);
+    });
+
+    select.disabled = false;
+    if (btn) btn.disabled = world.sections.length <= 1;
+}
+
 if (document.getElementById('settings-btn')) {
     document.getElementById('settings-btn').addEventListener('click', () => { 
         if(settingsModal) {
@@ -2454,6 +2484,7 @@ if (document.getElementById('settings-btn')) {
             if (world && document.getElementById('world-rename-input')) {
                 document.getElementById('world-rename-input').value = world.name || world.title || "";
             }
+            refreshDeletePageOptions();
         }
     });
 }
@@ -2474,6 +2505,42 @@ if (document.getElementById('btn-rename-world')) {
 }
 if (document.getElementById('close-settings')) {
     document.getElementById('close-settings').addEventListener('click', () => { if(settingsModal) settingsModal.classList.add('hidden') });
+}
+if (document.getElementById('delete-page-btn')) {
+    document.getElementById('delete-page-btn').addEventListener('click', () => {
+        const world = getActiveWorld();
+        const select = document.getElementById('delete-page-select');
+        if (!world || !select) return;
+        if (!Array.isArray(world.sections) || world.sections.length <= 1) {
+            alert('At least one page must remain. Use Delete Current World if you want to remove everything.');
+            return;
+        }
+
+        const sectionToDelete = select.value;
+        if (!sectionToDelete) return;
+
+        if (!confirm(`Delete page "${sectionToDelete}" from this world?`)) return;
+
+        world.sections = world.sections.filter(section => section !== sectionToDelete);
+        if (world.content) delete world.content[sectionToDelete];
+        if (world.progress) delete world.progress[sectionToDelete];
+        if (world.readProgress) delete world.readProgress[sectionToDelete];
+
+        world.tasks = (world.tasks || []).filter(item => item.section !== sectionToDelete);
+        world.flashcards = (world.flashcards || []).filter(item => item.section !== sectionToDelete);
+        world.quizzes = (world.quizzes || []).filter(item => item.section !== sectionToDelete);
+        world.exams = (world.exams || []).filter(item => item.section !== sectionToDelete);
+        world.miniGames = (world.miniGames || []).filter(item => item.section !== sectionToDelete);
+        world.rituals = (world.rituals || []).filter(item => item.section !== sectionToDelete);
+        world.chronicles = (world.chronicles || []).filter(item => item.section !== sectionToDelete);
+
+        world.coordinates = generateMapCoordinates(world.sections.length);
+
+        saveToStorage();
+        renderMap();
+        refreshDeletePageOptions();
+        alert(`Deleted page "${sectionToDelete}".`);
+    });
 }
 if (document.getElementById('delete-world-btn')) {
     document.getElementById('delete-world-btn').addEventListener('click', () => {
