@@ -86,6 +86,231 @@ if (excelUploadInput) {
 // --- FILE UPLOAD & EDITOR LOGIC ---
 let tempFilename = "New World";
 
+const DEFAULT_MINIGAMES = ['Flash Match', 'Spellweaver', 'Cloze Trial'];
+
+function ensureSectionSkeleton(world, sectionName) {
+    if (!world.content[sectionName]) world.content[sectionName] = '';
+    if (!world.progress[sectionName]) {
+        world.progress[sectionName] = { quizPassed: false, examPassed: false, gameCooldowns: {} };
+    }
+    if (!world.progress[sectionName].gameCooldowns) {
+        world.progress[sectionName].gameCooldowns = {};
+    }
+}
+
+function firstMeaningfulSentence(text) {
+    const cleaned = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!cleaned) return '';
+    const split = cleaned.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
+    return split[0] || cleaned;
+}
+
+function clampText(text, maxLen) {
+    const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!normalized) return '';
+    if (normalized.length <= maxLen) return normalized;
+    return normalized.slice(0, maxLen - 3).trim() + '...';
+}
+
+function deriveQuestionFromSection(sectionName, sectionText) {
+    const seed = firstMeaningfulSentence(sectionText);
+    if (seed.length > 12) {
+        return `Explain this key idea from ${sectionName}: ${clampText(seed, 110)}`;
+    }
+    return `What is the core concept of ${sectionName}?`;
+}
+
+function deriveAnswerFromSection(sectionName, sectionText) {
+    const seed = firstMeaningfulSentence(sectionText);
+    if (seed.length > 10) return clampText(seed, 220);
+    return `${sectionName} introduces foundational concepts that should be reviewed in reading notes.`;
+}
+
+function normalizeAndRepairWorld(world) {
+    const report = {
+        normalizedCommands: 0,
+        createdSections: 0,
+        addedFlashcards: 0,
+        addedQuizzes: 0,
+        addedExams: 0,
+        addedMiniGames: 0,
+        addedTasks: 0,
+        addedRituals: 0,
+        removedOrphans: 0,
+        totalFixes: 0
+    };
+
+    world.sections = Array.from(new Set((world.sections || []).map(s => String(s || '').trim()).filter(Boolean)));
+    if (world.sections.length === 0) {
+        world.sections.push('Intro');
+        report.createdSections += 1;
+    }
+
+    world.content = world.content || {};
+    world.progress = world.progress || {};
+    world.readProgress = world.readProgress || {};
+
+    world.sections.forEach(sectionName => ensureSectionSkeleton(world, sectionName));
+
+    const validSections = new Set(world.sections);
+    const scopedArrays = ['tasks', 'flashcards', 'quizzes', 'exams', 'miniGames', 'rituals', 'chronicles'];
+    scopedArrays.forEach(key => {
+        world[key] = Array.isArray(world[key]) ? world[key] : [];
+        const before = world[key].length;
+        world[key] = world[key].filter(item => item && validSections.has(item.section));
+        report.removedOrphans += (before - world[key].length);
+    });
+
+    world.sections.forEach((sectionName, index) => {
+        const sectionText = world.content[sectionName] || '';
+
+        const sectionFlash = world.flashcards.filter(fc => fc.section === sectionName);
+        if (sectionFlash.length === 0) {
+            world.flashcards.push({
+                section: sectionName,
+                question: deriveQuestionFromSection(sectionName, sectionText),
+                answer: deriveAnswerFromSection(sectionName, sectionText),
+                interval: 0,
+                ease: 2.5,
+                nextReview: 0,
+                burned: false
+            });
+            report.addedFlashcards += 1;
+        }
+
+        const sectionQuiz = world.quizzes.filter(q => q.section === sectionName);
+        if (sectionQuiz.length === 0) {
+            const seedFlash = world.flashcards.find(fc => fc.section === sectionName);
+            world.quizzes.push({
+                section: sectionName,
+                question: seedFlash ? seedFlash.question : `Checkpoint: What matters most in ${sectionName}?`,
+                answer: seedFlash ? seedFlash.answer : deriveAnswerFromSection(sectionName, sectionText)
+            });
+            report.addedQuizzes += 1;
+        }
+
+        const sectionExam = world.exams.filter(ex => ex.section === sectionName);
+        if (sectionExam.length === 0) {
+            const seedQuiz = world.quizzes.find(q => q.section === sectionName);
+            world.exams.push({
+                section: sectionName,
+                question: seedQuiz ? seedQuiz.question : `Exam: Summarize ${sectionName}.`,
+                answer: seedQuiz ? seedQuiz.answer : deriveAnswerFromSection(sectionName, sectionText)
+            });
+            report.addedExams += 1;
+        }
+
+        const sectionGames = world.miniGames.filter(g => g.section === sectionName);
+        if (sectionGames.length === 0) {
+            DEFAULT_MINIGAMES.forEach(name => world.miniGames.push({ section: sectionName, name }));
+            report.addedMiniGames += DEFAULT_MINIGAMES.length;
+        }
+
+        const sectionTasks = world.tasks.filter(t => t.section === sectionName);
+        if (sectionTasks.length === 0) {
+            world.tasks.push({ section: sectionName, text: `Read the full ${sectionName} page carefully.`, completed: false });
+            world.tasks.push({ section: sectionName, text: `Complete quiz and exam for ${sectionName}.`, completed: false });
+            report.addedTasks += 2;
+        }
+
+        const sectionRituals = world.rituals.filter(r => r.section === sectionName);
+        if (sectionRituals.length === 0) {
+            world.rituals.push({
+                section: sectionName,
+                name: `${sectionName} Recall Rite`,
+                steps: ['Read section notes', 'Recall key terms', 'Summarize in your own words']
+            });
+            report.addedRituals += 1;
+        }
+
+        // Keep a stable fallback for page content if syntax was mostly commands.
+        if (!String(world.content[sectionName] || '').trim()) {
+            world.content[sectionName] = `${sectionName} notes were auto-repaired during import. Add richer notes here as needed.`;
+        }
+
+        if (!world.progress[sectionName]) {
+            world.progress[sectionName] = { quizPassed: false, examPassed: false, gameCooldowns: {} };
+        }
+        if (!world.progress[sectionName].gameCooldowns) {
+            world.progress[sectionName].gameCooldowns = {};
+        }
+        if (typeof world.progress[sectionName].quizPassed !== 'boolean') {
+            world.progress[sectionName].quizPassed = false;
+        }
+        if (typeof world.progress[sectionName].examPassed !== 'boolean') {
+            world.progress[sectionName].examPassed = false;
+        }
+    });
+
+    world.coordinates = generateMapCoordinates(world.sections.length);
+
+    report.totalFixes = report.createdSections + report.addedFlashcards + report.addedQuizzes + report.addedExams +
+        report.addedMiniGames + report.addedTasks + report.addedRituals + report.removedOrphans;
+
+    return report;
+}
+
+function parseSyntaxLine(line) {
+    const trimmed = String(line || '').trim();
+    if (!trimmed) return { type: 'EMPTY' };
+
+    if (/^!CHAPTER!\s*/i.test(trimmed)) {
+        return { type: 'CHAPTER', value: trimmed.replace(/^!CHAPTER!\s*/i, '').trim() };
+    }
+
+    if (/^#{1,3}\s+/.test(trimmed)) {
+        return { type: 'CHAPTER', value: trimmed.replace(/^#{1,3}\s+/, '').trim() };
+    }
+
+    if (/^!FLASH(CARD)?!\s*/i.test(trimmed)) {
+        return { type: 'FLASH', value: trimmed.replace(/^!FLASH(CARD)?!\s*/i, '').trim(), normalized: !/^!FLASH!/i.test(trimmed) };
+    }
+
+    if (/^!QUIZ(Z)?!\s*/i.test(trimmed)) {
+        return { type: 'QUIZ', value: trimmed.replace(/^!QUIZ(Z)?!\s*/i, '').trim(), normalized: !/^!QUIZZ!/i.test(trimmed) };
+    }
+
+    if (/^!EXAM(TEST)?!\s*/i.test(trimmed)) {
+        return { type: 'EXAM', value: trimmed.replace(/^!EXAM(TEST)?!\s*/i, '').trim(), normalized: !/^!EXAM!/i.test(trimmed) };
+    }
+
+    if (/^!RITUAL!\s*/i.test(trimmed)) {
+        return { type: 'RITUAL', value: trimmed.replace(/^!RITUAL!\s*/i, '').trim() };
+    }
+
+    if (/^!GAME!\s*/i.test(trimmed)) {
+        return { type: 'GAME', value: trimmed.replace(/^!GAME!\s*/i, '').trim() };
+    }
+
+    if (/^-\s*\[( |x|X)\]\s*/.test(trimmed)) {
+        const isCompleted = /-\s*\[(x|X)\]/.test(trimmed);
+        const text = trimmed.replace(/^-\s*\[( |x|X)\]\s*/, '').trim();
+        return { type: 'TASK', value: text, isCompleted };
+    }
+
+    return { type: 'TEXT', value: line };
+}
+
+function splitPromptAnswer(value) {
+    const idx = String(value || '').indexOf('::');
+    if (idx >= 0) {
+        return {
+            prompt: value.slice(0, idx).trim(),
+            answer: value.slice(idx + 2).trim()
+        };
+    }
+
+    // Fallback for malformed rows that used a single colon.
+    const fallback = String(value || '').split(':');
+    if (fallback.length >= 2) {
+        const prompt = fallback.shift().trim();
+        const answer = fallback.join(':').trim();
+        return { prompt, answer };
+    }
+
+    return { prompt: String(value || '').trim(), answer: '' };
+}
+
 function parseWorldFromSyntax(finalContent, worldName) {
     let newWorld = {
         name: worldName || tempFilename,
@@ -99,11 +324,16 @@ function parseWorldFromSyntax(finalContent, worldName) {
     let hasStarted = false;
 
     lines.forEach(line => {
-        let trimmedLine = line.trim();
-        if (trimmedLine === "") return;
+        const parsed = parseSyntaxLine(line);
+        let trimmedLine = String(line || '').trim();
+        if (parsed.type === 'EMPTY') return;
 
-        if (trimmedLine.startsWith('!CHAPTER! ')) {
-            currentSection = trimmedLine.replace('!CHAPTER! ', '').trim() || `Section ${newWorld.sections.size + 1}`;
+        if (parsed.normalized) {
+            newWorld._normalizedCommands = (newWorld._normalizedCommands || 0) + 1;
+        }
+
+        if (parsed.type === 'CHAPTER') {
+            currentSection = parsed.value || `Section ${newWorld.sections.size + 1}`;
             newWorld.sections.add(currentSection);
             newWorld.content[currentSection] = "";
             newWorld.progress[currentSection] = { quizPassed: false, examPassed: false, gameCooldowns: {} };
@@ -118,28 +348,27 @@ function parseWorldFromSyntax(finalContent, worldName) {
             hasStarted = true;
         }
 
-        let isSyntaxCommand = trimmedLine.startsWith('!FLASH!') ||
-            trimmedLine.startsWith('!QUIZZ!') ||
-            trimmedLine.startsWith('!EXAM!') ||
-            trimmedLine.startsWith('!RITUAL!') ||
-            trimmedLine.startsWith('!GAME!') ||
-            trimmedLine.startsWith('- [ ]') ||
-            trimmedLine.startsWith('- [x]');
+        let isSyntaxCommand = parsed.type === 'FLASH' ||
+            parsed.type === 'QUIZ' ||
+            parsed.type === 'EXAM' ||
+            parsed.type === 'RITUAL' ||
+            parsed.type === 'GAME' ||
+            parsed.type === 'TASK';
 
         if (!isSyntaxCommand) {
             newWorld.content[currentSection] += line + '\n';
         }
 
-        if (trimmedLine.startsWith('!FLASH!')) {
-            const parts = trimmedLine.replace('!FLASH!', '').split('::');
-            if (parts.length === 2) newWorld.flashcards.push({ section: currentSection, question: parts[0].trim(), answer: parts[1].trim(), interval: 0, ease: 2.5, nextReview: 0, burned: false });
+        if (parsed.type === 'FLASH') {
+            const parts = splitPromptAnswer(parsed.value);
+            if (parts.prompt && parts.answer) newWorld.flashcards.push({ section: currentSection, question: parts.prompt, answer: parts.answer, interval: 0, ease: 2.5, nextReview: 0, burned: false });
         }
-        if (trimmedLine.startsWith('!QUIZZ!')) {
-            const parts = trimmedLine.replace('!QUIZZ!', '').split('::');
-            if (parts.length === 2) newWorld.quizzes.push({ section: currentSection, question: parts[0].trim(), answer: parts[1].trim() });
+        if (parsed.type === 'QUIZ') {
+            const parts = splitPromptAnswer(parsed.value);
+            if (parts.prompt && parts.answer) newWorld.quizzes.push({ section: currentSection, question: parts.prompt, answer: parts.answer });
         }
-        if (trimmedLine.startsWith('!RITUAL!')) {
-            const parts = trimmedLine.replace('!RITUAL!', '').split('::');
+        if (parsed.type === 'RITUAL') {
+            const parts = parsed.value.split('::');
             if (parts.length === 2) {
                 newWorld.rituals.push({
                     section: currentSection,
@@ -148,22 +377,25 @@ function parseWorldFromSyntax(finalContent, worldName) {
                 });
             }
         }
-        if (trimmedLine.startsWith('!EXAM!')) {
-            const parts = trimmedLine.replace('!EXAM!', '').split('::');
-            if (parts.length === 2) newWorld.exams.push({ section: currentSection, question: parts[0].trim(), answer: parts[1].trim() });
+        if (parsed.type === 'EXAM') {
+            const parts = splitPromptAnswer(parsed.value);
+            if (parts.prompt && parts.answer) newWorld.exams.push({ section: currentSection, question: parts.prompt, answer: parts.answer });
         }
-        if (trimmedLine.includes('- [ ]') || trimmedLine.includes('- [x]')) {
-            let isCompleted = trimmedLine.includes('- [x]');
-            let taskText = trimmedLine.replace('- [ ]', '').replace('- [x]', '').trim();
-            newWorld.tasks.push({ section: currentSection, text: taskText, completed: isCompleted });
+        if (parsed.type === 'TASK') {
+            newWorld.tasks.push({ section: currentSection, text: parsed.value, completed: parsed.isCompleted });
         }
-        if (trimmedLine.startsWith('!GAME!')) {
-            newWorld.miniGames.push({ section: currentSection, name: trimmedLine.replace('!GAME!', '').trim() });
+        if (parsed.type === 'GAME') {
+            newWorld.miniGames.push({ section: currentSection, name: parsed.value.trim() });
         }
     });
 
     newWorld.sections = Array.from(newWorld.sections);
-    newWorld.coordinates = generateMapCoordinates(newWorld.sections.length);
+    const repairReport = normalizeAndRepairWorld(newWorld);
+    if (newWorld._normalizedCommands) {
+        repairReport.normalizedCommands = newWorld._normalizedCommands;
+        repairReport.totalFixes += newWorld._normalizedCommands;
+    }
+    newWorld.importRepairReport = repairReport;
     return newWorld;
 }
 function loadFileToEditor() {
@@ -186,6 +418,9 @@ function cancelEdit() {
 function saveAndProcessWorld() {
     const finalContent = editor.value;
     const newWorld = parseWorldFromSyntax(finalContent, tempFilename);
+    const report = newWorld.importRepairReport;
+    delete newWorld.importRepairReport;
+    delete newWorld._normalizedCommands;
     
     const hub = appState.hubs[appState.currentHubIndex];
     hub.worlds.push(newWorld); hub.currentWorldIndex = hub.worlds.length - 1;
@@ -194,10 +429,17 @@ function saveAndProcessWorld() {
     if(document.getElementById('training-card')) document.getElementById('training-card').classList.remove('locked');
     if(document.getElementById('vault-card')) document.getElementById('vault-card').classList.remove('locked');
     renderMap();
+
+    if (report && report.totalFixes > 0) {
+        alert(`Import audit complete: auto-fixed ${report.totalFixes} issue(s) so the world can run end-to-end.`);
+    }
 }
 
 function createWorldFromSyntax(syntaxContent, worldName) {
     const newWorld = parseWorldFromSyntax(syntaxContent, worldName || 'Auto Forged World');
+    const report = newWorld.importRepairReport;
+    delete newWorld.importRepairReport;
+    delete newWorld._normalizedCommands;
     const hub = appState.hubs[appState.currentHubIndex];
     hub.worlds.push(newWorld);
     hub.currentWorldIndex = hub.worlds.length - 1;
@@ -206,6 +448,10 @@ function createWorldFromSyntax(syntaxContent, worldName) {
     if(document.getElementById('training-card')) document.getElementById('training-card').classList.remove('locked');
     if(document.getElementById('vault-card')) document.getElementById('vault-card').classList.remove('locked');
     renderMap();
+
+    if (report && report.totalFixes > 0) {
+        console.info('Auto-forge import audit report', report);
+    }
     return newWorld;
 }
 
