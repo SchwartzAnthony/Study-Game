@@ -2951,6 +2951,7 @@ let vibeMusicInterval = null;
 let vibeDroneOsc = null;
 let vibeDroneGain = null;
 let vibeEnabled = true;
+let vibeMutedAll = false;
 let vibeStarted = false;
 let vibeLastHoverMs = 0;
 let vibeUnlockPromise = null;
@@ -2964,6 +2965,14 @@ let vibeSessionId = 0;
 
 const VIBE_SCALE = [130.81, 155.56, 174.61, 196.00, 233.08, 261.63]; // C minor-ish
 const VIBE_GAIN_MULT = 2.2;
+
+function _isAmbienceEnabled() {
+    return vibeEnabled && !vibeMutedAll;
+}
+
+function _isSfxEnabled() {
+    return !vibeMutedAll;
+}
 
 function ensureVibeAudio() {
     if (!vibeAudioCtx) {
@@ -3092,6 +3101,7 @@ function initFallbackAudio() {
 }
 
 function playFallbackClick(isHover) {
+    if (!_isSfxEnabled()) return;
     initFallbackAudio();
     if (!vibeFallbackReady) return;
     const pool = isHover ? vibeFallbackHoverPool : vibeFallbackClickPool;
@@ -3106,7 +3116,7 @@ function playFallbackClick(isHover) {
 
 function startFallbackAmbience(sessionId = vibeSessionId) {
     initFallbackAudio();
-    if (!vibeEnabled || sessionId !== vibeSessionId) return;
+    if (!_isAmbienceEnabled() || sessionId !== vibeSessionId) return;
     if (!vibeFallbackReady || !vibeFallbackAmbience) return;
     vibeFallbackAmbience.play().catch(() => {});
 }
@@ -3118,7 +3128,7 @@ function stopFallbackAmbience() {
 }
 
 function playUiTone(freq, duration = 0.06, type = 'triangle', volume = 0.018) {
-    if (!vibeEnabled) return;
+    if (!_isSfxEnabled()) return;
     ensureVibeAudioRunning().then((ok) => {
         if (!ok || !vibeAudioCtx || !vibeMasterGain) {
             playFallbackClick(false);
@@ -3145,12 +3155,12 @@ function playUiTone(freq, duration = 0.06, type = 'triangle', volume = 0.018) {
 }
 
 function startVibeMusic(sessionId = vibeSessionId) {
-    if (!vibeEnabled) return;
+    if (!_isAmbienceEnabled()) return;
     if (!ensureVibeAudio()) return;
     if (vibeMusicInterval) return;
 
     ensureVibeAudioRunning().then((ok) => {
-        if (!vibeEnabled || sessionId !== vibeSessionId) return;
+        if (!_isAmbienceEnabled() || sessionId !== vibeSessionId) return;
         if (!ok || !vibeAudioCtx || !vibeMasterGain) {
             startFallbackAmbience(sessionId);
             return;
@@ -3170,7 +3180,7 @@ function startVibeMusic(sessionId = vibeSessionId) {
 
         let step = 0;
         vibeMusicInterval = setInterval(() => {
-            if (!vibeEnabled || !vibeAudioCtx) return;
+            if (!_isAmbienceEnabled() || !vibeAudioCtx) return;
 
             const root = VIBE_SCALE[step % VIBE_SCALE.length];
             const accent = VIBE_SCALE[(step + 3) % VIBE_SCALE.length];
@@ -3204,8 +3214,31 @@ function stopVibeMusic() {
 function updateVibeToggleUI() {
     const btn = document.getElementById('vibe-audio-toggle');
     if (!btn) return;
-    btn.classList.toggle('off', !vibeEnabled);
+    btn.classList.toggle('off', !vibeEnabled || vibeMutedAll);
     btn.innerHTML = vibeEnabled ? '♫ Ambience: ON' : '♫ Ambience: OFF';
+}
+
+function updateMuteToggleUI() {
+    const btn = document.getElementById('vibe-mute-toggle');
+    if (!btn) return;
+    btn.classList.toggle('off', !vibeMutedAll ? false : true);
+    btn.innerHTML = vibeMutedAll ? '🔇 All Sound: OFF' : '🔊 All Sound: ON';
+}
+
+function setMuteAll(nextMuted) {
+    vibeMutedAll = !!nextMuted;
+    appState.vibeMuteAll = vibeMutedAll;
+    saveToStorage();
+    updateMuteToggleUI();
+    updateVibeToggleUI();
+
+    if (vibeMutedAll) {
+        vibeStarted = false;
+        stopVibeMusic();
+    } else if (vibeEnabled) {
+        startVibeMusic(vibeSessionId);
+        playUiTone(392.0, 0.09, 'triangle', 0.10);
+    }
 }
 
 function setVibeEnabled(nextEnabled) {
@@ -3215,7 +3248,7 @@ function setVibeEnabled(nextEnabled) {
     saveToStorage();
     updateVibeToggleUI();
 
-    if (vibeEnabled) {
+    if (_isAmbienceEnabled()) {
         startVibeMusic(vibeSessionId);
         playUiTone(261.63, 0.12, 'triangle', 0.12); // audible confirmation ping
         startFallbackAmbience(vibeSessionId);
@@ -3255,19 +3288,36 @@ function initGameVibeSystem() {
     }
 
     vibeEnabled = appState.vibeAudioOn !== false;
+    vibeMutedAll = appState.vibeMuteAll === true;
     updateVibeToggleUI();
+
+    let muteToggle = document.getElementById('vibe-mute-toggle');
+    if (!muteToggle) {
+        muteToggle = document.createElement('button');
+        muteToggle.id = 'vibe-mute-toggle';
+        muteToggle.className = 'vibe-audio-toggle vibe-mute-toggle';
+        muteToggle.type = 'button';
+        muteToggle.title = 'Mute or unmute all game sounds';
+        document.body.appendChild(muteToggle);
+    }
+    updateMuteToggleUI();
 
     if (floatingToggle.dataset.vibeBound !== '1') {
         floatingToggle.addEventListener('click', () => setVibeEnabled(!vibeEnabled));
         floatingToggle.dataset.vibeBound = '1';
     }
 
+    if (muteToggle.dataset.vibeMuteBound !== '1') {
+        muteToggle.addEventListener('click', () => setMuteAll(!vibeMutedAll));
+        muteToggle.dataset.vibeMuteBound = '1';
+    }
+
     if (document.body.dataset.vibeUnlockBound !== '1') {
         const unlock = () => {
-            if (!vibeEnabled) return;
+            if (!_isAmbienceEnabled()) return;
             const unlockSession = vibeSessionId;
             ensureVibeAudioRunning().then((ok) => {
-                if (!vibeEnabled || unlockSession !== vibeSessionId) return;
+                if (!_isAmbienceEnabled() || unlockSession !== vibeSessionId) return;
                 if (!ok) {
                     startFallbackAmbience(unlockSession);
                     playFallbackClick(false);
@@ -3282,6 +3332,7 @@ function initGameVibeSystem() {
     }
 
     document.addEventListener('click', (e) => {
+        if (e.target.closest('#vibe-audio-toggle') || e.target.closest('#vibe-mute-toggle')) return;
         const interactive = e.target.closest('button,.btn-primary,.btn-secondary,.btn-danger,.upload-btn,.nav-btn,.game-list-btn,.close-btn,.sprint-option-btn,.rune-btn,.map-node');
         if (!interactive) return;
 
@@ -3291,15 +3342,15 @@ function initGameVibeSystem() {
 
         if (e.clientX && e.clientY) spawnButtonRipple(interactive, e.clientX, e.clientY);
 
-        if (vibeEnabled) {
+        if (_isSfxEnabled()) {
             playUiTone(220 + Math.random() * 140, 0.07, 'triangle', 0.06);
-            if (!vibeStarted) startVibeMusic();
+            if (_isAmbienceEnabled() && !vibeStarted) startVibeMusic(vibeSessionId);
         }
     }, true);
 
     document.addEventListener('pointerover', (e) => {
         const interactive = e.target.closest('button,.btn-primary,.btn-secondary,.btn-danger,.upload-btn,.nav-btn,.game-list-btn,.rune-btn');
-        if (!interactive || !vibeEnabled) return;
+        if (!interactive || !_isSfxEnabled()) return;
         const now = Date.now();
         if (now - vibeLastHoverMs < 85) return;
         vibeLastHoverMs = now;

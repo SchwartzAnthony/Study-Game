@@ -99,6 +99,18 @@
     box-shadow: 0 0 10px rgba(80,70,120,0.2), inset 0 0 10px rgba(0,0,0,0.35);
 }
 
+.vibe-mute-toggle {
+    bottom: 78px;
+    border-color: rgba(212,168,67,0.55);
+    color: #f0d9a8;
+    background: linear-gradient(180deg, rgba(40,28,16,0.95), rgba(16,10,6,0.95));
+}
+
+.vibe-mute-toggle.off {
+    color: #8d7b59;
+    border-color: rgba(120,98,62,0.35);
+}
+
 @media (max-width: 700px) {
     .vibe-audio-toggle {
         left: 10px;
@@ -107,6 +119,10 @@
         padding: 7px 11px;
         max-width: calc(100vw - 20px);
         white-space: nowrap;
+    }
+
+    .vibe-mute-toggle {
+        bottom: 82px;
     }
 }
 
