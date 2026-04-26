@@ -649,6 +649,20 @@ function getActiveWorld() {
     return hub.worlds[hub.currentWorldIndex];
 }
 
+function isSectionClearedForProgression(world, sectionName) {
+    if (!world || !sectionName) return false;
+
+    const progress = world.progress?.[sectionName] || { quizPassed: false, examPassed: false };
+    const hasExams = (world.exams || []).some(exam => exam.section === sectionName);
+    const hasQuizzes = (world.quizzes || []).some(quiz => quiz.section === sectionName);
+
+    if (hasExams) return !!progress.examPassed;
+    if (hasQuizzes) return !!progress.quizPassed;
+
+    // Bridge sections (for example generated intros) should not block map progression.
+    return true;
+}
+
 // --- OCCULT OWL MENTOR ---
 function getDefaultOwlTips() {
     return [
@@ -688,6 +702,11 @@ function initOwlMentor() {
     if (!toggle || !panel) return;
     if (!appState.owlMentor) appState.owlMentor = { tips: [], tipIndex: 0, lastWorldName: null };
 
+    if (toggle.dataset.owlBound === '1') {
+        renderOwlTip();
+        return;
+    }
+
     toggle.addEventListener('click', () => {
         panel.classList.toggle('hidden');
         renderOwlTip();
@@ -712,6 +731,8 @@ function initOwlMentor() {
             renderOwlTip();
         });
     }
+
+    toggle.dataset.owlBound = '1';
 
     renderOwlTip();
 }
@@ -887,15 +908,20 @@ function renderMap() {
             
             let isLocked = false;
             if (index > 0) {
-                const prevProgress = world.progress[world.sections[index - 1]];
-                if (!prevProgress || !prevProgress.examPassed) isLocked = true;
+                const previousSectionName = world.sections[index - 1];
+                if (!isSectionClearedForProgression(world, previousSectionName)) isLocked = true;
             }
 
             if (isLocked) {
-                node.classList.add('locked-node'); node.onclick = () => alert(`🔒 Arcane Seal! You must pass the Exam in "${world.sections[index - 1]}" first.`);
+                node.classList.add('locked-node');
+                node.onclick = () => {
+                    const previousSectionName = world.sections[index - 1];
+                    const requiresExam = (world.exams || []).some(exam => exam.section === previousSectionName);
+                    const gateLabel = requiresExam ? 'Exam' : 'Quiz';
+                    alert(`🔒 Arcane Seal! You must pass the ${gateLabel} in "${previousSectionName}" first.`);
+                };
             } else {
-                const progress = world.progress && world.progress[sectionName];
-                if (progress && progress.examPassed) {
+                if (isSectionClearedForProgression(world, sectionName)) {
                     const sectionFc = world.flashcards.filter(fc => fc.section === sectionName);
                     if (sectionFc.length === 0 || sectionFc.every(fc => fc.burned)) node.classList.add('mastered'); else node.classList.add('completed'); 
                 }
@@ -2568,6 +2594,8 @@ if (document.getElementById('btn-force-sync')) {
 // Boot Application
 async function bootApp() {
     loadFromStorage();
+    // Bind Owl controls immediately so the button responds even during cloud sync fetch.
+    try { initOwlMentor(); } catch(e) { console.error('Owl mentor init error', e); }
     
     // Attempt Cloud Sync Fetch
     try {
@@ -2692,7 +2720,6 @@ async function bootApp() {
     // Render uploaded rewards into the store panel (if any were saved)
     try { renderUploadedRewards(); } catch (e) { /* ignore if DOM not ready */ }
     try { initMindMap(appState); } catch(e) { console.error("MindMap init error", e); }
-    try { initOwlMentor(); } catch(e) { console.error('Owl mentor init error', e); }
 }
 
 bootApp();
