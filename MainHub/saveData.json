@@ -170,9 +170,548 @@
                         }
                     ],
                     "title": "Physik01"
+                },
+                {
+                    "name": "syntax_MECH01",
+                    "sections": [
+                        "2 Die Aggregatzustände – Beispiel für eine physikalische",
+                        "1 Was ist Physik?",
+                        "2 MECH 1",
+                        "4 MECH 1",
+                        "2 Die Aggregatzustände – Beispiel für eine physikalische Modellbildung",
+                        "6 MECH 1",
+                        "8 MECH 1",
+                        "3 Die Hauptgebiete der Mechanik",
+                        "10 MECH 1",
+                        "4 Das physikalische Maßsystem",
+                        "12 MECH 1",
+                        "14 MECH 1",
+                        "1 m. Sie sollte, wie das Klafter, zwischen zwei Hände passen, durfte also nicht zu klein",
+                        "16 MECH 1",
+                        "18 MECH 1",
+                        "1582 folgen ließ.",
+                        "1 Sekunde ist der 31\u0002556\u0002925,9747-ste Teil eines Jahres.",
+                        "20 MECH 1",
+                        "22 MECH 1",
+                        "5 Zusammengesetzte Größen und Einheiten",
+                        "24 MECH 1",
+                        "100 m; 9,2",
+                        "100 m 100 m s 100 s",
+                        "26 MECH 1",
+                        "134 mm2 = … km2",
+                        "134 mm2 = 0,000000000134 km2 = 1,34 · 10–10 km2",
+                        "6 Kraft und Masse",
+                        "28 MECH 1",
+                        "30 MECH 1",
+                        "32 MECH 1",
+                        "1990 wurde bei Bremen ein Bauwerk eingeweiht, dass solche Experimente ermöglicht.",
+                        "34 MECH 1",
+                        "36 MECH 1",
+                        "38 MECH 1",
+                        "7 Arbeit, Energie und Leistung",
+                        "40 MECH 1",
+                        "42 MECH 1",
+                        "10 kg und einer Kantenlänge von a = 20 cm. Welche Arbeit W ist zu verrichten, um",
+                        "44 MECH 1",
+                        "46 MECH 1",
+                        "5 m",
+                        "48 MECH 1",
+                        "50 MECH 1",
+                        "52 MECH 1",
+                        "54 MECH 1",
+                        "56 MECH 1",
+                        "58 MECH 1"
+                    ],
+                    "flashcards": [],
+                    "quizzes": [],
+                    "exams": [],
+                    "tasks": [],
+                    "miniGames": [],
+                    "rituals": [],
+                    "content": {
+                        "2 Die Aggregatzustände – Beispiel für eine physikalische": "Modellbildung\n!SECTION! Wenn Sie einen Eiswürfel in eine Schale legen und lange genug warten, so ist der Eis-\nwürfel nach einer Weile verschwunden. Abgesehen von einem kleinen Kalkrand, der\nsich vermeiden lässt, wenn man einen Würfel aus chemisch reinem Wasser (dem sog.\n!SECTION! destillierten Wassser) verwendet, hat er keine sichtbaren Spuren hinterlassen.\n!SECTION! Was ist passiert?\n!SECTION! Geheimnisvoll ist das auf den ersten Blick nicht: zunächst ist der Würfel geschmolzen,\nund die hinterbliebene Wasserlache ist im Lauf der Zeit einfach getrocknet. So be-\nschreibt man diesen Vorgang umgangssprachlich.\n!SECTION! Legt man in einem zweiten Versuch einen Metallwürfel auf dieselbe Schale, so sagt Ih-\nnen Ihr gesunder Menschenverstand, dass dieser Metallwürfel sicher nicht die gleiche\nVerwandlung durchlaufen wird, würde man auch noch so lange warten. Tatsächlich\nnicht?\n!SECTION! Die alles entscheidende Größe ist hier die Umgebungstemperatur: Auch Metall kann,\nebenso wie Wasser, schmelzen und verdampfen, wenn nur die Temperatur hoch genug\nist.\n!SECTION! Aus diesem Grund geht auch jede Glühlampe irgendwann einmal kaputt. Der Metall-\ndraht, der in einer Glühlampe durch den elektrischen Strom zum Glühen gebracht wird,\nverliert durch einen dem Verdampfen des Wassers entsprechenden Vorgang immer\nmehr an Masse, bis er schließlich an einer Stelle so dünn wird, dass er durchschmilzt.\n!SECTION! Wenn nun so grundverschiedene Materialien wie Wasser und Metalle beim Überschrei-\nten einer bestimmten Temperatur im Prinzip den gleichen Vorgang durchlaufen, so soll-\nte man die verschiedenen Stufen, in denen dieser Vorgang abläuft, auch mit eigenen Na-\nmen belegen:\n!SECTION! Man bezeichnet die verschiedenen Zustände, in denen jeder Stoff auftreten kann, als\nAggregatzustände. Es gibt den festen, den flüssigen und den gasförmigen Zustand.\n!SECTION! Die Temperatur, die den Übergang zum jeweils nächsten Aggregatzustand bestimmt,\nheißt beim Übergang vom festen in den flüssigen Zustand Schmelztemperatur, beim\nÜbergang vom flüssigen in den gasförmigen Zustand Siedetemperatur. Allerdings han-\ndelt es sich dabei nicht um feste Werte, sondern diese Temperaturen sind abhängig von\nden jeweiligen Druckverhältnissen.\n!SECTION! Handelt es sich nicht um eine Erwärmung, sondern um eine Abkühlung, so bezeichnet\nman die gleichen Temperaturen als Erstarrungstemperatur bzw. als Kondensationstem-\nperatur.\n!SECTION! Bei Temperaturen unterhalb des Schmelzpunktes ist ein Stoff also fest, zwischen\nSchmelz- und Siedepunkt flüssig, oberhalb des Siedepunkts gasförmig.\n",
+                        "1 Was ist Physik?": "!SECTION! Mit dieser Einschätzung soll nun keineswegs in Abrede gestellt werden, dass die moder-\nnen Naturwissenschaften für unser tägliches Leben von immenser Bedeutung sind und\nnie geahnte Möglichkeiten geschaffen haben, die Natur nutzbar zu machen – zum Guten\nwie zum Schlechten: Waschen in der Waschmaschine, Rechnen mit dem Computer oder\naber auch die massive Bedrohung der Menschheit durch die Atombombe.\n!SECTION! Den wahren Grund jedoch, warum Dinge so sind wie sie sind, vermag die Naturwis-\nsenschaft nicht zu nennen.\n!SECTION! Die ständig wachsende Fülle neuer Erkenntnisse über Zusammenhänge zwischen den\nNaturerscheinungen führte zu einer Aufspaltung in verschiedene Bereiche: Es entwi-\nckelten sich die Biologie, die Chemie und die Physik als eigenständige Wissenschafts-\ngebiete.\n!SECTION! Dabei fiel der Physik zunächst die Aufgabe zu, die Gesetzmäßigkeiten der verschiedenen\nBewegungen zu untersuchen und zu systematisieren. Sie versuchte herauszufinden, wel-\nche Einflüsse den Ablauf einer Bewegung bestimmen. Heute bezeichnet man dieses, in-\nzwischen vielfach erweiterte Teilgebiet der Physik als Mechanik (griech.: „die Kunst,\nMaschinen zu bauen“).\n!SECTION! Doch bald begannen die Forscher auch, Erkenntnisse über das zu sammeln, was wir heu-\nte als elektrische Erscheinungen kennen, eine Elektrizitätslehre wurde entwickelt.\n!SECTION! Das Studium der merkwürdigen Effekte, die mit der Naturerscheinung Licht zusam-\nmenhängen (denken Sie z. B. an den Regenbogen), begründete im Lauf der Zeit mit der\nOptik einen eigenständigen Wissenschaftsbereich innerhalb der Physik. Dazu kamen\ndann noch das Gebiet der Wärmelehre und viel später die Kern- und Quanten-Physik.\n!SECTION! Das Teilgebiet Mechanik, dessen Grundlagen in diesem Heft dargestellt werden, steht\nnicht nur historisch am Anfang der Entwicklung der Physik. Auch inhaltlich ist es der\nWissenschaftszweig, der am weitesten in die anderen Teilgebiete hineinreicht und\ngleichzeitig unserer Anschauung am nächsten liegt.\n",
+                        "2 MECH 1": "",
+                        "4 MECH 1": "",
+                        "2 Die Aggregatzustände – Beispiel für eine physikalische Modellbildung": "!SECTION! Sollte nun diese Theorie tatsächlich stimmen, so müsste man in der Realität zwei Dinge\nbeobachten können:\n!SECTION! • Der Aufbau einer Flüssigkeit ist durch eine relativ starke Wärmebewegung der Ato-\nme gekennzeichnet. Befindet sich ein Atom dicht an der Oberfläche einer Flüssig-\nkeit, so müsste es möglich sein, dass es, quasi zufällig, den Anziehungskräften der\nbenachbarten Teilchen aufgrund seiner relativ intensiven Bewegung „entkommt“. Ist\neine solche Erscheinung in der Natur zu beobachten?\n!SECTION! • Wenn die Temperatur eines Stoffes sich tatsächlich in der Wärmebewegung seiner\nBausteine widerspiegelt, so muss es auch eine Temperatur geben, bei der die Teil-\nchenbewegung erlischt. Diese Temperatur kann dann auch nicht mehr unterschrit-\nten werden; im Gegensatz zu der Tatsache, dass eine weitere Energiezufuhr auch\neine immer höhere Temperaturen eines Stoffes zur Folge hat. Gibt es also einen sol-\nchen absoluten Nullpunkt?\n!SECTION! Tatsächlich lässt sich der erste Effekt beobachten: Wasser oder andere Flüssigkeiten ver-\nschwinden von selbst, wenn man sie lange genug stehen lässt. Das einfache Gedanken-\nexperiment mit dem Eiswürfel, das am Anfang dieses Abschnitts beschrieben wurde, be-\nlegt das: Obwohl das Schmelzwasser des Eiswürfels sicher nicht siedet, findet doch\nallmählich der Übergang in den gasförmigen Zustand statt. Dieser Vorgang geschieht je-\ndoch, in Übereinstimmung mit der entwickelten Theorie, viel langsamer als das Ver-\ndampfen siedenden Wassers.\n!SECTION! Diese Form des Übergangs in den nächsthöheren Zustand bezeichnet man als Verduns-\ntung. Stoffe, die relativ schnell verdunsten, bezeichnet man als flüchtig. Solche Stoffe\nsind zum Beispiel Alkohol, Aceton und Benzin.\n!SECTION! Bei manchen Stoffen, z. B. bei Wasser, gibt es sogar einen direkten Übergang vom festen\nin den gasförmigen Zustand, die Sublimation. Dieser Übergang vollzieht sich sehr lang-\nsam; man kann ihn im Winter beobachten. Auch wenn die Temperatur stets unter 0 °C\nbleibt, verschwindet Schnee allmählich, ohne zu tauen. Hier ändert das Wasser seinen\nAggregatzustand direkt vom festen in den gasförmigen Zustand, indem Teilchen, die\nsich direkt an der Oberfläche befinden, den Anziehungskräften ihrer Nachbarn entkom-\nmen.\n!SECTION! Auch die zweite aus der entwickelten Theorie vorhergesagte Erscheinung ist wirklich zu\nbeobachten.\n!SECTION! Der absolute Nullpunkt liegt bei –273,14 °C. Bei allen Messungen hat man diese Tempe-\nratur jedoch noch nie erreicht, was auch leicht zu verstehen ist: Man kann einen Stoff\n(bei gleich bleibendem Druck) nur abkühlen, indem man ihn dazu bringt, seine Wärme\nan einen kälteren Körper abzugeben. Daher müsste man einen Stoff, um ihn auf den ab-\nsoluten Nullpunkt abzukühlen, mit einem Körper in Kontakt bringen, der noch kälter ist.\n!SECTION! Eine Temperatur unterhalb des absoluten Nullpunkts gibt es aber nicht, und somit ist der\nabsolute Nullpunkt nie erreichbar.\n!SECTION! In diesem Abschnitt haben Sie (in vereinfachter Form) gesehen, wie die Physik arbeitet.\n!SECTION! An erster Stelle steht stets die Beobachtung eines Phänomens; genauere Untersuchungen\nliefern dann erste Theorieansätze. Wenn sich Folgerungen aus einer solchen Theorie ex-\nperimentell bestätigen lassen, bestätigt dies auch die Richtigkeit der vorausgegangenen\nÜberlegungen.\n!SECTION! Die Aggregatzustände – Beispiel für eine physikalische Modellbildung 2\nHierbei handelt sich jedoch um einen Prozess, der sich in vielen Fällen über Jahrhunder-\nte hingezogen hat und teilweise immer noch andauert. Dies sollten Sie stets bedenken,\num zu verstehen, was durch die physikalischen Theorien beschrieben wird:\nEin über lange Zeit hinweg entstandenes Modell der Natur!\n!SECTION! Aufgaben zur Selbstüberprüfung\n!SECTION! Überprüfen Sie nun bitte Ihre Kenntnisse. Benutzen Sie bei der Lösung der folgenden\nAufgaben bitte stets einen Bleistift, damit Sie mögliche Fehler nach dem Vergleich\nmit den Lösungen im Anhang berichtigen können. Es ist in Ihrem Interesse, die Auf-\ngaben selbstständig zu lösen, ehe Sie im Anhang nachschlagen!\n!SECTION! 2.1 Nennen Sie bitte die drei verschiedenen Zustände, in denen sich ein Stoff be-\nfinden kann!\n!SECTION! 2.2 Wie werden die Übergänge zwischen den Aggregatzuständen bezeichnet bei\n• steigender Temperatur:\n!SECTION! _________________________ und ______________________________\n!SECTION! • fallender Temperatur:\n!SECTION! _________________________ und ______________________________\n!SECTION! 2.3 Warum kann man Körper nicht beliebig weit abkühlen? Nennen Sie bitte einen\na) praktischen Grund\n!SECTION! b) theoretischen Grund\n!SECTION! 2.4 In einem der drei Aggregatzustände ist Materie leicht zusammendrückbar. In\nwelchem und warum?\n",
+                        "6 MECH 1": "",
+                        "8 MECH 1": "",
+                        "3 Die Hauptgebiete der Mechanik": "!SECTION! Dieses Teilgebiet der Mechanik ist sicher das umfangreichste unter den drei genannten.\n!SECTION! Es ist hier in hohem Maße notwendig, neue, klar definierte Begriffe zu entwickeln, um\ndie verschiedensten Phänomene beschreiben zu können und Berechnungen durchzufüh-\nren.\n!SECTION! Auch hier einige typische Beispiele zur Erläuterung:\n!SECTION! • Warum werden die Insassen eines Autos bei einem Unfall nach vorn geschleudert?\n!SECTION! • Wie muss ich werfen, damit ein Ball genau fünf Meter hoch fliegt?\n!SECTION! • Was muss man alles beachten, damit eine Rakete ihre Umlaufbahn erreicht?\n!SECTION! Vielleicht sind Ihnen anhand dieser Beispiele schon einige Vokabeln eingefallen, die mit\ndiesen Fragestellungen zu tun haben: Masse, Gewicht, Kraft, Trägheit usw.\n!SECTION! Solche grundlegenden Begriffe zu klären, ist Hauptaufgabe dieses Studienhefts.\n!SECTION! Aufgaben zur Selbstüberprüfung\n!SECTION! 3.1 Die Mechanik ist in drei Hauptgebiete unterteilt:\n!SECTION! a) die Lehre von den Kräften\n!SECTION! b) die Lehre vom Gleichgewicht\n!SECTION! c) die Lehre von den Bewegungen\n!SECTION! Ergänzen Sie bitte die Fachbegriffe!\n!SECTION! 3.2 Nennen Sie bitte die drei verschiedenen Formen des Gleichgewichts!\n!SECTION! 3.3 Ordnen Sie die kurz beschriebenen Fragestellungen den drei Teilgebieten der\nMechanik zu!\n!SECTION! a) Warum fällt der schiefe Turm von Pisa nicht um?\n!SECTION! b) Welche durchschnittliche Geschwindigkeit hatte ein Kraftfahrzeug, dass in\neiner Zeit von 8 Stunden von Hamburg nach München fuhr?\n!SECTION! c) Warum fällt ein Stein von einem hohen Turm?\n",
+                        "10 MECH 1": "",
+                        "4 Das physikalische Maßsystem": "!SECTION! Die neue Schaltregel bestimmte, dass weiterhin alle vier Jahre ein Schaltjahr sein solle.\n!SECTION! Zur Korrektur des Fehlers aus dem Julianischen Kalender legte man jedoch fest, dass in\njeweils 400 Jahren drei von diesen Schaltjahren ausfallen sollten. Es handelt sich dabei\num jene Jahre, deren Jahreszahl auf 00 endet und bei denen die Zahl aus den beiden ers-\nten Ziffern der Jahreszahl nicht durch vier teilbar ist.\n!SECTION! Keine Schaltjahre waren somit die Jahre 1700, 1800 und 1900. Das Jahr 2000 war wieder\nein Schaltjahr; die Jahre 2100, 2200 und 2300 nicht usw.\n!SECTION! Aber auch mit dieser Schaltregel sind noch nicht alle Unregelmäßigkeiten beseitigt, der\nFehler addiert sich jedoch erst im Lauf von 3\u0002333 Jahren auf eine ganze Tageslänge.\n!SECTION! Es ist also nicht ganz einfach, aus dem Lauf der Gestirne eine zuverlässige und genaue\nAnweisung zur Zeitmessung zu konstruieren. Die Genauigkeit reicht zwar für Anwen-\ndungen aus dem täglichen Leben aus, ist aber zu gering, um daraus eine exakte wissen-\nschaftliche Definition der Einheit Sekunde abzuleiten.\n!SECTION! Wie aber lässt sich in anderer Weise eine Vorschrift entwerfen, um überall auf der Welt\npräzise die Zeitspanne „1 Sekunde“ zu erzeugen?\n!SECTION! Man könnte auf folgende Idee kommen:\n!SECTION! Es gibt viele Vorgänge in der Natur, in denen sich bestimmte Abläufe in regelmäßigen\nAbständen wiederholen. Solche Vorgänge bezeichnet man als periodisch. Die Zeitspan-\nne, die zwischen zwei sich entsprechenden Zuständen verstreicht, heißt Schwingungs-\nzeit; die Anzahl der Schwingungen pro Zeiteinheit bestimmt die Frequenz der Schwin-\ngung:\n!SECTION! Ein Beispiel hierfür ist die Schwingung eines Pendels, die auch in mechanischen Uhren\nausgenutzt wird. Bei den alten Pendeluhren ist der die Uhrenbewegung bestimmende\nVorgang tatsächlich ein Pendel, in kleineren Uhren übernimmt diese Aufgabe eine an-\ndere Pendelform. Es handelt sich hier um ein sich hin- und herdrehendes Metallscheib-\nchen, das durch die Kraft einer Feder und einen Mechanismus in Gang gesetzt wird. Die-\nses bezeichnet man als Unruh.\n!SECTION! Könnte man nun z. B. ein bestimmtes Pendel mit einer genau definierten Masse und prä-\nzise bestimmten Länge zur Definition der Grundeinheit Sekunde oder eines Vielfachen\nvon ihr heranziehen?\n!SECTION! Leider ist dies nicht mit der nötigen Präzision möglich. Auch wenn die äußere Form und\ndie Schwingungsweite exakt vorgegeben sind, so ist die die Schwingungsdauer bestim-\nmende Kraft die Erdanziehungskraft.\n!SECTION! Ohne sie gäbe es überhaupt keine Pendelbewegung. Das Pendel würde, einmal ausge-\nlenkt, einfach in seinem Zustand verharren, da es gar nicht nach unten gezogen würde.\n!SECTION! Entsprechend würde das Pendel auch schneller pendeln, wenn die Erdanziehungskraft\ngrößer würde als an dem Ort, für den die Angaben über das Pendel gemacht wurden.\n!SECTION! Sie erkennen hierin die gleiche Schwierigkeit, wie sie bei der Massedefinition aufge-\ntaucht ist: Die auf eine Masse wirkende Gewichtskraft ist ortsabhängig.\n!SECTION! Somit ergibt sich hieraus auch keine universelle und genaue Sekundendefinition.\n!SECTION! Kleine Schwingungsdauer bedeutet also große Frequenz.\n!SECTION! Das physikalische Maßsystem 4\n!SECTION! Im Bereich der Natur gibt es aber Schwingungsvorgänge, die vollkommen unabhängig\nvom Ort sind. Ein solcher Vorgang ist z. B. das Schwingen eines Quarzstabes, wenn\neine elektrische Spannung an ihn angelegt wird. Diese Schwingung erfolgt mit großer\nPräzision und wird in den Ihnen bekannten Quarzuhren ausgenutzt.\n!SECTION! Die hohe Präzision dieser Uhren erklärt sich auch daraus, dass der Quarz mit sehr hoher\nFrequenz schwingt, eine Sekunde enthält mehrere Hunderttausend volle Schwingungen.\n!SECTION! Diese hohe Anzahl von Schwingungen wird auf elektronischem Weg gezählt:\nImmer dann, wenn eine bestimmte Anzahl von Schwingungen abgelaufen ist, wird ein\nImpuls abgegeben, der den Sekundenzeiger eine Sekunde vorrücken lässt. Danach be-\nginnt das Zählen von Neuem. Durch diese Methode fallen Ungenauigkeiten in der\nGrundschwingung des Quarzes nicht so sehr ins Gewicht. Ob der Quarz nun 10mal\nmehr oder weniger in einer Sekunde schwingt, ist bei der sehr hohen Gesamtzahl von\nSchwingungen in der Sekunde recht unerheblich.\n!SECTION! Noch höhere Frequenzen und somit kleinere Schwingungszeiten haben Vorgänge im\natomaren Bereich. Auch hier wird eine bestimmte Anzahl von Schwingungen gezählt\nund dann ein Sekundenimpuls abgegeben.\n!SECTION! Zur genauen Sekundendefinition benutzt man seit 1967 die Tatsache, dass eine „Sorte“\ndes chemischen Elements CAESIUM (das Isotop mit der Massenzahl 133) nach Energie-\nzufuhr u. a. eine Infrarotstrahlung mit der Frequenz 9\u0002192\u0002631\u0002770 Hz emittiert. Mit die-\nser hochfrequenten Schwingung werden Atomuhren so synchronisiert, dass sie in\n1\u0002000\u0002000 Jahren nur eine Sekunde falsch gehen können. Wozu man so genau gehende\nUhren braucht? Zum Beispiel, um Ihren Navigator so genau zu orten, dass Sie nicht beim\nNachbarn in die Garage gelenkt werden, sondern um die nächste Straßenecke. Sie müs-\nsen sich das einmal vorstellen: Da fliegen mindestens vier Satelliten im Sichtbereich Ih-\nres Autos. Über die Messung der Dauer eines Funksignals vom Satelliten zum Auto und\nzurück kann man die derzeitige Entfernung des Autos von diesen vier Satelliten messen.\n!SECTION! Daraus lässt sich eine auf dem Kopf stehende Pyramide berechnen, in deren Spitze Ihr\nAuto steht. Nun bewegen aber nicht nur Sie sich, sondern auch die Satelliten. Wenn die-\nses Durcheinander auch noch genau sein soll, müssen alle beteiligten Uhren sehr genau\ngehen. Wegen der recht hohen Geschwindigkeit der Satelliten von ca. 26 000 km/h spielt\nzusätzlich auch noch die Einsteinsche Relativitätstheorie in die Rechnung hinein.\n!SECTION! Aufgaben zur Selbstüberprüfung\n!SECTION! 4.1 Eine physikalische Größe umfasst eine ____________ und eine____________.\n!SECTION! 4.2 Schreiben Sie bitte die folgenden Zahlen mit Hilfe einer Zehnerpotenz!\n!SECTION! a) 386 046 728\n!SECTION! b) 1 000 001\n!SECTION! c) 0,0000569\n!SECTION! 4.3 Nennen Sie die drei Grundgrößen der Mechanik und beschreiben Sie, wodurch\nsie festgelegt sind!\n",
+                        "12 MECH 1": "",
+                        "14 MECH 1": "",
+                        "1 m. Sie sollte, wie das Klafter, zwischen zwei Hände passen, durfte also nicht zu klein": "!SECTION! und auch nicht zu groß sein. Man stellte fest, dass, wenn man den Abstand vom Nordpol\nbis zum Äquator in 10\u0002000\u0002000 gleiche Teile teilt, eine solche Strecke entsteht. Ein Stab\naus Edelmetall wurde hergestellt und liegt auch heute noch als Urmeter in Sèvres bei Pa-\nris. Alle an der Konferenz beteiligten Staaten bekamen eine Kopie. In Braunschweig lie-\ngen in der PTB (Physikalisch-Technischer Bundesanstalt) sogar zwei, eines von der Bun-\ndesrepublik, eines von der DDR.\n!SECTION! Natürlich sind alle Messeinrichtungen, die als Kopie einer anderen hergestellt werden,\nmit einer gewissen Ungenauigkeit behaftet. Im täglichen Leben fällt dies kaum auf, denn\nmit handelsüblichen Längenmessgeräten lassen sich Genauigkeiten erzielen, die den Er-\nfordernissen des Alltags und der Produktion völlig genügen.\n!SECTION! Erst mit der Entwicklung der Mikrotechnologie ist die Notwendigkeit aufgetaucht, eine\nneue Meterdefinition zu erarbeiten, die es ermöglicht, ohne umfangreiche Teilungsan-\nweisungen geringste Bruchteile eines Meters mit hoher Genauigkeit zu reproduzieren.\n!SECTION! Hierbei geht es teilweise um Millionstel eines Millimeters. Solche Genauigkeiten sind\nmit herkömmlichen Werkzeugen nicht zu erzielen, man muss hier auf optische Verfah-\nren zurückgreifen.\n!SECTION! Die Wahl des zur Längenmessung verwendeten Werkzeugs hängt von der Größe des zu\nmessenden Gegenstandes und der geforderten Genauigkeit ab. Will man Längen im Me-\nter- und Zentimeterbereich messen, so genügt i. A. eine Messlatte (umgangsspr.: Zoll-\nstock), oder ein Maßband. Hier liegt die Messgenauigkeit bei ungefähr einem Millimeter,\nwas z. B. auf dem Bau völlig ausreicht.\n!SECTION! In der Feinmechanik bedient man sich zweier Längenmessgeräte, die an dieser Stelle\nvorgestellt werden sollen: Messschieber und Mikrometerschraube.\n!SECTION! Der Messschieber (früher auch: die Schieblehre) ist ein Messinstrument, auf dessen\nLängenmaßstab ein Schieber sitzt. Auf dem Längenmaßstab befindet sich eine Millime-\ntereinteilung, auf dem Schieber ist ein 9 mm langer Bereich durch Striche in zehn gleich\ngroße Teile geteilt. Diese besondere Einteilung ermöglicht es, die Stellung des Schiebers\nauf einen Zehntelmillimeter genau zu bestimmen. Man muss hierzu die Strichmarkie-\nrungen auf dem Schieber und auf dem Maßstab vergleichen; die „Nummer“ des Teil-\nstrichs in der Neunerteilung (oder Nonius), der sich mit einem Teilstrich der Millimeter-\nskala deckt, bestimmt die Anzahl der zuzurechnenden Zehntel.\n!SECTION! Daher ist seit 1983 die Länge des Meters auf den 299\u0002792\u0002458-ten Teil der Strecke\nfestgelegt, die das Licht im Vakuum in einer Sekunde zurücklegt.©\n",
+                        "16 MECH 1": "",
+                        "18 MECH 1": "",
+                        "1582 folgen ließ.": "",
+                        "1 Sekunde ist der 31\u0002556\u0002925,9747-ste Teil eines Jahres.": "!SECTION! 4. Julius Caesar (100–44 v. Chr.), Kaiser und Kalenderreformer\n!SECTION! 5. Gregor XIII (1502–1585), Papst und Kalenderreformer\n",
+                        "20 MECH 1": "",
+                        "22 MECH 1": "",
+                        "5 Zusammengesetzte Größen und Einheiten": "!SECTION! die Vorstellung eines Würfels hilfreich) gilt entsprechend, dass sich bei der Verzehnfa-\nchung der Kantenlänge der Rauminhalt sogar vertausendfacht! Ein cm3 enthält also\n1\u0002000 mm3!\n!SECTION! Es gibt hierfür eine einfache, zweischrittige Merkregel, deren Bedeutung Sie bitte mit\nder Darstellung in dem folgenden Beispiel vergleichen:\n!SECTION! 1) Um wie viele Stellen müsste ich das Komma verschieben, wenn ich mir die beiden\nEinheiten als Längeneinheiten vorstellen würde?\n!SECTION! 2) Das, was bei der entsprechenden Längenumrechnung geschehen würde, führe ich so\noft aus, wie es der Exponent angibt.\n!SECTION! Beispiel 5.3:\n",
+                        "24 MECH 1": "",
+                        "100 m; 9,2": "s\n= =s v\nEs ist: = ; umstellen nach : =\ns s\nv t t\nt v\n",
+                        "100 m 100 m s 100 s": "= = = = 10,87 s\nm 9,2 m 9,2\n9,2\ns\n⋅\nt\nm\ns\nm s\n= m = s\nm m\ns\nZusammengesetzte Größen und Einheiten 5\nBeispiel 5.2:\n!SECTION! Ein Regionalzug fahrt mit einer Geschwindigkeit v = 100 kmh–1. Welche Strecke s\nlegt er in der Zeit t = 1,5 s zurück?\n!SECTION! Gegeben: v = 100 kmh–1; t = 1,5 s\n!SECTION! Gesucht: s\n!SECTION! Formel:\n!SECTION! Einsetzen:\n!SECTION! Obgleich kein grundsätzlicher Fehler gemacht wurde, lässt sich das Ergebnis so nicht\nangeben. Käme man auf den Gedanken, nun einfach 100 · 1,5 = 150 zu rechnen, so\nerkennt man, dass das Ergebnis nicht stimmen kann: Welcher Regionalzug fährt in\neineinhalb Sekunden 150 km?\n!SECTION! Wo liegt der Fehler?\n!SECTION! Sie erkennen sicher sofort, dass nach dem Einsetzen zwei unterschiedliche Zeitein-\nheiten auftauchen, nämlich Sekunde (s) und Stunde (h). Diese kann man nicht ge-\ngeneinander kürzen.\n!SECTION! Um solche Fehler zu vermeiden, muss man von vornherein die gegebenen Größen in\nihre Grundeinheiten umrechnen, d. h. aus der Einheit kmh–1 die Einheit ms–1 ma-\nchen. Solche Umrechnungen sind ganz einfach:\n!SECTION! Anstelle von 100 kmh–1 sollte man die Geschwindigkeit in der Rubrik „gegeben“\ngleich mit 27,8 ms–1 (denn , beachten Sie das\n!SECTION! Runden!) anführen.\n!SECTION! Es ergibt sich:\n!SECTION! Nun noch einige Bemerkungen zu den Flächen- und Volumeneinheiten. Hier werden\nbei der Umrechnung in eine andere Einheit sehr viele Fehler gemacht.\n!SECTION! Ein Meter enthält 100 cm. Das weiß jeder. Aber wie viele Quadratzentimeter sind in ei-\nnem Quadratmeter enthalten? Oder:\n!SECTION! Wieviele Kubikmillimeter enthält ein Kubikzentimeter?\n!SECTION! Bei der Umrechnung von Flächenmaßen (wobei man sich hier ein Quadrat vorstellen\nsollte) ist zu beachten, dass sich der Flächeninhalt verhundertfacht, wenn sich die Maß-\nzahl der Kantenlänge des Quadrats verzehnfacht! Somit sind in einem m2 nicht 100 cm2\nenthalten, sondern 10\u0002000 cm2! Bei der Umrechnung von Volumenangaben (auch hier ist\n= ; umstellen nach : =\n!SECTION! v s s v t\n!SECTION! = 100 1,5 s\n!SECTION! km 1 000 m 1 m\n!SECTION! h 3 600 s 3,6 s\n!SECTION! km 1 m 100 m\n!SECTION! 100 = 100 =\n!SECTION! h 3,6 s 3,6 s\n!SECTION! = 27,8 1,5 s = 41,7 m\n",
+                        "26 MECH 1": "",
+                        "134 mm2 = … km2": "!SECTION! 1. Schritt: Man rechnet von mm in km um, indem man das Komma in der Maß-\nzahl um sechs Stellen nach links schiebt (nach drei Stellen ist man\nbei m, weitere drei Stellen ergeben km).\n!SECTION! 2. Schritt: Da nicht mm in km, sondern mm2 in km2 umgerechnet werden sol-\nlen, ergibt sich insgesamt eine Verschiebung um zweimal sechs Stel-\nlen nach links, da der Exponent 2 ist.\n!SECTION! Es ergibt sich:\n",
+                        "134 mm2 = 0,000000000134 km2 = 1,34 · 10–10 km2": "Aufgaben zur Selbstüberprüfung\n!SECTION! 5.1 Bitte rechnen Sie die angegebenen Größen in die in Klammern stehende Maß-\neinheit um!\n!SECTION! a) 126 m2 (km2)\n!SECTION! b) 34 cm2 (mm2)\n!SECTION! c) 102 m3 (cm3)\n!SECTION! d) 0,01 m3 (mm3)\n!SECTION! e) 20 kmh–1 (ms–1)\n!SECTION! f) 2,5 ms–1 (kmh–1)\n!SECTION! 5.2 Wie teilt man durch eine Einheit, wenn diese durch einen Quotienten definiert\nist?\n!SECTION! 5.3 Nach welcher Methode sollte man eine Aufgabe lösen, bevor man die gegebe-\nnen Werte einsetzt?\n!SECTION! 5.4 Was ist eine Dimensionskontrolle?\n",
+                        "6 Kraft und Masse": "!SECTION! Wenn Sie den waagerecht gehaltenen Stern in diesem Punkt mit der Fingerspitze\noder einem Bleistiftende unterstützen, dann hält er sich im Gleichgewicht. Dieser\nPunkt (es gibt für jeden Körper nur einen bestimmten Punkt, der diese Eigenschaft\nhat) besitzt offensichtlich eine für das Gleichgewicht eines Körpers entscheidende\nEigenschaft. Bei einfach geformten Körpern weiß man intuitiv, wo dieser Punkt\nliegt:\n!SECTION! bei einer langen, geraden Stange in der Mitte, bei einem Rechteck im Kreuzungs-\npunkt der Diagonalen usw.\n!SECTION! Diesen Punkt bezeichnet man als Schwerpunkt. Wird ein Körper in ihm unterstützt, so\ngleichen sich die Gewichtskräfte auf die um den Punkt herumliegenden Teile des Kör-\npers aus. Unterstützt man den Körper nicht in seinem Schwerpunkt, so überwiegen die\nGewichtskräfte auf der einen Seite, und der Gegenstand kippt in diese Richtung.\n!SECTION! Die entscheidende Bedeutung des Schwerpunktes für das Gleichgewicht eines Körpers\nlässt sich so formulieren:\n!SECTION! Solange der Schwerpunkt eines gekippten Körpers über seiner früheren Unterstützungs-\nfläche bleibt, kippt der Gegenstand nicht von alleine weiter; lässt man ihn los, so kippt\ner zurück. Liegt der Schwerpunkt nicht mehr über dieser Fläche, so endet das stabile\nGleichgewicht, und der Körper fällt um. Für Gleichgewichtsüberlegungen ist somit die\näußere Form des Körpers nicht mehr von Interesse, wenn man nur die Lage des Schwer-\npunkts kennt.\n!SECTION! Dies konnten Sie bei dem Kippversuch mit der Getränkebox gut beobachten. Die maxi-\nmale Neigung wird erreicht, wenn sich bei einer Krafteinwirkung von rechts die rechte\nobere Kante genau über der linken unteren Kante befindet. Bei dieser Stellung befindet\nsich der Schwerpunkt des Quaders genau auf der Grenze der früheren Unterstützungs-\nfläche. Überschreitet man diese Neigung, so kippt die Box um.\n!SECTION! Beim fünften Versuch konnten Sie beobachten, dass der Bücherstapel noch nicht über\ndie Kante kippt, wenn das untere Buch noch mit mindestens drei Vierteln seiner Fläche\nauf dem Tisch liegt. Auch dies ist mit der Schwerpunktsüberlegung zu erklären.\n!SECTION! Der Schwerpunkt jedes einzelnen Buches liegt über seiner Unterstützungsfläche auf\ndem nächstunteren Buch. Daher bleibt der Stapel stabil. Den gemeinsamen Schwer-\npunkt des ganzen Stapels findet man, indem man den Schwerpunkt der Schwerpunkte\nKraft und Masse 6\n!SECTION! sucht. Dieser befindet sich an der gleichen Stelle wie der Schwerpunkt des mittleren\nBuchs. Daher kippt der ganze Stapel über die Kante, wenn mindestens ein Viertel des\nunteren Buches nicht mehr unterstützt wird.\n!SECTION! Merken Sie sich daher bitte:\n!SECTION! Aufgaben zur Selbstüberprüfung\n!SECTION! 6.1 In welchen Worten formuliert Newton das Prinzip „Kraft gleich Gegenkraft“?\n!SECTION! 6.2 Warum kann man im Stadium der Schwerelosigkeit kein Glas Wasser austrin-\nken?\n!SECTION! 6.3 Unter welcher Bedingung fällt ein Körper um?\n!SECTION! 6.4 Stellen Sie sich bitte eine Mannschaft mit 20 gleich starken Teilnehmern beim\nTauziehen vor.\n!SECTION! Wann reißt das Seil eher?\n!SECTION! • Wenn 10 Teilnehmer an je einer Seite in entgegengesetzte Richtung ziehen\n• Wenn das Seil an einer Seite festgebunden wird und an der freien Seite 10\nvon diesen 20 Teilnehmern ziehen\n!SECTION! Bitte begründen Sie Ihre Antwort!\n!SECTION! 6.5 Wovon hängt die auf einen Körper wirkende Trägheitskraft ab?\n!SECTION! Von der _______________________ und der _________________________\n6.6 Welche Gewichtskraft wirkt (ungefähr) auf einen Körper der Masse\nFür alle Gleichgewichtsüberlegungen kann man sich die gesamte Masse eines Kör-\npers in seinem Schwerpunkt vereinigt denken!\n!SECTION! Hat man es mit einem System aus mehreren Körpern zu tun, so kann man mit den\nSchwerpunkten der einzelnen Körper die Lage eines Gesamtschwerpunktes finde.\n!SECTION! Allein seine Lage in Bezug auf die Unterstützungsfläche entscheidet über den\nGleichgewichtszustand des ganzen Körpers.\n!SECTION! a) m = 0,001 kg\n!SECTION! b) m = 230 kg\n!SECTION! c) m = 234 g\n",
+                        "28 MECH 1": "",
+                        "30 MECH 1": "",
+                        "32 MECH 1": "",
+                        "1990 wurde bei Bremen ein Bauwerk eingeweiht, dass solche Experimente ermöglicht.": "!SECTION! Dieser Fallturm ist im Inneren luftleer, so dass keine Luftreibung auftritt. Während der\nkurzen Zeit des freien Falls herrscht in der Kabine ein Zustand, der völliger Schwerelo-\nsigkeit entspricht. Die Kosten für ein Kurzexperiment betragen nur noch einen Bruchteil\ndessen, was ein Weltraumaufenthalt kosten würde; außerdem lassen sich die Experi-\nmente beliebig oft wiederholen.\n",
+                        "34 MECH 1": "",
+                        "36 MECH 1": "",
+                        "38 MECH 1": "",
+                        "7 Arbeit, Energie und Leistung": "7.2 geg.: Fg = 225,63 N, Δ h = 2,5 m\nges.: Whub\n!SECTION! Whub = Fg · Δ h, eingesetzt: Whub = 225,63 N · 2,5 m = 564,075 Nm\n7.3 a) Lageenergie, Beschleunigungsarbeit, Bewegungsenergie, Spannarbeit, Span-\nnenergie, Beschleunigungsarbeit, Bewegungsenergie, Hubarbeit, Lageener-\ngie.\n!SECTION! b) Spannarbeit, Spannenergie, Beschleunigungsarbeit, Bewegungsenergie,\nSpannarbeit, Spannenergie, usw. ...\n!SECTION! 7.4 Sie wird durch die Reibung der Bremsbeläge in Wärme umgewandelt.\n!SECTION! 7.5 a) geg.: V = 3 m3 (das entspricht einer Wassermenge von 3\u0002000 kg,\ndie eine Gewichtskraft von Fg = 29\u0002430 N erfährt),\n!SECTION! Δ h = 5 m, t = 3\u0002600 s\n!SECTION! ges.: P\n!SECTION! , eingesetzt:\n!SECTION! b) geg.: FR = 800 N, v = 22,22 ms–1\n!SECTION! ges.: P\n!SECTION! P = FR · v, eingesetzt:\n!SECTION! c) geg.: Fg = 784,8 N, t = 7 200 s, Δ h = 870 m\n!SECTION! ges.: P\n!SECTION! , eingesetzt:\n!SECTION! 7.6 geg.: P = 100 W, t = 14 400 s, h = 3,5 m\n!SECTION! ges.: m bzw. Fg\n!SECTION! Nun muss man nach Fg auflösen:\n!SECTION! , eingesetzt:\n!SECTION! Das entspricht einer Masse von m = 41\u0002939,8 kg = 41,9398 t\n!SECTION! ⋅ 29 430 5 N m\n!SECTION! = = 40,875 W\n!SECTION! 3 600 s s\n!SECTION! = 800 N 22,22 = 17,776 kW\n!SECTION! ⋅ 784,8 870 N m\n!SECTION! = = 94,83 W\n!SECTION! 7 200 s\n!SECTION! 100 14 400 s= = 411 429 N\n!SECTION! B. Abbildungsverzeichnis\n",
+                        "40 MECH 1": "",
+                        "42 MECH 1": "",
+                        "10 kg und einer Kantenlänge von a = 20 cm. Welche Arbeit W ist zu verrichten, um": "aus diesen Klötzen einen 2 m hohen Turm zu bauen?\n!SECTION! Lösung: Hier kann man nicht, wie in Beispiel 1, die gegebenen Werte einfach in\neine Formel einsetzen. Man muss sich zunächst darüber klar werden,\ndass an jedem Klotz eine andere Arbeit verrichtet werden muss, da jeder\nauf eine andere Höhe gehoben werden soll. Am ersten Klotz wird gar kei-\nne Arbeit verrichtet, der zweite wird um h2 = 20 cm angehoben, der dritte\num h3 = 40 cm usw.\n!SECTION! Die Arbeit W ist das Produkt aus dem zurückgelegten Weg s und der Kraft F, die ent-\nlang dieses Weges in Wegrichtung aufgewendet worden ist:\n!SECTION! W = F · s\n!SECTION! Die Maßeinheit der Arbeit W ist das NEWTONMETER (Nm), oder abgekürzt, das\nschon im Kapitel 4.3 erwähnte JOULE (J).\n!SECTION! dim W = Nm = J\n",
+                        "44 MECH 1": "",
+                        "46 MECH 1": "",
+                        "5 m": "F\n⋅\nArbeit, Energie und Leistung 7\nBeachten Sie bitte:\n!SECTION! • Immer dann, wenn eine Leistung in der Einheit Watt gegeben ist, muss man diese\nEinheit beim Rechnen in die Einheiten Nm und s zurückverwandeln, da sich sonst\ndie gesuchte Größe nicht in der richtigen Einheit ergibt.\n!SECTION! • Das Formelzeichen P kommt vom englischen „Power“ (engl.: Kraft, Macht).\n!SECTION! • Die Leistung kann auch durch die Angabe einer Geschwindigkeit v und einer Kraft\nF (beispielsweise einer Reibungskraft) bestimmt sein.\n!SECTION! Es gilt:\n!SECTION! wobei das Produkt F · s im Zähler für die verrichtete Arbeit steht.\n!SECTION! Schreibt man diesen Ausdruck etwas anders, so erkennt man sofort, dass die Leistung\ndurch das Produkt aus Kraft F und Geschwindigkeit v bestimmt ist:\nBeispiel 7.5:\n!SECTION! Ein Fahrradfahrer der Masse m = 90 kg (incl. Fahrrad) überwindet einen Höhenun-\nterschied von h = 250 m innerhalb einer Zeit t = 45 min. Welche Leistung erbringt\ner?\n!SECTION! Gegeben: FG = 882,9 N (dies ergibt sich aus m = 90 kg)\n!SECTION! h = 250 m\n!SECTION! t = 2\u0002700 s (bitte immer gleich umrechnen!)\n!SECTION! gesucht: Leistung P\n!SECTION! Es gilt:\n!SECTION! Daraus folgt:\n!SECTION! Die Leistung P ist der Quotient aus der erbrachten Arbeit W und der dazu benötigten\nZeit t:\n!SECTION! Als Abkürzung für die aus dieser Definition folgende, zusammengesetzte Einheit\ndefiniert man das WATTa) (W):\n!SECTION! Es gilt:\n!SECTION! a) nach dem englischen Physiker James WATT (1736–1819), der u. a. die Dampfmaschine erfand.\n!SECTION! dim = = W =\n!SECTION! = = , da =\n!SECTION! P F F v v\n!SECTION! G= mit =\n!SECTION! P W F h\n",
+                        "48 MECH 1": "",
+                        "50 MECH 1": "A. Lösungen der Aufgaben zur Selbstüberprüfung\n!SECTION! Hier finden Sie die Lösungen zu den Aufgaben zur Selbstüberprüfung in den einzelnen\nKapiteln. Bei offenen Aufgaben mit freien Formulierungen kommt es nicht auf eine\nwörtliche Übereinstimmung an, sondern auf den Inhalt. Entsprechen Ihre Ergebnisse\nnicht den Lösungen, wiederholen Sie bitte das entsprechende Kapitel und bearbeiten Sie\ndie zugehörigen Aufgaben zur Selbstüberprüfung nach einer Pause erneut.\n!SECTION! Kapitel 2\n!SECTION! 2.1 Es sind dies der feste, der flüssige und der gasförmige Zustand.\n!SECTION! 2.2 Bei steigender Temperatur heißen die Übergänge Schmelzen und Verdampfen\n(bzw. verdunsten), bei fallender Temperatur Kondensieren und Erstarren bzw.\n!SECTION! Gefrieren.\n!SECTION! 2.3 a) Da sich ein Körper nur durch den Kontakt mit einem kälteren Körper abküh-\nlen kann, ist es nicht möglich, den absoluten Nullpunkt zu unterschreiten.\n!SECTION! b) Wäre der absolute Nullpunkt erreicht, so kommt jede Teilchenbewegung zur\nRuhe. Absolute Ruhe heißt aber auch, dass die Temperatur nicht weiter ge-\nsenkt werden kann.\n!SECTION! 2.4 Im gasförmigen Zustand, da nur in diesem noch „Platz“ zwischen den Teilchen\nist.\n!SECTION! Kapitel 3\n!SECTION! 3.1 Dynamik, Statik, Kinematik.\n!SECTION! 3.2 Labiles, indifferentes und stabiles Gleichgewicht.\n!SECTION! 3.3 a) Statik\n!SECTION! b) Kinematik\n!SECTION! c) Dynamik\n!SECTION! Kapitel 4\n!SECTION! 4.1 Eine physikalische Größe besteht aus einer Maßzahl und einer Maßeinheit.\n!SECTION! 4.2 Die Werte werden in dieser Form der Darstellung sinnvollerweise gerundet:\na) 3,86 · 108\n!SECTION! b) 1 · 106\n!SECTION! c) 5,69 · 10–5\n!SECTION! 4.3 Die drei Grundgrößen sind Masse, Länge und Zeit.\n!SECTION! Das Kilogramm ist durch das URKILOGRAMM, der Meter durch den\n!SECTION! 299\u0002792\u0002458-ten Teil der Strecke, die das Licht im Vakuum in einer Sekunde zu-\nrücklegt, und die Sekunde durch eine bestimmte Anzahl von Schwingungen ei-\nnes Atoms festgelegt.\n!SECTION! Arbeit, Energie und Leistung 7\n!SECTION! Kapitel 5\n!SECTION! 5.1 a) 0,000126 km2\n!SECTION! b) 3\u0002400 mm2\n!SECTION! c) 102\u0002000\u0002000 cm3\n!SECTION! d) 10\u0002000\u0002000 mm3\n!SECTION! e) 5,56 ms–1\n!SECTION! f) 9 kmh–1\n!SECTION! 5.2 Man multipliziert mit dem Kehrwert der Einheit.\n!SECTION! 5.3 Man sollte die gegebenen Größen stets in die jeweiligen Grundeinheiten um-\nrechnen.\n!SECTION! 5.4 Man setzt nicht die Größen, sondern nur ihre Einheiten in die hergeleitete For-\nmel ein. Dabei muss sich die gesuchte Einheit ergeben.\n!SECTION! Kapitel 6\n!SECTION! 6.1 actio = reactio\n!SECTION! 6.2 Weil das Wasser nicht nach unten gezogen wird. Mit einem Strohhalm geht es.\n!SECTION! 6.3 Der Körper kippt, wenn sich sein Schwerpunkt nicht mehr in senkrechter Linie\nüber seiner Unterstützungsfläche befindet.\n!SECTION! 6.4 Die beiden Fälle unterscheiden sich, bezogen auf die Kräfte, nicht: in dem Fall,\nin dem an jeder Seite 10 Teilnehmer ziehen, bringt die eine Seite nur die Gegen-\nkraft zur jeweils anderen Seite auf. Das kann aber auch die Wand!\n!SECTION! 6.5 Die auf einen Körper wirkende Trägheitskraft hängt von der Masse des Körpers\nund von der Beschleunigung ab, die er erfährt.\n!SECTION! 6.6 a) Fg = 0,00981 N\n!SECTION! b) Fg = 2 256,3 N\n!SECTION! c) Fg = 2,29554 N\n!SECTION! Kapitel 7\n!SECTION! 7.1 a) Es wird keine Arbeit aufgewendet. Es wird zwar eine Kraft ausgeübt, aber\nder zugehörige Weg ist Null.\n!SECTION! b) Allein das Tragen eines Gegenstandes erfordert im physikalischen Sinn keine\nArbeit, obwohl es körperlich anstrengend ist. Sieht man vom Anheben des\nKoffers beim Losgehen und beim Einsteigen ab, so lautet die richtige Ant-\nwort auch hier: der Fahrgast wendet keine Arbeit auf.\n!SECTION! c) Die zu leistende Arbeit berechnet sich aus dem Produkt von Gewichtskraft\nund Hubhöhe. Hier wird also Arbeit verrichtet!\n",
+                        "52 MECH 1": "",
+                        "54 MECH 1": "C\nC. Tabellenverzeichnis\nD\nD. Sachwortverzeichnis\nMECH1\nA\nB\nD\nE\nF\nG\nGleichgewicht\nH\nK\nL\nM\nN\nP\nR\nS\nT\nU\nV\nW\n",
+                        "56 MECH 1": "Name: Vorname:\nPostleitzahl und Ort: Straße:\nStudien- bzw. Vertrags-Nr.: Lehrgangs-Nr.:\nFernlehrer/in:\nDatum:\nNote:\nUnterschrift Fernlehrer/in:\nE\n!SECTION! Bitte reichen Sie Ihre Lösungen über die Online-Lernplattform ein oder schicken Sie uns\ndiese per Post. Geben Sie bitte immer den Code zum Studienheft an (siehe oben rechts).\n!SECTION! E. Einsendeaufgabe\n!SECTION! Mechanik\n!SECTION! 1225K14\n!SECTION! Hinweise zur Bearbeitung der Einsendeaufgabe\n!SECTION! Geben Sie bitte immer den ausführlichen Rechenweg mit einem allgemeinen Formel-\nansatz und der nötigen Umformung an. Bitte denken Sie auch daran, dass eine physika-\nlische Größe immer aus einem Zahlenwert und einer Einheit besteht, die in jedem\nRechenschritt anzugeben ist. So kann Ihr Gedankengang in der Korrektur klar nachvoll-\nzogen werden. Auch Sie können bei einer Einheitenprobe leichter mögliche Fehler er-\nkennen.\n!SECTION! 1. Rechnen Sie bitte die gegebenen Längen-, Massen- und Zeitangaben in die entspre-\nchende Basiseinheit um!\n!SECTION! a) 340,7 km\n!SECTION! b) 57 429 mm\n!SECTION! c) 4,82 t\n!SECTION! d) 19 Stunden\n!SECTION! e) 712 mg\n!SECTION! f) 42 min 11 s\n!SECTION! 2. Ein Intercity hat eine Durchschnittsgeschwindigkeit v, die sich daraus errechnen\nlässt, dass der Zug in t = 3 Stunden eine Strecke von s = 288 km zurücklegt, Aufent-\nhalte eingerechnet.\n!SECTION! a) Berechnen Sie diese Durchschnittsgeschwindigkeit v und geben sie das Ergebnis\nin kmh–1 und in ms–1 an!\n!SECTION! b) Wie lange würde der Intercity für eine Strecke von s = 800 km brauchen? Be-\nrechnen Sie die Lösung sowohl in Stunden als auch in Minuten und Sekunden!\n!SECTION! 3. Ein Trampolinturner stößt sich vom Netz ab, so dass ihn die wirksame Gegenkraft\nnach oben schleudert.\n!SECTION! a) Wie bezeichnet man die Energie, die er bei diesem Vorgang dem Netz erteilt?\n!SECTION! b) In welche Energieform wird diese Energie umgewandelt, wenn der Springer\nnach oben bewegt wird?\n",
+                        "58 MECH 1": "E Einsendeaufgabe\n!SECTION! c) Wie bezeichnet man die Energieform, die er im Höhepunkt besitzt, ehe er wieder\nherunterfällt?\n!SECTION! d) Welche Energieform gewinnt er beim Herabfallen?\n!SECTION! 4. Berechnen Sie die physikalische Arbeit, die notwendig ist, um eine Last der Masse\nm = 22 kg\n!SECTION! a) um Δ h = 14 m anzuheben.\n!SECTION! b) auf ebener Strecke bei konstanter Höhe 19 m weit zu tragen.\n!SECTION! c) um Δ h = 1 m anzuheben und ihn dann wieder abzusetzen.\n!SECTION! Begründen Sie Ihre Antworten zu b) und c) bitte kurz!\n!SECTION! 5. Ein Wanderer, dessen Körpermasse m = 82 kg beträgt, hat 8 kg Gepäck bei sich. Er\nsteigt auf einen Berg der Höhe h = 142 m in einer Zeit t = 1 Stunde 45 min. Wie groß\nwar seine physikalische Leistung ?\n!SECTION! 6. Auf welche Höhe h kann man eine Last der Masse m = 68 kg mit einer Energie\nW = 18\u0002000 Nm anheben ?\n!SECTION! ( = 9,81 )\n!SECTION! ( = 9,81 )\n"
+                    },
+                    "progress": {
+                        "2 Die Aggregatzustände – Beispiel für eine physikalische": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "1 Was ist Physik?": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "2 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "4 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "2 Die Aggregatzustände – Beispiel für eine physikalische Modellbildung": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "6 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "8 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "3 Die Hauptgebiete der Mechanik": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "10 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "4 Das physikalische Maßsystem": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "12 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "14 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "1 m. Sie sollte, wie das Klafter, zwischen zwei Hände passen, durfte also nicht zu klein": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "16 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "18 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "1582 folgen ließ.": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "1 Sekunde ist der 31\u0002556\u0002925,9747-ste Teil eines Jahres.": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "20 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "22 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "5 Zusammengesetzte Größen und Einheiten": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "24 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "100 m; 9,2": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "100 m 100 m s 100 s": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "26 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "134 mm2 = … km2": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "134 mm2 = 0,000000000134 km2 = 1,34 · 10–10 km2": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "6 Kraft und Masse": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "28 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "30 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "32 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "1990 wurde bei Bremen ein Bauwerk eingeweiht, dass solche Experimente ermöglicht.": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "34 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "36 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "38 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "7 Arbeit, Energie und Leistung": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "40 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "42 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "10 kg und einer Kantenlänge von a = 20 cm. Welche Arbeit W ist zu verrichten, um": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "44 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "46 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "5 m": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "48 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "50 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "52 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "54 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "56 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        },
+                        "58 MECH 1": {
+                            "quizPassed": false,
+                            "examPassed": false,
+                            "gameCooldowns": {}
+                        }
+                    },
+                    "background": null,
+                    "coordinates": [
+                        {
+                            "x": 44.20415958382703,
+                            "y": 35.817166171801865
+                        },
+                        {
+                            "x": 51.120268613215536,
+                            "y": 62.03022368605872
+                        },
+                        {
+                            "x": 56.57445552800241,
+                            "y": 39.03477739748688
+                        },
+                        {
+                            "x": 55.47788877932334,
+                            "y": 54.05290475522695
+                        },
+                        {
+                            "x": 27.20212021501043,
+                            "y": 49.348044282351296
+                        },
+                        {
+                            "x": 13.157948657993668,
+                            "y": 63.75167981651582
+                        },
+                        {
+                            "x": 25.27107021343629,
+                            "y": 73.94126561802469
+                        },
+                        {
+                            "x": 41.71170840752596,
+                            "y": 68.77710198797772
+                        },
+                        {
+                            "x": 39.509124268446676,
+                            "y": 42.79541430632003
+                        },
+                        {
+                            "x": 24.357485253356707,
+                            "y": 43.920397993922954
+                        },
+                        {
+                            "x": 13.986114459274742,
+                            "y": 49.8882880713185
+                        },
+                        {
+                            "x": 13.622835191959235,
+                            "y": 39.67687629713851
+                        },
+                        {
+                            "x": 37.15952278935095,
+                            "y": 53.45289450974045
+                        },
+                        {
+                            "x": 53.61706171020886,
+                            "y": 32.8995121199367
+                        },
+                        {
+                            "x": 54.087639248404926,
+                            "y": 10.330526301973784
+                        },
+                        {
+                            "x": 35.853788566937496,
+                            "y": 20.24845300179771
+                        },
+                        {
+                            "x": 11.362460120661808,
+                            "y": 18.659238105536616
+                        },
+                        {
+                            "x": 14.804393678392401,
+                            "y": 29.7513294303031
+                        },
+                        {
+                            "x": 39.32360805108553,
+                            "y": 14.132194085055795
+                        },
+                        {
+                            "x": 26.338201564031998,
+                            "y": 24.999393804446015
+                        },
+                        {
+                            "x": 24.07771706992103,
+                            "y": 13.413281395462468
+                        },
+                        {
+                            "x": 25.272003320172704,
+                            "y": 35.49758692509481
+                        },
+                        {
+                            "x": 17.13183684487312,
+                            "y": 11.967973259718484
+                        },
+                        {
+                            "x": 32.57357147755624,
+                            "y": 11.745460318491151
+                        },
+                        {
+                            "x": 16.884158636811385,
+                            "y": 21.311794561970608
+                        },
+                        {
+                            "x": 10.722715866371331,
+                            "y": 11.248038375052543
+                        },
+                        {
+                            "x": 29.32439498337105,
+                            "y": 30.498468280121095
+                        },
+                        {
+                            "x": 42.9899979338501,
+                            "y": 22.333397068288413
+                        },
+                        {
+                            "x": 68.66287685867128,
+                            "y": 20.01768152513361
+                        },
+                        {
+                            "x": 79.22353420145525,
+                            "y": 13.392582634601233
+                        },
+                        {
+                            "x": 87.29047507818711,
+                            "y": 27.14230650774916
+                        },
+                        {
+                            "x": 62.41326583331057,
+                            "y": 34.79257313980957
+                        },
+                        {
+                            "x": 56.21311112990137,
+                            "y": 20.35689714916647
+                        },
+                        {
+                            "x": 66.46955008529264,
+                            "y": 11.869195212676406
+                        },
+                        {
+                            "x": 73.22349102484503,
+                            "y": 12.0203214152132
+                        },
+                        {
+                            "x": 88.23285550448453,
+                            "y": 10.82191427300799
+                        },
+                        {
+                            "x": 87.90950096375347,
+                            "y": 38.220647189610034
+                        },
+                        {
+                            "x": 87.33508275499707,
+                            "y": 65.69783219191663
+                        },
+                        {
+                            "x": 86.3167182677669,
+                            "y": 44.424475424768715
+                        },
+                        {
+                            "x": 89.14286634618189,
+                            "y": 17.393233431864804
+                        },
+                        {
+                            "x": 72.0283178500194,
+                            "y": 30.97938371657188
+                        },
+                        {
+                            "x": 83.20471931328548,
+                            "y": 51.21706776861387
+                        },
+                        {
+                            "x": 70.97181367488119,
+                            "y": 59.94219035708089
+                        },
+                        {
+                            "x": 85.43957271237248,
+                            "y": 76.98215556392017
+                        },
+                        {
+                            "x": 89.25609485403248,
+                            "y": 89.55950509007684
+                        },
+                        {
+                            "x": 73.63323811654735,
+                            "y": 88.62368018753683
+                        },
+                        {
+                            "x": 54.50161720888018,
+                            "y": 72.01513594606598
+                        }
+                    ],
+                    "readProgress": {
+                        "2 Die Aggregatzustände – Beispiel für eine physikalische": 4,
+                        "Speed Read: syntax_MECH01": 0
+                    }
                 }
             ],
-            "currentWorldIndex": 0
+            "currentWorldIndex": 1
         }
     ],
     "currentHubIndex": 0,
@@ -199,5 +738,5 @@
     ],
     "inventory": [],
     "customRewards": [],
-    "lastExported": 1776763633729
+    "lastExported": 1777182395984
 }
