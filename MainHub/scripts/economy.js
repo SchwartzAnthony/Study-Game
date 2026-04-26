@@ -15,17 +15,20 @@ export function updateEconomyUI() {
 
 export function awardGold(amount) { 
     appState.gold = (appState.gold || 0) + amount; 
-    saveToStorage(); 
+    saveToStorage();
+    updateEconomyUI(); 
 }
 
 export function awardInk(amount) { 
     appState.ink = (appState.ink || 0) + amount; 
-    saveToStorage(); 
+    saveToStorage();
+    updateEconomyUI(); 
 }
 
 export function awardPaper(paperName) {
     if(!appState.paper) appState.paper = {};
     appState.paper[paperName] = (appState.paper[paperName] || 0) + 1;
     saveToStorage();
+    updateEconomyUI();
     alert(`?? Arcane Discovery! You found a [${paperName}]!`);
 }

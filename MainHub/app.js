@@ -7,7 +7,7 @@ import { buyItem, renderStore, renderUploadedRewards, deleteUploadedReward, buyC
 import { loadFileToEditor, cancelEdit, saveAndProcessWorld, createWorldFromSyntax } from './scripts/parser.js';
 import { initMindMap } from './scripts/mindmapRenderer.js';
 import { forgeWorldFromPdf } from './scripts/pdfAutoForge.js';
-import { openPdfHighlighter, initHighlighterUI, importHighlightsToWorld } from './scripts/pdfHighlighter.js';
+import { openPdfHighlighter, initHighlighterUI } from './scripts/pdfHighlighter.js';
 
 function sanitizeRewardImages() {
     if (!appState || !Array.isArray(appState.customRewards)) return;
@@ -539,7 +539,6 @@ initHighlighterUI();
 
 const hlOpenBtn   = document.getElementById('btn-open-highlighter');
 const hlFileInput = document.getElementById('pdf-highlighter-input');
-const hlImportBtn = document.getElementById('btn-hl-import');
 
 if (hlOpenBtn && hlFileInput) {
     hlOpenBtn.addEventListener('click', () => hlFileInput.click());
@@ -547,22 +546,17 @@ if (hlOpenBtn && hlFileInput) {
         const file = e.target.files[0];
         if (!file) return;
         e.target.value = '';
-        await openPdfHighlighter(file);
+        await openPdfHighlighter(file, {
+            appState,
+            saveToStorage,
+            renderMap,
+            generateMapCoordinates,
+            showToast
+        });
     });
 }
 
-if (hlImportBtn) {
-    hlImportBtn.addEventListener('click', () => {
-        const world = getActiveWorld();
-        if (!world) { showToast('Zuerst eine Welt auswählen oder erstellen.'); return; }
-        const count = importHighlightsToWorld(world, generateMapCoordinates);
-        if (count === 0) { showToast('Keine Markierungen vorhanden.'); return; }
-        saveToStorage();
-        renderMap();
-        document.getElementById('pdf-highlighter-modal').classList.add('hidden');
-        showToast(`✅ ${count} Markierung${count === 1 ? '' : 'en'} importiert!`);
-    });
-}
+
 
 // --- SAVE, LOAD & MIGRATE SYSTEM ---
 
@@ -1948,8 +1942,7 @@ const sprintModal = document.getElementById('sprint-modal');
 
 if (document.getElementById('btn-sprint-start')) {
     document.getElementById('btn-sprint-start').addEventListener('click', () => {
-        sprintModal.classList.remove('hidden');
-        showSprintSetup();
+        _startSectionSpeedRead();
     });
 }
 if (document.getElementById('close-sprint-modal')) {
@@ -2952,6 +2945,70 @@ async function bootApp() {
 
 bootApp();
 
+function _sanitizeTextForSpeedRead(text) {
+    const src = String(text || '');
+    return src.replace(/!IMAGE!\s*(data:image\/[^ \n]+)/g, '[Image Reference Skipped]');
+}
+
+function _launchSpeedReadWithWords(wordsList) {
+    if (!Array.isArray(wordsList) || wordsList.length === 0) {
+        alert('No readable text found.');
+        return;
+    }
+
+    window.speedReadWords = wordsList;
+    window.speedReadIndex = 0;
+    window.speedReadWordsSinceReward = 0;
+
+    const srModal = document.getElementById('speed-read-modal');
+    const srDisplay = document.getElementById('speed-read-display');
+    const srSettings = document.getElementById('speed-read-settings');
+
+    if (srModal) srModal.classList.remove('hidden');
+    if (srSettings) srSettings.style.display = 'flex';
+    if (srDisplay) srDisplay.classList.add('hidden');
+}
+
+function _startWorldSpeedRead() {
+    const world = getActiveWorld();
+    if (!world || !world.content || !Array.isArray(world.sections) || world.sections.length === 0) return;
+
+    const allTextContent = [];
+    world.sections.forEach(secName => {
+        let secText = _sanitizeTextForSpeedRead(world.content[secName] || '');
+        if (secText.trim()) {
+            allTextContent.push(`\n\n=== ${secName.toUpperCase()} ===\n\n` + secText.trim());
+        }
+    });
+
+    if (allTextContent.length === 0) {
+        alert('No readable text found in this world.');
+        return;
+    }
+
+    const wordsList = allTextContent.join('\n').match(/\S+/g) || [];
+    _launchSpeedReadWithWords(wordsList);
+}
+
+function _startSectionSpeedRead() {
+    const world = getActiveWorld();
+    if (!world || !world.content) return;
+
+    const sectionName =
+        currentReadSectionTitle
+        || document.getElementById('section-modal-title')?.innerText
+        || '';
+
+    const sectionText = _sanitizeTextForSpeedRead(world.content[sectionName] || '');
+    const wordsList = sectionText.match(/\S+/g) || [];
+    if (wordsList.length === 0) {
+        alert('No readable text found in this section.');
+        return;
+    }
+
+    _launchSpeedReadWithWords(wordsList);
+}
+
 // --- STATIC DOM EVENT BINDINGS ---
 function initStaticListeners() {
     const cancelBtn = document.getElementById('btn-cancel-edit');
@@ -2965,48 +3022,7 @@ function initStaticListeners() {
 
     const speedReadBtn = document.getElementById('btn-speed-read');
     if (speedReadBtn) {
-        speedReadBtn.addEventListener('click', () => {
-            const world = getActiveWorld();
-            if (!world || !world.content || world.sections.length === 0) return;
-
-            let allTextContent = [];
-            world.sections.forEach(secName => {
-                let secText = world.content[secName] || "";
-                if (secText.trim()) {
-                    // Filter out !IMAGE! data tags for RSVP reader
-                    secText = secText.replace(/!IMAGE!\s*(data:image\/[^ \n]+)/g, '[Image Reference Skipped]');
-                    allTextContent.push(`\n\n=== ${secName.toUpperCase()} ===\n\n` + secText.trim());
-                }
-            });
-
-            if (allTextContent.length === 0) {
-                alert("No readable text found in this world.");
-                return;
-            }
-
-            // Combine into one master string
-            const combinedText = allTextContent.join('\n');
-            const wordsList = combinedText.match(/\S+/g) || [];
-            
-            if (wordsList.length === 0) {
-                alert("No readable text found in this world.");
-                return;
-            }
-
-            // Expose globally to interval runner
-            window.speedReadWords = wordsList;
-            window.speedReadIndex = 0;
-            window.speedReadWordsSinceReward = 0;
-
-            const srModal = document.getElementById('speed-read-modal');
-            const srDisplay = document.getElementById('speed-read-display');
-            const srSettings = document.getElementById('speed-read-settings');
-            
-            // Show Modal into configuration state
-            if (srModal) srModal.classList.remove('hidden');
-            if (srSettings) srSettings.style.display = 'flex';
-            if (srDisplay) srDisplay.classList.add('hidden');
-        });
+        speedReadBtn.addEventListener('click', _startWorldSpeedRead);
     }
 }
 
