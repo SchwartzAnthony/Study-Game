@@ -7,6 +7,7 @@ import { buyItem, renderStore, renderUploadedRewards, deleteUploadedReward, buyC
 import { loadFileToEditor, cancelEdit, saveAndProcessWorld, createWorldFromSyntax } from './scripts/parser.js';
 import { initMindMap } from './scripts/mindmapRenderer.js';
 import { forgeWorldFromPdf } from './scripts/pdfAutoForge.js';
+import { openPdfHighlighter, initHighlighterUI, importHighlightsToWorld } from './scripts/pdfHighlighter.js';
 
 function sanitizeRewardImages() {
     if (!appState || !Array.isArray(appState.customRewards)) return;
@@ -532,6 +533,36 @@ if (document.getElementById('btn-convert-pdf')) {
 if(document.getElementById('upload-btn')) document.getElementById('upload-btn').addEventListener('click', loadFileToEditor);
 if(document.getElementById('prev-map')) document.getElementById('prev-map').addEventListener('click', () => changeWorld(-1));
 if(document.getElementById('next-map')) document.getElementById('next-map').addEventListener('click', () => changeWorld(1));
+
+// --- PDF HIGHLIGHTER ---
+initHighlighterUI();
+
+const hlOpenBtn   = document.getElementById('btn-open-highlighter');
+const hlFileInput = document.getElementById('pdf-highlighter-input');
+const hlImportBtn = document.getElementById('btn-hl-import');
+
+if (hlOpenBtn && hlFileInput) {
+    hlOpenBtn.addEventListener('click', () => hlFileInput.click());
+    hlFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        e.target.value = '';
+        await openPdfHighlighter(file);
+    });
+}
+
+if (hlImportBtn) {
+    hlImportBtn.addEventListener('click', () => {
+        const world = getActiveWorld();
+        if (!world) { showToast('Zuerst eine Welt auswählen oder erstellen.'); return; }
+        const count = importHighlightsToWorld(world, generateMapCoordinates);
+        if (count === 0) { showToast('Keine Markierungen vorhanden.'); return; }
+        saveToStorage();
+        renderMap();
+        document.getElementById('pdf-highlighter-modal').classList.add('hidden');
+        showToast(`✅ ${count} Markierung${count === 1 ? '' : 'en'} importiert!`);
+    });
+}
 
 // --- SAVE, LOAD & MIGRATE SYSTEM ---
 
