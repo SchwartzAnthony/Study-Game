@@ -454,87 +454,130 @@ function startFlashMatchGame(sectionName, gameName) {
 
 // --- SPELLWEAVER LOGIC ---
 function launchSpellweaverGame(flashcards, sectionName, gameName) {
-    if(!minigameBoard) return;
-    
-    // Pick 5 random flashcards to decipher
-    let deck = [...flashcards].sort(() => 0.5 - Math.random()).slice(0, 5);
+    if (!minigameBoard) return;
+
+    const deck = [...flashcards]
+        .filter(fc => fc && String(fc.answer || '').trim().length > 0)
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 5);
+
+    if (deck.length < 1) {
+        minigameBoard.innerHTML = '<div class="minigame-victory-card"><p class="minigame-victory-stats">No valid answer text found for Spellweaver.</p></div>';
+        return;
+    }
+
     let currentIndex = 0;
     let score = 0;
-    
-    if(document.getElementById('minigame-stats')) document.getElementById('minigame-stats').innerText = `Incantations: 0 / ${deck.length}`;
-    
-    function loadNextSpell() {
-        if (currentIndex >= deck.length) {
-            let goldEarned = score * 5; 
-            minigameBoard.innerHTML = `
-                <div class="minigame-victory-card">
-                    <h2 class="minigame-victory-title">Grimoire Scribed!</h2>
-                    <p class="minigame-victory-stats">You wove ${score} out of ${deck.length} spells correctly.</p>
-                    <p class="minigame-victory-reward">Earned: ${goldEarned} 🪙</p>
-                </div>
-            `;
-            awardGold(goldEarned);
-            
-            const world = getActiveWorld();
+
+    function updateStats() {
+        const stats = document.getElementById('minigame-stats');
+        if (stats) stats.innerText = `Incantations: ${score} / ${deck.length}`;
+    }
+
+    function finalizeGame() {
+        const goldEarned = score * 5;
+        minigameBoard.innerHTML = `
+            <div class="minigame-victory-card">
+                <h2 class="minigame-victory-title">Grimoire Scribed!</h2>
+                <p class="minigame-victory-stats">You wove ${score} out of ${deck.length} spells correctly.</p>
+                <p class="minigame-victory-reward">Earned: ${goldEarned} 🪙</p>
+            </div>
+        `;
+
+        awardGold(goldEarned);
+
+        const world = getActiveWorld();
+        if (world && world.progress && world.progress[sectionName] && world.progress[sectionName].gameCooldowns) {
             world.progress[sectionName].gameCooldowns[gameName] = Date.now() + (2 * 60 * 60 * 1000);
             saveToStorage();
+        }
+    }
+
+    function loadNextSpell() {
+        if (currentIndex >= deck.length) {
+            finalizeGame();
             return;
         }
 
-        let currentCard = deck[currentIndex];
-        
-        // Split the answer into individual words and filter out accidental empty spaces
-        let targetWords = currentCard.answer.split(' ').filter(w => w.trim() !== '');
-        
-        // Scramble them to create the clickable runes
-        let scrambledWords = [...targetWords].sort(() => 0.5 - Math.random());
-        
-        const runes = document.querySelectorAll('.rune-btn');
+        const currentCard = deck[currentIndex];
+        const targetWords = String(currentCard.answer || '').match(/\S+/g) || [];
+
+        if (targetWords.length < 1) {
+            currentIndex++;
+            loadNextSpell();
+            return;
+        }
+
+        const scrambledWords = targetWords
+            .map((word, idx) => ({ word, idx }))
+            .sort(() => 0.5 - Math.random());
+
+        minigameBoard.innerHTML = `
+            <div class="spellweaver-container">
+                <div style="font-size:0.85em;color:#8a9bcf;letter-spacing:1px;text-align:center;">Decipher this prompt:</div>
+                <div style="font-size:1.05em;color:#d8ddf5;text-align:center;max-width:840px;line-height:1.5;">${currentCard.question || 'Spell Prompt'}</div>
+                <div id="incantation-bar" class="incantation-bar"><span style="opacity:0.5;">Select runes to weave the spell...</span></div>
+                <div id="spellweaver-runes" class="rune-grid">
+                    ${scrambledWords.map(item => `<button class="rune-btn" data-word="${item.word.replace(/"/g, '&quot;')}" data-idx="${item.idx}">${item.word}</button>`).join('')}
+                </div>
+            </div>
+        `;
+
+        const incantationBar = document.getElementById('incantation-bar');
+        const runes = Array.from(document.querySelectorAll('.rune-btn'));
+        let selectedWords = [];
         let failed = false;
 
         function updateBar() {
-            if(selectedWords.length === 0) {
-                incantationBar.innerHTML = '<span style="opacity: 0.5;">Select runes to weave the spell...</span>';
+            if (!incantationBar) return;
+            if (selectedWords.length === 0) {
+                incantationBar.innerHTML = '<span style="opacity:0.5;">Select runes to weave the spell...</span>';
             } else {
-                incantationBar.innerHTML = selectedWords.map(w => `<span style="color: white; font-weight: bold;">${w.word}</span>`).join(' ');
+                incantationBar.innerHTML = selectedWords
+                    .map(sw => `<span style="color:white;font-weight:bold;">${sw.word}</span>`)
+                    .join(' ');
             }
         }
 
         runes.forEach(rune => {
             rune.addEventListener('click', () => {
-                if(failed) return;
-                
-                let word = rune.getAttribute('data-word');
-                let expectedWord = targetWords[selectedWords.length];
-                
+                if (failed || rune.classList.contains('used')) return;
+
+                const word = rune.getAttribute('data-word') || '';
+                const expectedWord = targetWords[selectedWords.length] || '';
+
                 if (word === expectedWord) {
-                    // Correct Word Clicked!
                     rune.classList.add('used');
-                    selectedWords.push({ word: word, element: rune });
+                    selectedWords.push({ word, element: rune });
                     updateBar();
-                    
-                    // Check if the entire sentence is complete
+
                     if (selectedWords.length === targetWords.length) {
-                        incantationBar.style.borderColor = '#4cd137';
-                        incantationBar.style.color = '#4cd137';
+                        if (incantationBar) {
+                            incantationBar.style.borderColor = '#4cd137';
+                            incantationBar.style.color = '#4cd137';
+                        }
                         score++;
-                        if(document.getElementById('minigame-stats')) document.getElementById('minigame-stats').innerText = `Incantations: ${score} / ${deck.length}`;
-                        setTimeout(() => { currentIndex++; loadNextSpell(); }, 1200);
+                        updateStats();
+                        setTimeout(() => {
+                            currentIndex++;
+                            loadNextSpell();
+                        }, 900);
                     }
                 } else {
-                    // Wrong Word! The spell fizzles.
                     failed = true;
                     rune.style.backgroundColor = '#ff4757';
                     rune.style.borderColor = '#ff4757';
-                    incantationBar.style.borderColor = '#ff4757';
-                    
-                    // Reset the board so they can try the sentence again
+                    if (incantationBar) incantationBar.style.borderColor = '#ff4757';
+
                     setTimeout(() => {
                         selectedWords.forEach(sw => sw.element.classList.remove('used'));
                         selectedWords = [];
                         rune.style.backgroundColor = '';
                         rune.style.borderColor = '';
-                        incantationBar.style.borderColor = '#6c5ce7';
+                        if (incantationBar) {
+                            incantationBar.style.borderColor = '#6c5ce7';
+                            incantationBar.style.color = '#a29bfe';
+                        }
                         failed = false;
                         updateBar();
                     }, 800);
@@ -542,8 +585,9 @@ function launchSpellweaverGame(flashcards, sectionName, gameName) {
             });
         });
     }
-    
-    loadNextSpell(); // Start the first round
+
+    updateStats();
+    loadNextSpell();
 }
 
 

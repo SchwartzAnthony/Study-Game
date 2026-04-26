@@ -2945,6 +2945,181 @@ async function bootApp() {
 
 bootApp();
 
+let vibeAudioCtx = null;
+let vibeMasterGain = null;
+let vibeMusicInterval = null;
+let vibeDroneOsc = null;
+let vibeDroneGain = null;
+let vibeEnabled = true;
+let vibeStarted = false;
+let vibeLastHoverMs = 0;
+
+const VIBE_SCALE = [130.81, 155.56, 174.61, 196.00, 233.08, 261.63]; // C minor-ish
+
+function ensureVibeAudio() {
+    if (!vibeAudioCtx) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return false;
+        vibeAudioCtx = new Ctx();
+        vibeMasterGain = vibeAudioCtx.createGain();
+        vibeMasterGain.gain.value = 0.06;
+        vibeMasterGain.connect(vibeAudioCtx.destination);
+    }
+    if (vibeAudioCtx.state === 'suspended') {
+        vibeAudioCtx.resume().catch(() => {});
+    }
+    return !!vibeAudioCtx;
+}
+
+function playUiTone(freq, duration = 0.06, type = 'triangle', volume = 0.018) {
+    if (!vibeEnabled) return;
+    if (!ensureVibeAudio()) return;
+
+    const t0 = vibeAudioCtx.currentTime;
+    const osc = vibeAudioCtx.createOscillator();
+    const g = vibeAudioCtx.createGain();
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(60, freq * 0.85), t0 + duration);
+
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(volume, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+
+    osc.connect(g);
+    g.connect(vibeMasterGain);
+    osc.start(t0);
+    osc.stop(t0 + duration + 0.02);
+}
+
+function startVibeMusic() {
+    if (!vibeEnabled) return;
+    if (!ensureVibeAudio()) return;
+    if (vibeMusicInterval) return;
+
+    vibeStarted = true;
+
+    vibeDroneOsc = vibeAudioCtx.createOscillator();
+    vibeDroneGain = vibeAudioCtx.createGain();
+    vibeDroneOsc.type = 'sine';
+    vibeDroneOsc.frequency.value = 65.41; // C2
+    vibeDroneGain.gain.value = 0.012;
+    vibeDroneOsc.connect(vibeDroneGain);
+    vibeDroneGain.connect(vibeMasterGain);
+    vibeDroneOsc.start();
+
+    let step = 0;
+    vibeMusicInterval = setInterval(() => {
+        if (!vibeEnabled || !vibeAudioCtx) return;
+
+        const root = VIBE_SCALE[step % VIBE_SCALE.length];
+        const accent = VIBE_SCALE[(step + 3) % VIBE_SCALE.length];
+
+        playUiTone(root, 0.22, 'sine', 0.010);
+        if (step % 2 === 0) playUiTone(accent * 0.5, 0.18, 'triangle', 0.007);
+        if (step % 4 === 0) playUiTone(root * 2, 0.08, 'square', 0.004);
+
+        step++;
+    }, 650);
+}
+
+function stopVibeMusic() {
+    if (vibeMusicInterval) {
+        clearInterval(vibeMusicInterval);
+        vibeMusicInterval = null;
+    }
+    if (vibeDroneOsc) {
+        try { vibeDroneOsc.stop(); } catch (e) { /* noop */ }
+        vibeDroneOsc.disconnect();
+        vibeDroneOsc = null;
+    }
+    if (vibeDroneGain) {
+        vibeDroneGain.disconnect();
+        vibeDroneGain = null;
+    }
+}
+
+function updateVibeToggleUI() {
+    const btn = document.getElementById('vibe-audio-toggle');
+    if (!btn) return;
+    btn.classList.toggle('off', !vibeEnabled);
+    btn.innerHTML = vibeEnabled ? '♫ Ambience: ON' : '♫ Ambience: OFF';
+}
+
+function setVibeEnabled(nextEnabled) {
+    vibeEnabled = !!nextEnabled;
+    appState.vibeAudioOn = vibeEnabled;
+    saveToStorage();
+    updateVibeToggleUI();
+
+    if (vibeEnabled) {
+        startVibeMusic();
+        playUiTone(261.63, 0.08, 'triangle', 0.02);
+    } else {
+        stopVibeMusic();
+    }
+}
+
+function spawnButtonRipple(target, clientX, clientY) {
+    if (!target) return;
+    const rect = target.getBoundingClientRect();
+    const ripple = document.createElement('span');
+    ripple.className = 'vibe-ripple';
+
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    ripple.style.left = x + 'px';
+    ripple.style.top = y + 'px';
+
+    const previousPosition = getComputedStyle(target).position;
+    if (previousPosition === 'static') target.style.position = 'relative';
+    target.classList.add('vibe-ripple-host');
+    target.appendChild(ripple);
+    ripple.addEventListener('animationend', () => ripple.remove());
+}
+
+function initGameVibeSystem() {
+    const floatingToggle = document.createElement('button');
+    floatingToggle.id = 'vibe-audio-toggle';
+    floatingToggle.className = 'vibe-audio-toggle';
+    floatingToggle.type = 'button';
+    floatingToggle.title = 'Toggle ambient soundtrack and UI sounds';
+    document.body.appendChild(floatingToggle);
+
+    vibeEnabled = appState.vibeAudioOn !== false;
+    updateVibeToggleUI();
+
+    floatingToggle.addEventListener('click', () => setVibeEnabled(!vibeEnabled));
+
+    document.addEventListener('click', (e) => {
+        const interactive = e.target.closest('button,.btn-primary,.btn-secondary,.btn-danger,.upload-btn,.nav-btn,.game-list-btn,.close-btn,.sprint-option-btn,.rune-btn,.map-node');
+        if (!interactive) return;
+
+        interactive.classList.remove('vibe-press');
+        void interactive.offsetWidth;
+        interactive.classList.add('vibe-press');
+
+        if (e.clientX && e.clientY) spawnButtonRipple(interactive, e.clientX, e.clientY);
+
+        if (vibeEnabled) {
+            playUiTone(220 + Math.random() * 140, 0.05, 'triangle', 0.015);
+            if (!vibeStarted) startVibeMusic();
+        }
+    }, true);
+
+    document.addEventListener('pointerover', (e) => {
+        const interactive = e.target.closest('button,.btn-primary,.btn-secondary,.btn-danger,.upload-btn,.nav-btn,.game-list-btn,.rune-btn');
+        if (!interactive || !vibeEnabled) return;
+        const now = Date.now();
+        if (now - vibeLastHoverMs < 85) return;
+        vibeLastHoverMs = now;
+        playUiTone(440, 0.03, 'sine', 0.005);
+    }, true);
+
+    document.body.classList.add('game-vibe-on');
+}
+
 function _sanitizeTextForSpeedRead(text) {
     const src = String(text || '');
     return src.replace(/!IMAGE!\s*(data:image\/[^ \n]+)/g, '[Image Reference Skipped]');
@@ -3166,6 +3341,7 @@ function stopSpeedReadAndClose() {
 }
 
 initStaticListeners();
+initGameVibeSystem();
 
 
 
