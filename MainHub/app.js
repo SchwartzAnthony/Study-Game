@@ -2,10 +2,11 @@ import { appState, getSafeImageSrc } from './scripts/state.js';
 import { awardGold, awardInk, awardPaper, updateEconomyUI } from './scripts/economy.js';
 import { saveToStorage } from './scripts/storage.js';
 import { generateMapCoordinates } from './scripts/mapRenderer.js';
-import { launchArcaneDefenseGame, launchTriviaGame, launchMemoryGame, startFlashMatchGame, launchSpellweaverGame, launchRitualAlignmentGame } from './scripts/minigames.js';
+import { launchArcaneDefenseGame, launchTriviaGame, launchMemoryGame, startFlashMatchGame, launchSpellweaverGame, launchRitualAlignmentGame, launchClozeGame, launchTrueFalseBlitz, launchGlimpseRecall } from './scripts/minigames.js';
 import { buyItem, renderStore, renderUploadedRewards, deleteUploadedReward, buyCustomReward } from './scripts/store.js';
-import { loadFileToEditor, cancelEdit, saveAndProcessWorld } from './scripts/parser.js';
+import { loadFileToEditor, cancelEdit, saveAndProcessWorld, createWorldFromSyntax } from './scripts/parser.js';
 import { initMindMap } from './scripts/mindmapRenderer.js';
+import { forgeWorldFromPdf } from './scripts/pdfAutoForge.js';
 
 function sanitizeRewardImages() {
     if (!appState || !Array.isArray(appState.customRewards)) return;
@@ -77,6 +78,8 @@ if (document.getElementById('app-title-btn')) {
 if (document.getElementById('btn-convert-pdf')) {
     const pdfUploadBtn = document.getElementById('btn-convert-pdf');
     const pdfUploadInput = document.getElementById('pdf-upload-input');
+    const autoForgeBtn = document.getElementById('btn-auto-forge-pdf');
+    const autoForgeInput = document.getElementById('pdf-auto-upload-input');
     const txtSyntaxUploadBtn = document.getElementById('btn-convert-txt-syntax');
     const txtSyntaxUploadInput = document.getElementById('txt-syntax-upload-input');
     const progressModal = document.getElementById('pdf-progress-modal');
@@ -254,6 +257,89 @@ if (document.getElementById('btn-convert-pdf')) {
             e.target.value = ''; // clear input allowing re-upload of same file
         }
     });
+
+    if (autoForgeBtn && autoForgeInput) {
+        autoForgeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            autoForgeBtn.style.pointerEvents = 'none';
+            autoForgeInput.click();
+            setTimeout(() => { autoForgeBtn.style.pointerEvents = 'auto'; }, 1000);
+        });
+
+        autoForgeInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (currentDownloadUrl) {
+                window.URL.revokeObjectURL(currentDownloadUrl);
+                currentDownloadUrl = null;
+            }
+
+            btnDownload.classList.add('hidden');
+            progressTitle.innerText = 'Forging World from PDF...';
+            progressTitle.style.color = '#f3d98a';
+            progressStatus.innerText = 'Initializing offline parser and heuristic mentor...';
+            progressBar.style.width = '0%';
+            progressBar.style.background = 'linear-gradient(90deg, #5b3b12, #d4a843)';
+            progressModal.classList.remove('hidden');
+
+            autoForgeBtn.innerText = 'Forging... ⏳';
+            autoForgeBtn.style.opacity = '0.7';
+            autoForgeBtn.style.pointerEvents = 'none';
+
+            try {
+                await new Promise(r => setTimeout(r, 250));
+
+                const forged = await forgeWorldFromPdf(file, (status, pct) => {
+                    progressStatus.innerText = status;
+                    progressBar.style.width = `${Math.max(0, Math.min(100, pct || 0))}%`;
+                });
+
+                progressStatus.innerText = 'Injecting generated syntax into a new world...';
+                progressBar.style.width = '96%';
+                await new Promise(r => setTimeout(r, 40));
+
+                createWorldFromSyntax(forged.syntax, forged.worldName);
+                setOwlTips(forged.owlTips, forged.worldName);
+                if (workshopScreen && hubScreen) {
+                    workshopScreen.classList.add('hidden');
+                    hubScreen.classList.remove('hidden');
+                }
+
+                progressBar.style.width = '100%';
+                progressTitle.innerText = 'World Forged Successfully';
+                progressTitle.style.color = '#f3d98a';
+                progressStatus.innerText = `Created ${forged.counts.sections} sections, ${forged.counts.flashcards} flashcards, ${forged.counts.quizzes} quizzes, and ${forged.counts.exams} exams.`;
+
+                const syntaxFileName = `autoforge_${file.name.replace(/\.pdf$/i, '')}.md`;
+                const blob = new Blob([forged.syntax], { type: 'text/markdown;charset=utf-8' });
+                currentDownloadUrl = window.URL.createObjectURL(blob);
+
+                btnDownload.innerText = '📥 Download Generated Syntax';
+                btnDownload.onclick = () => {
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = currentDownloadUrl;
+                    a.download = syntaxFileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                };
+                btnDownload.classList.remove('hidden');
+            } catch (error) {
+                console.error('Auto-forge PDF error:', error);
+                progressTitle.innerText = 'Auto-Forge Failed';
+                progressTitle.style.color = '#ff2400';
+                progressBar.style.background = '#ff2400';
+                progressStatus.innerText = 'The PDF could not be forged into a world. Try a text-based PDF or run Convert PDF to MD first.';
+            } finally {
+                autoForgeBtn.innerText = 'Auto-Forge World from PDF (Offline)';
+                autoForgeBtn.style.opacity = '1';
+                autoForgeBtn.style.pointerEvents = 'auto';
+                e.target.value = '';
+            }
+        });
+    }
 
     if (txtSyntaxUploadBtn && txtSyntaxUploadInput) {
         txtSyntaxUploadBtn.addEventListener('click', (e) => {
@@ -458,6 +544,9 @@ function loadFromStorage() {
             // Defaults if missing
             if (appState.ink === undefined) appState.ink = 0;
             if (appState.paper === undefined) appState.paper = {};
+            if (appState.scholarXP === undefined) appState.scholarXP = 0;
+            if (appState.scholarLevel === undefined) appState.scholarLevel = 1;
+            if (!appState.owlMentor) appState.owlMentor = { tips: [], tipIndex: 0, lastWorldName: null };
             if (!appState.library || appState.library.length === 0) {
                 appState.library = [
                     { unlocked: true, tome: null, inkLevel: 0, timeStarted: null },
@@ -493,6 +582,7 @@ function loadFromStorage() {
     } else {
         appState.hubs = [{ name: "Main Hub", worlds: [], currentWorldIndex: 0 }];
         appState.library = [ { unlocked: true, tome: null }, { unlocked: false, cost: 250 }, { unlocked: false, cost: 500 }, { unlocked: false, cost: 1000 } ];
+        if (!appState.owlMentor) appState.owlMentor = { tips: [], tipIndex: 0, lastWorldName: null };
         updateHubDropdown();
     }
     updateEconomyUI();
@@ -557,6 +647,73 @@ function getActiveWorld() {
     const hub = appState.hubs[appState.currentHubIndex];
     if (!hub || !hub.worlds || hub.worlds.length === 0) return null;
     return hub.worlds[hub.currentWorldIndex];
+}
+
+// --- OCCULT OWL MENTOR ---
+function getDefaultOwlTips() {
+    return [
+        'I am Aset\'s Owl. Bring me a PDF in the Workshop and I will forge chapters, flashcards, quizzes, and game-ready sections offline.',
+        'Best ritual: run one Comprehension Checkpoint immediately after reading each section to lock short-term memory.',
+        'If your PDF is mostly scanned images, first run Convert PDF to MD, clean noise, then run Convert MD to Syntax for stronger structure.',
+        'After each chapter: Chronicle entry, then Cloze Trial, then Vault review. This creates layered recall and retention.'
+    ];
+}
+
+function renderOwlTip() {
+    if (!appState.owlMentor) appState.owlMentor = { tips: [], tipIndex: 0, lastWorldName: null };
+    const tips = (appState.owlMentor.tips && appState.owlMentor.tips.length > 0) ? appState.owlMentor.tips : getDefaultOwlTips();
+    const index = Math.max(0, Math.min(appState.owlMentor.tipIndex || 0, tips.length - 1));
+    appState.owlMentor.tipIndex = index;
+
+    const message = document.getElementById('owl-message');
+    if (message) message.textContent = tips[index];
+}
+
+function setOwlTips(tips, worldName) {
+    if (!appState.owlMentor) appState.owlMentor = { tips: [], tipIndex: 0, lastWorldName: null };
+    appState.owlMentor.tips = Array.isArray(tips) && tips.length > 0 ? tips : getDefaultOwlTips();
+    appState.owlMentor.tipIndex = 0;
+    appState.owlMentor.lastWorldName = worldName || null;
+    renderOwlTip();
+    saveToStorage();
+}
+
+function initOwlMentor() {
+    const toggle = document.getElementById('owl-toggle');
+    const panel = document.getElementById('owl-panel');
+    const close = document.getElementById('owl-close');
+    const prev = document.getElementById('owl-prev');
+    const next = document.getElementById('owl-next');
+
+    if (!toggle || !panel) return;
+    if (!appState.owlMentor) appState.owlMentor = { tips: [], tipIndex: 0, lastWorldName: null };
+
+    toggle.addEventListener('click', () => {
+        panel.classList.toggle('hidden');
+        renderOwlTip();
+    });
+
+    if (close) {
+        close.addEventListener('click', () => panel.classList.add('hidden'));
+    }
+
+    if (prev) {
+        prev.addEventListener('click', () => {
+            const tips = (appState.owlMentor.tips && appState.owlMentor.tips.length > 0) ? appState.owlMentor.tips : getDefaultOwlTips();
+            appState.owlMentor.tipIndex = (appState.owlMentor.tipIndex - 1 + tips.length) % tips.length;
+            renderOwlTip();
+        });
+    }
+
+    if (next) {
+        next.addEventListener('click', () => {
+            const tips = (appState.owlMentor.tips && appState.owlMentor.tips.length > 0) ? appState.owlMentor.tips : getDefaultOwlTips();
+            appState.owlMentor.tipIndex = (appState.owlMentor.tipIndex + 1) % tips.length;
+            renderOwlTip();
+        });
+    }
+
+    renderOwlTip();
 }
 
 // --- OCCULT LIBRARY LOGIC (FOUNDATION) ---
@@ -667,6 +824,7 @@ function renderMap() {
     const globalDueCards = world.flashcards.filter(fc => !fc.burned && fc.nextReview <= now);
     if(document.getElementById('global-fc-count')) document.getElementById('global-fc-count').innerText = globalDueCards.length;
     if(document.getElementById('btn-global-flashcards')) document.getElementById('btn-global-flashcards').onclick = () => startFlashcards('Global', globalDueCards, "Entire World");
+    updateStreakDisplay();
 
     if(worldTitle) worldTitle.innerText = world.name;
 
@@ -837,6 +995,16 @@ function openSectionModal(sectionName) {
         btnQuiz.onclick = () => startAssessment('Quiz', sectionQuizzes, sectionName); btnExam.onclick = () => startAssessment('Exam', sectionExams, sectionName);
     }
     if(sectionModal) sectionModal.classList.remove('hidden');
+
+    // Chronicle button
+    const btnChronicle = document.getElementById('btn-section-chronicle');
+    if (btnChronicle) {
+        if (!world.chronicles) world.chronicles = [];
+        const sectionChronicles = world.chronicles.filter(c => c.section === sectionName);
+        const countEl = document.getElementById('chronicle-count');
+        if (countEl) countEl.innerText = sectionChronicles.length;
+        btnChronicle.onclick = () => openChronicleModal(sectionName);
+    }
 }
 
 // --- ARCADE GAME LIST MODAL LOGIC ---
@@ -940,6 +1108,21 @@ if(fcInner) fcInner.addEventListener('click', () => { if (!fcInner.classList.con
 
 function gradeCard(quality) {
     let card = fcQueue[currentFcIndex];
+
+    // --- STREAK TRACKING ---
+    const today = new Date().toDateString();
+    if (appState.lastReviewDate !== today) {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (appState.lastReviewDate === yesterday.toDateString()) {
+            appState.streak = (appState.streak || 0) + 1;
+        } else {
+            appState.streak = 1; // first ever, or streak broken
+        }
+        appState.lastReviewDate = today;
+        updateStreakDisplay();
+    }
+
     if (quality === 0) { card.interval = 0; card.ease = Math.max(1.3, card.ease - 0.2); } 
     else {
         if (quality >= 2) awardInk(1); // EARN INK!
@@ -948,6 +1131,19 @@ function gradeCard(quality) {
     }
     if (card.interval > 21) card.burned = true; else card.nextReview = Date.now() + (card.interval * 86400000);
     saveToStorage(); currentFcIndex++; loadFlashcard();
+}
+
+function updateStreakDisplay() {
+    const badge = document.getElementById('streak-badge');
+    const count = document.getElementById('streak-count');
+    if (!badge || !count) return;
+    const s = appState.streak || 0;
+    if (s > 0) {
+        count.innerText = s;
+        badge.style.display = 'inline-flex';
+    } else {
+        badge.style.display = 'none';
+    }
 }
 
 if(document.getElementById('btn-fc-again')) document.getElementById('btn-fc-again').onclick = () => gradeCard(0); 
@@ -983,6 +1179,246 @@ function openVault() {
         }
     }
     if(fcVaultModal) fcVaultModal.classList.remove('hidden');
+}
+
+// =============================================================================
+// --- THE CHRONICLE ENGINE ---
+// Narrative learning: write stories with your flashcard terms, then recall them.
+// =============================================================================
+let chronicleSectionName = '';
+
+const chronicleModal = document.getElementById('chronicle-modal');
+const chronicleReviewModal = document.getElementById('chronicle-review-modal');
+
+if (document.getElementById('close-chronicle')) {
+    document.getElementById('close-chronicle').addEventListener('click', () => {
+        if (chronicleModal) chronicleModal.classList.add('hidden');
+        openSectionModal(chronicleSectionName);
+    });
+}
+if (document.getElementById('close-chronicle-from-list')) {
+    document.getElementById('close-chronicle-from-list').addEventListener('click', () => {
+        if (chronicleModal) chronicleModal.classList.add('hidden');
+        openSectionModal(chronicleSectionName);
+    });
+}
+if (document.getElementById('close-chronicle-review')) {
+    document.getElementById('close-chronicle-review').addEventListener('click', () => {
+        if (chronicleReviewModal) chronicleReviewModal.classList.add('hidden');
+        if (chronicleModal) chronicleModal.classList.remove('hidden');
+    });
+}
+if (document.getElementById('btn-save-chronicle')) {
+    document.getElementById('btn-save-chronicle').addEventListener('click', saveChronicle);
+}
+if (document.getElementById('btn-view-past-chronicles')) {
+    document.getElementById('btn-view-past-chronicles').addEventListener('click', openPastChronicles);
+}
+if (document.getElementById('btn-back-to-write')) {
+    document.getElementById('btn-back-to-write').addEventListener('click', () => {
+        document.getElementById('chronicle-list-view').classList.add('hidden');
+        document.getElementById('chronicle-write-view').classList.remove('hidden');
+    });
+}
+
+// Prompts themed around monastery / mountain scholar aesthetic
+const CHRONICLE_PROMPTS = [
+    (sectionName) => `A wandering scholar arrives at the mountain monastery of ${sectionName} seeking ancient wisdom. In your own words, describe what they discover — what the texts reveal, what it means, and how it changes their understanding. Weave in as many of the studied concepts as you can.`,
+    (sectionName) => `You are the last monk transcribing the sacred knowledge of ${sectionName} before the library is sealed for a hundred years. Preserve what you know in your own words — every concept, every truth, every secret the texts hold.`,
+    (sectionName) => `An apprentice must recite everything they have learned about ${sectionName} to their master before dawn breaks over the mountain peaks. Tell their story — the knowledge they carry, and what it means.`,
+    (sectionName) => `The monastery of ${sectionName} has burned. You are the last scholar alive who remembers its teachings. Write what must be preserved before the knowledge is lost to the ages forever.`,
+    (sectionName) => `A young scribe sits alone in the scriptorium at midnight, surrounded by the scrolls of ${sectionName}. They must summarize everything they have absorbed — for the examination at sunrise will test every word.`
+];
+
+function openChronicleModal(sectionName) {
+    chronicleSectionName = sectionName;
+    const world = getActiveWorld();
+    if (!world) return;
+    if (!world.chronicles) world.chronicles = [];
+
+    const sectionCards = world.flashcards.filter(fc => fc.section === sectionName);
+    const terms = [...new Set(sectionCards.map(fc => fc.answer).filter(a => a && a.trim()))];
+
+    // Pick a random prompt
+    const promptFn = CHRONICLE_PROMPTS[Math.floor(Math.random() * CHRONICLE_PROMPTS.length)];
+    const prompt = promptFn(sectionName);
+
+    document.getElementById('chronicle-section-label').innerText = `Section: ${sectionName}`;
+    document.getElementById('chronicle-prompt-text').innerText = prompt;
+    document.getElementById('chronicle-term-total').innerText = terms.length;
+    document.getElementById('chronicle-term-count').innerText = '0';
+    document.getElementById('chronicle-weave-fill').style.width = '0%';
+
+    const editorEl = document.getElementById('chronicle-editor');
+    editorEl.value = '';
+    editorEl.dataset.terms = JSON.stringify(terms);
+    editorEl.dataset.prompt = prompt;
+
+    // Real-time term detection
+    editorEl.oninput = () => {
+        const text = editorEl.value.toLowerCase();
+        const detected = terms.filter(t => text.includes(t.toLowerCase()));
+        document.getElementById('chronicle-term-count').innerText = detected.length;
+        const pct = terms.length > 0 ? (detected.length / terms.length) * 100 : 0;
+        document.getElementById('chronicle-weave-fill').style.width = pct + '%';
+    };
+
+    // Show write view
+    document.getElementById('chronicle-write-view').classList.remove('hidden');
+    document.getElementById('chronicle-list-view').classList.add('hidden');
+
+    if (sectionModal) sectionModal.classList.add('hidden');
+    if (chronicleModal) chronicleModal.classList.remove('hidden');
+}
+
+function saveChronicle() {
+    const editorEl = document.getElementById('chronicle-editor');
+    const text = editorEl.value.trim();
+
+    if (text.length < 30) {
+        alert("Your chronicle is too brief. Write at least a few sentences to seal it.");
+        return;
+    }
+
+    const world = getActiveWorld();
+    if (!world.chronicles) world.chronicles = [];
+
+    const terms = JSON.parse(editorEl.dataset.terms || '[]');
+    const detectedTerms = terms.filter(t => text.toLowerCase().includes(t.toLowerCase()));
+
+    world.chronicles.push({
+        id: Date.now(),
+        section: chronicleSectionName,
+        prompt: editorEl.dataset.prompt || '',
+        text: text,
+        terms: detectedTerms,
+        dateWritten: Date.now(),
+        reviewed: false
+    });
+
+    saveToStorage();
+
+    const inkEarned = Math.max(1, detectedTerms.length);
+    awardInk(inkEarned);
+
+    if (chronicleModal) chronicleModal.classList.add('hidden');
+    openSectionModal(chronicleSectionName);
+
+    // Update chronicle count badge
+    const countEl = document.getElementById('chronicle-count');
+    if (countEl) {
+        const newCount = world.chronicles.filter(c => c.section === chronicleSectionName).length;
+        countEl.innerText = newCount;
+    }
+
+    alert(`📜 Chronicle sealed! You wove ${detectedTerms.length} concept(s) into your story and earned ${inkEarned} 🖋️ Ink.`);
+}
+
+function openPastChronicles() {
+    const world = getActiveWorld();
+    if (!world.chronicles) world.chronicles = [];
+
+    const sectionChronicles = world.chronicles
+        .filter(c => c.section === chronicleSectionName)
+        .sort((a, b) => b.dateWritten - a.dateWritten);
+
+    document.getElementById('chronicle-list-section-label').innerText = `Section: ${chronicleSectionName}`;
+    const list = document.getElementById('chronicle-entries-list');
+    list.innerHTML = '';
+
+    if (sectionChronicles.length === 0) {
+        list.innerHTML = '<p style="color: #555; text-align: center; font-style: italic; padding: 20px;">No chronicles have been written for this section yet.</p>';
+    } else {
+        sectionChronicles.forEach(chronicle => {
+            const date = new Date(chronicle.dateWritten).toLocaleDateString('en-US', {
+                month: 'long', day: 'numeric', year: 'numeric'
+            });
+            const card = document.createElement('div');
+            card.className = 'chronicle-entry-card';
+            const excerpt = chronicle.text.length > 160
+                ? chronicle.text.substring(0, 160).trimEnd() + '…'
+                : chronicle.text;
+            card.innerHTML = `
+                <div class="chronicle-entry-header">
+                    <span class="chronicle-entry-date">${date}</span>
+                    <span class="chronicle-entry-terms">${chronicle.terms.length} concept(s) woven</span>
+                </div>
+                <p class="chronicle-entry-excerpt">&ldquo;${excerpt}&rdquo;</p>
+                <button class="btn-occult chronicle-review-btn" style="width: 100%; margin-top: 8px; font-size: 0.88em; padding: 8px; border-color: rgba(180,140,60,0.4); color: #c9a84c;">🔮 Begin Recollection Trial</button>
+            `;
+            if (chronicle.terms.length > 0) {
+                card.querySelector('.chronicle-review-btn').onclick = () => openChronicleReview(chronicle);
+            } else {
+                card.querySelector('.chronicle-review-btn').innerText = '(No terms woven — no trial available)';
+                card.querySelector('.chronicle-review-btn').disabled = true;
+                card.querySelector('.chronicle-review-btn').style.opacity = '0.4';
+            }
+            list.appendChild(card);
+        });
+    }
+
+    document.getElementById('chronicle-write-view').classList.add('hidden');
+    document.getElementById('chronicle-list-view').classList.remove('hidden');
+}
+
+function openChronicleReview(chronicle) {
+    if (chronicleModal) chronicleModal.classList.add('hidden');
+
+    const date = new Date(chronicle.dateWritten).toLocaleDateString('en-US', {
+        month: 'long', day: 'numeric', year: 'numeric'
+    });
+    document.getElementById('chronicle-review-date').innerText = `Written: ${date}`;
+
+    // Build cloze text — replace each woven term (first occurrence, case-insensitive) with an input
+    let clozeHtml = chronicle.text;
+    chronicle.terms.forEach((term, i) => {
+        const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(escaped, 'i');
+        const inputHtml = `<input type="text" id="cloze-${i}" class="cloze-blank" data-answer="${term.toLowerCase().replace(/"/g, '&quot;')}" placeholder="___" autocomplete="off" spellcheck="false">`;
+        clozeHtml = clozeHtml.replace(regex, inputHtml);
+    });
+    // Preserve line breaks
+    clozeHtml = clozeHtml.replace(/\n/g, '<br>');
+
+    document.getElementById('chronicle-cloze-text').innerHTML = clozeHtml;
+    document.getElementById('chronicle-review-result').classList.add('hidden');
+    document.getElementById('chronicle-review-result').innerHTML = '';
+
+    const verifyBtn = document.getElementById('btn-verify-recollection');
+    verifyBtn.disabled = false;
+    verifyBtn.onclick = () => {
+        const inputs = document.querySelectorAll('#chronicle-cloze-text .cloze-blank');
+        let correct = 0;
+        inputs.forEach(input => {
+            const answer = input.dataset.answer;
+            const given = input.value.trim().toLowerCase();
+            if (given === answer) {
+                correct++;
+                input.style.borderBottomColor = '#4cd137';
+                input.style.color = '#4cd137';
+            } else {
+                input.style.borderBottomColor = '#ff4757';
+                input.style.color = '#ff4757';
+                input.value = ''; 
+                input.placeholder = answer; // Show correct answer as placeholder
+            }
+        });
+
+        const inkEarned = correct;
+        if (inkEarned > 0) awardInk(inkEarned);
+        chronicle.reviewed = true;
+        saveToStorage();
+
+        const resultEl = document.getElementById('chronicle-review-result');
+        resultEl.innerHTML = `
+            <p style="font-size: 1.15em; color: #d4a843; font-family: 'Cinzel', serif; letter-spacing: 1px; margin: 0 0 6px 0;">Recollection: ${correct} / ${inputs.length}</p>
+            <p style="color: #8a7555; margin: 0; font-style: italic;">You earned ${inkEarned} 🖋️ Ink for correct recollections.</p>
+        `;
+        resultEl.classList.remove('hidden');
+        verifyBtn.disabled = true;
+    };
+
+    if (chronicleReviewModal) chronicleReviewModal.classList.remove('hidden');
 }
 
 // --- MINI-GAME ARCADE ENGINE (Rewards GOLD & Triggers Cooldowns) ---
@@ -1034,7 +1470,25 @@ function startMiniGame(gameName, sectionName) {
         if(minigameModal) minigameModal.classList.remove('hidden');
         if(document.getElementById('minigame-title')) document.getElementById('minigame-title').innerText = "Ritual Alignment";
         launchRitualAlignmentGame(sectionName, gameName);
-    }    else {
+    } else if (gameName.toLowerCase() === 'cloze' || gameName.toLowerCase() === 'cloze trial') {
+        if (sectionFlashcards.length < 1) return alert("You need at least 1 Flashcard to play the Cloze Trial!");
+        if(sectionModal) sectionModal.classList.add('hidden');
+        if(minigameModal) minigameModal.classList.remove('hidden');
+        if(document.getElementById('minigame-title')) document.getElementById('minigame-title').innerText = "Cloze Trial";
+        launchClozeGame(sectionFlashcards, sectionName, gameName);
+    } else if (gameName.toLowerCase() === 'true/false blitz' || gameName.toLowerCase() === 'true-false blitz' || gameName.toLowerCase() === 'blitz') {
+        if (sectionFlashcards.length < 2) return alert("You need at least 2 Flashcards to play True/False Blitz!");
+        if(sectionModal) sectionModal.classList.add('hidden');
+        if(minigameModal) minigameModal.classList.remove('hidden');
+        if(document.getElementById('minigame-title')) document.getElementById('minigame-title').innerText = "True/False Blitz";
+        launchTrueFalseBlitz(sectionFlashcards, sectionName, gameName);
+    } else if (gameName.toLowerCase() === 'glimpse & recall' || gameName.toLowerCase() === 'glimpse and recall' || gameName.toLowerCase() === 'glimpse') {
+        if (sectionFlashcards.length < 1) return alert("You need at least 1 Flashcard to play Glimpse & Recall!");
+        if(sectionModal) sectionModal.classList.add('hidden');
+        if(minigameModal) minigameModal.classList.remove('hidden');
+        if(document.getElementById('minigame-title')) document.getElementById('minigame-title').innerText = "Glimpse & Recall";
+        launchGlimpseRecall(sectionFlashcards, sectionName, gameName);
+    } else {
         alert(`The game "${gameName}" is currently under construction!`);
     }   
 }
@@ -1289,10 +1743,630 @@ if (document.getElementById('btn-section-read')) {
             currentReadIndex = 0;
         }
         
+        // Split text by !SECTION!, clean up empty whitespace
+        currentReadPages = fullText.split('!SECTION!').map(page => page.trim()).filter(page => page.length > 0);
+        if (currentReadPages.length === 0) currentReadPages = ["No text available."];
+        
+        if (world.readProgress && typeof world.readProgress[currentReadSectionTitle] === 'number') {
+            currentReadIndex = world.readProgress[currentReadSectionTitle];
+            if (currentReadIndex >= currentReadPages.length) currentReadIndex = 0;
+        } else {
+            currentReadIndex = 0;
+        }
+        
         updateReadModalContent();
+        enableLexiconReadCapture();
         if(readModal) readModal.classList.remove('hidden');
     });
 }
+
+// =====================================================================
+// READING TOOLS SUITE
+// =====================================================================
+
+// --- Scholar Level System ---
+function updateScholarBadge() {
+    const xp = appState.scholarXP || 0;
+    const level = Math.floor(xp / 1000) + 1;
+    appState.scholarLevel = level;
+    const badge = document.getElementById('scholar-badge');
+    const lvlEl = document.getElementById('scholar-level');
+    if (!badge || !lvlEl) return;
+    lvlEl.textContent = level;
+    if (xp > 0) badge.style.display = 'inline-flex';
+}
+
+function awardScholarXP(words) {
+    appState.scholarXP = (appState.scholarXP || 0) + words;
+    const prevLevel = appState.scholarLevel || 1;
+    updateScholarBadge();
+    if (appState.scholarLevel > prevLevel) {
+        const toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(60,40,130,0.97);border:2px solid rgba(162,155,254,0.6);border-radius:14px;padding:28px 40px;z-index:99999;text-align:center;font-family:Cinzel,serif;box-shadow:0 0 60px rgba(162,155,254,0.35)';
+        toast.innerHTML = `<div style="font-size:2.5em;margin-bottom:8px;">🎓</div><div style="color:#a29bfe;font-size:1.4em;letter-spacing:3px;text-shadow:0 0 16px rgba(162,155,254,0.6)">SCHOLAR LEVEL ${appState.scholarLevel}</div><div style="color:#6c5ce7;font-size:0.85em;margin-top:8px;font-style:italic;font-family:'Cormorant Garamond',serif">The archives yield their deeper secrets to you.</div>`;
+        document.body.appendChild(toast);
+        setTimeout(() => { toast.style.transition = 'opacity 0.8s'; toast.style.opacity = '0'; setTimeout(() => toast.remove(), 800); }, 2800);
+    }
+    saveToStorage();
+}
+
+// --- READING SPRINT ---
+let sprintMinutes = 25;
+let sprintTimerInterval = null;
+let sprintSecondsLeft = 0;
+let sprintTotalSeconds = 0;
+
+const sprintModal = document.getElementById('sprint-modal');
+
+if (document.getElementById('btn-sprint-start')) {
+    document.getElementById('btn-sprint-start').addEventListener('click', () => {
+        sprintModal.classList.remove('hidden');
+        showSprintSetup();
+    });
+}
+if (document.getElementById('close-sprint-modal')) {
+    document.getElementById('close-sprint-modal').addEventListener('click', () => {
+        if (sprintTimerInterval) clearInterval(sprintTimerInterval);
+        sprintTimerInterval = null;
+        sprintModal.classList.add('hidden');
+        document.getElementById('sprint-live-bar-wrap').classList.add('hidden');
+    });
+}
+
+function showSprintSetup() {
+    document.getElementById('sprint-setup-view').classList.remove('hidden');
+    document.getElementById('sprint-active-view').classList.add('hidden');
+    document.getElementById('sprint-complete-view').classList.add('hidden');
+    updateSprintRewardPreview();
+}
+
+function updateSprintRewardPreview() {
+    const inkReward = sprintMinutes;
+    const el = document.getElementById('sprint-reward-preview-ink');
+    if (el) el.textContent = `${inkReward} Ink`;
+}
+
+document.querySelectorAll('.sprint-option-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.sprint-option-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        sprintMinutes = parseInt(btn.getAttribute('data-minutes'), 10);
+        updateSprintRewardPreview();
+    });
+});
+
+if (document.getElementById('btn-sprint-begin')) {
+    document.getElementById('btn-sprint-begin').addEventListener('click', () => {
+        sprintTotalSeconds = sprintMinutes * 60;
+        sprintSecondsLeft = sprintTotalSeconds;
+
+        document.getElementById('sprint-setup-view').classList.add('hidden');
+        document.getElementById('sprint-active-view').classList.remove('hidden');
+        document.getElementById('sprint-active-label').textContent = document.querySelector('.sprint-option-btn.active span')?.textContent + ' Sprint' || `${sprintMinutes}min Sprint`;
+
+        // Show live bar on the read modal
+        const liveWrap = document.getElementById('sprint-live-bar-wrap');
+        if (liveWrap) liveWrap.classList.remove('hidden');
+
+        updateSprintDisplay();
+        if (sprintTimerInterval) clearInterval(sprintTimerInterval);
+        sprintTimerInterval = setInterval(() => {
+            sprintSecondsLeft--;
+            if (sprintSecondsLeft <= 0) {
+                clearInterval(sprintTimerInterval);
+                sprintTimerInterval = null;
+                onSprintComplete();
+            } else {
+                updateSprintDisplay();
+            }
+        }, 1000);
+    });
+}
+
+function updateSprintDisplay() {
+    const pct = sprintSecondsLeft / sprintTotalSeconds;
+    const mm = Math.floor(sprintSecondsLeft / 60).toString().padStart(2, '0');
+    const ss = (sprintSecondsLeft % 60).toString().padStart(2, '0');
+    const timeStr = `${mm}:${ss}`;
+    const pctStr = `${(pct * 100).toFixed(1)}%`;
+    const inkSoFar = Math.floor((sprintTotalSeconds - sprintSecondsLeft) / 60);
+
+    if (document.getElementById('sprint-big-timer')) document.getElementById('sprint-big-timer').textContent = timeStr;
+    if (document.getElementById('sprint-active-fill')) document.getElementById('sprint-active-fill').style.width = pctStr;
+    if (document.getElementById('sprint-xp-preview')) document.getElementById('sprint-xp-preview').textContent = `+${inkSoFar} 🖋️ earned so far`;
+    if (document.getElementById('sprint-live-timer')) document.getElementById('sprint-live-timer').textContent = timeStr;
+    if (document.getElementById('sprint-live-fill')) document.getElementById('sprint-live-fill').style.width = pctStr;
+}
+
+function onSprintComplete() {
+    document.getElementById('sprint-active-view').classList.add('hidden');
+    document.getElementById('sprint-complete-view').classList.remove('hidden');
+    const inkEarned = sprintMinutes;
+    awardInk(inkEarned);
+    // Award Scholar XP based on approximate words read (rough estimate: 200 wpm average)
+    awardScholarXP(sprintMinutes * 200);
+    if (document.getElementById('sprint-complete-msg')) document.getElementById('sprint-complete-msg').textContent = `You held the flame for ${sprintMinutes} minutes without breaking.`;
+    if (document.getElementById('sprint-complete-reward')) document.getElementById('sprint-complete-reward').textContent = `+${inkEarned} 🖋️ Ink`;
+    if (document.getElementById('sprint-live-bar-wrap')) document.getElementById('sprint-live-bar-wrap').classList.add('hidden');
+}
+
+if (document.getElementById('btn-sprint-abandon')) {
+    document.getElementById('btn-sprint-abandon').addEventListener('click', () => {
+        if (sprintTimerInterval) clearInterval(sprintTimerInterval);
+        sprintTimerInterval = null;
+        const secondsSpent = sprintTotalSeconds - sprintSecondsLeft;
+        const inkPartial = Math.floor(secondsSpent / 60);
+        if (inkPartial > 0) {
+            awardInk(inkPartial);
+            awardScholarXP(inkPartial * 200);
+            alert(`Sprint abandoned. You earned ${inkPartial} Ink for the time you spent.`);
+        } else {
+            alert('Sprint abandoned. No time had passed yet.');
+        }
+        sprintModal.classList.add('hidden');
+        if (document.getElementById('sprint-live-bar-wrap')) document.getElementById('sprint-live-bar-wrap').classList.add('hidden');
+    });
+}
+
+if (document.getElementById('btn-sprint-again')) {
+    document.getElementById('btn-sprint-again').addEventListener('click', showSprintSetup);
+}
+
+// --- COMPASS MODE (Paragraph-by-Paragraph Focus) ---
+let compassParagraphs = [];
+let compassIndex = 0;
+let compassAutoTimer = null;
+
+if (document.getElementById('btn-compass-mode')) {
+    document.getElementById('btn-compass-mode').addEventListener('click', openCompassMode);
+}
+if (document.getElementById('btn-close-compass')) {
+    document.getElementById('btn-close-compass').addEventListener('click', closeCompassMode);
+}
+
+function openCompassMode() {
+    const rawText = currentReadPages[currentReadIndex] || '';
+    // Split by double newlines, filter empties
+    compassParagraphs = rawText.split(/\n\n+/).map(p => p.trim()).filter(p => p.length > 10);
+    if (compassParagraphs.length === 0) { alert('No paragraphs found on this page.'); return; }
+    compassIndex = 0;
+    renderCompassParagraph();
+    document.getElementById('compass-mode-display').style.display = 'flex';
+    document.getElementById('compass-mode-display').classList.remove('hidden');
+    if (readModal) readModal.classList.add('hidden');
+}
+
+function closeCompassMode() {
+    stopCompassAuto();
+    document.getElementById('compass-mode-display').style.display = 'none';
+    document.getElementById('compass-mode-display').classList.add('hidden');
+    if (readModal) readModal.classList.remove('hidden');
+    // Award XP for reading
+    const words = compassParagraphs.slice(0, compassIndex + 1).join(' ').split(/\s+/).length;
+    awardScholarXP(words);
+}
+
+function renderCompassParagraph() {
+    const para = document.getElementById('compass-paragraph-text');
+    if (para) {
+        para.style.opacity = '0';
+        setTimeout(() => {
+            para.textContent = compassParagraphs[compassIndex] || '';
+            para.style.opacity = '1';
+        }, 200);
+    }
+    const prog = document.getElementById('compass-progress-label');
+    if (prog) prog.textContent = `Paragraph ${compassIndex + 1} of ${compassParagraphs.length}`;
+
+    // Dots
+    const dotTrack = document.getElementById('compass-dot-track');
+    if (dotTrack) {
+        dotTrack.innerHTML = '';
+        const maxDots = 20;
+        const showCount = Math.min(compassParagraphs.length, maxDots);
+        for (let i = 0; i < showCount; i++) {
+            const d = document.createElement('div');
+            d.className = 'compass-dot' + (i === compassIndex ? ' active' : (i < compassIndex ? ' visited' : ''));
+            dotTrack.appendChild(d);
+        }
+    }
+
+    const prevBtn = document.getElementById('compass-prev-btn');
+    const nextBtn = document.getElementById('compass-next-btn');
+    if (prevBtn) prevBtn.style.opacity = compassIndex === 0 ? '0.3' : '1';
+    if (nextBtn) nextBtn.style.opacity = compassIndex === compassParagraphs.length - 1 ? '0.3' : '1';
+}
+
+if (document.getElementById('compass-prev-btn')) {
+    document.getElementById('compass-prev-btn').addEventListener('click', () => {
+        if (compassIndex > 0) { compassIndex--; renderCompassParagraph(); }
+    });
+}
+if (document.getElementById('compass-next-btn')) {
+    document.getElementById('compass-next-btn').addEventListener('click', () => {
+        if (compassIndex < compassParagraphs.length - 1) { compassIndex++; renderCompassParagraph(); }
+        else { closeCompassMode(); }
+    });
+}
+
+if (document.getElementById('compass-auto-toggle')) {
+    document.getElementById('compass-auto-toggle').addEventListener('change', function() {
+        if (this.checked) startCompassAuto(); else stopCompassAuto();
+    });
+}
+if (document.getElementById('compass-speed-select')) {
+    document.getElementById('compass-speed-select').addEventListener('change', () => {
+        if (document.getElementById('compass-auto-toggle').checked) {
+            stopCompassAuto(); startCompassAuto();
+        }
+    });
+}
+
+function startCompassAuto() {
+    stopCompassAuto();
+    const delay = parseInt(document.getElementById('compass-speed-select').value, 10) || 2500;
+    compassAutoTimer = setInterval(() => {
+        if (compassIndex < compassParagraphs.length - 1) { compassIndex++; renderCompassParagraph(); }
+        else { closeCompassMode(); }
+    }, delay);
+}
+function stopCompassAuto() {
+    if (compassAutoTimer) { clearInterval(compassAutoTimer); compassAutoTimer = null; }
+    const tog = document.getElementById('compass-auto-toggle');
+    if (tog) tog.checked = false;
+}
+
+// --- COMPREHENSION CHECKPOINT ---
+let checkpointQueue = [];
+let checkpointIndex = 0;
+let checkpointCorrect = 0;
+let checkpointCombo = 0;
+
+const checkpointModal = document.getElementById('checkpoint-modal');
+
+if (document.getElementById('btn-checkpoint-trigger')) {
+    document.getElementById('btn-checkpoint-trigger').addEventListener('click', openCheckpoint);
+}
+if (document.getElementById('close-checkpoint')) {
+    document.getElementById('close-checkpoint').addEventListener('click', () => checkpointModal.classList.add('hidden'));
+}
+if (document.getElementById('btn-checkpoint-close')) {
+    document.getElementById('btn-checkpoint-close').addEventListener('click', () => checkpointModal.classList.add('hidden'));
+}
+
+function openCheckpoint() {
+    const world = getActiveWorld();
+    if (!world) return;
+    const section = world.flashcards?.filter(fc => fc.section === currentReadSectionTitle);
+    if (!section || section.length === 0) {
+        alert('No flashcards found for this section. Add some !FLASH! cards to your notes first.');
+        return;
+    }
+    checkpointQueue = [...section].sort(() => Math.random() - 0.5).slice(0, Math.min(5, section.length));
+    checkpointIndex = 0;
+    checkpointCorrect = 0;
+    checkpointCombo = 0;
+
+    document.getElementById('checkpoint-active-view').classList.remove('hidden');
+    document.getElementById('checkpoint-results-view').classList.add('hidden');
+    renderCheckpointCard();
+    checkpointModal.classList.remove('hidden');
+}
+
+function renderCheckpointCard() {
+    const card = checkpointQueue[checkpointIndex];
+    document.getElementById('checkpoint-question').textContent = card.question;
+    document.getElementById('checkpoint-answer').textContent = card.answer;
+    document.getElementById('checkpoint-answer').classList.add('hidden');
+    document.getElementById('btn-checkpoint-reveal').classList.remove('hidden');
+    document.getElementById('checkpoint-grade-btns').classList.add('hidden');
+    document.getElementById('checkpoint-progress').textContent = `Card ${checkpointIndex + 1} of ${checkpointQueue.length}`;
+    const pct = (checkpointIndex / checkpointQueue.length) * 100;
+    document.getElementById('checkpoint-prog-fill').style.width = `${pct}%`;
+    const comboBadge = document.getElementById('checkpoint-combo-badge');
+    if (checkpointCombo >= 2) {
+        comboBadge.classList.remove('hidden');
+        comboBadge.textContent = `🔥 x${checkpointCombo}`;
+        comboBadge.style.animation = 'none'; void comboBadge.offsetWidth; comboBadge.style.animation = 'comboPulse 0.6s ease-in-out';
+    } else {
+        comboBadge.classList.add('hidden');
+    }
+}
+
+if (document.getElementById('btn-checkpoint-reveal')) {
+    document.getElementById('btn-checkpoint-reveal').addEventListener('click', () => {
+        document.getElementById('checkpoint-answer').classList.remove('hidden');
+        document.getElementById('btn-checkpoint-reveal').classList.add('hidden');
+        document.getElementById('checkpoint-grade-btns').classList.remove('hidden');
+    });
+}
+if (document.getElementById('btn-cp-right')) {
+    document.getElementById('btn-cp-right').addEventListener('click', () => advanceCheckpoint(true));
+}
+if (document.getElementById('btn-cp-wrong')) {
+    document.getElementById('btn-cp-wrong').addEventListener('click', () => advanceCheckpoint(false));
+}
+
+function advanceCheckpoint(isCorrect) {
+    if (isCorrect) { checkpointCorrect++; checkpointCombo++; } else { checkpointCombo = 0; }
+    checkpointIndex++;
+    if (checkpointIndex >= checkpointQueue.length) {
+        showCheckpointResults();
+    } else {
+        renderCheckpointCard();
+    }
+}
+
+function showCheckpointResults() {
+    document.getElementById('checkpoint-active-view').classList.add('hidden');
+    document.getElementById('checkpoint-results-view').classList.remove('hidden');
+    document.getElementById('checkpoint-prog-fill').style.width = '100%';
+
+    const total = checkpointQueue.length;
+    const pct = Math.round((checkpointCorrect / total) * 100);
+    const inkEarned = checkpointCorrect * 2;
+    const icon = pct >= 80 ? '🏆' : pct >= 50 ? '📜' : '⚗️';
+    const title = pct >= 80 ? 'Excellent Comprehension!' : pct >= 50 ? 'Partial Mastery' : 'Keep Studying';
+
+    document.getElementById('checkpoint-result-icon').textContent = icon;
+    document.getElementById('checkpoint-result-title').textContent = title;
+    document.getElementById('checkpoint-result-title').style.color = pct >= 80 ? '#4cd137' : pct >= 50 ? '#d4a843' : '#ff6b6b';
+    document.getElementById('checkpoint-result-stats').textContent = `${checkpointCorrect} / ${total} recalled correctly (${pct}%)`;
+    document.getElementById('checkpoint-result-reward').textContent = inkEarned > 0 ? `+${inkEarned} 🖋️ Ink awarded` : 'No Ink earned — try harder next time.';
+    if (inkEarned > 0) awardInk(inkEarned);
+    saveToStorage();
+}
+
+// --- SCHOLAR'S LEXICON ---
+let lexiconWords = []; // { word, definition, defined }
+let lexiconDefineQueue = [];
+let lexiconDefineIndex = 0;
+let lexiconDefineCorrect = 0;
+
+const lexiconModal = document.getElementById('lexicon-modal');
+const lexiconDefineModal = document.getElementById('lexicon-define-modal');
+
+if (document.getElementById('btn-lexicon-open')) {
+    document.getElementById('btn-lexicon-open').addEventListener('click', () => {
+        renderLexiconList();
+        lexiconModal.classList.remove('hidden');
+    });
+}
+if (document.getElementById('close-lexicon')) {
+    document.getElementById('close-lexicon').addEventListener('click', () => lexiconModal.classList.add('hidden'));
+}
+if (document.getElementById('close-lexicon-define')) {
+    document.getElementById('close-lexicon-define').addEventListener('click', () => { lexiconDefineModal.classList.add('hidden'); lexiconModal.classList.remove('hidden'); });
+}
+if (document.getElementById('btn-lexicon-clear')) {
+    document.getElementById('btn-lexicon-clear').addEventListener('click', () => {
+        if (confirm('Clear all collected words from the Lexicon?')) { lexiconWords = []; renderLexiconList(); }
+    });
+}
+
+// Enable double-click word collection while reading
+function enableLexiconReadCapture() {
+    const contentEl = document.getElementById('read-modal-content');
+    if (!contentEl) return;
+    contentEl.ondblclick = function(e) {
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed) return;
+        const word = sel.toString().trim().replace(/[^a-zA-ZÀ-ÿ\-]/g, '').toLowerCase();
+        if (!word || word.length < 3) return;
+        if (!lexiconWords.find(w => w.word === word)) {
+            // Try to find a matching flashcard answer as a definition hint
+            const world = getActiveWorld();
+            let hint = '';
+            if (world) {
+                const match = world.flashcards?.find(fc => fc.answer.toLowerCase().includes(word));
+                if (match) hint = match.answer;
+            }
+            lexiconWords.push({ word, hint, definition: '', defined: false });
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(60,40,130,0.95);border:1px solid rgba(162,155,254,0.4);border-radius:20px;padding:8px 20px;z-index:99999;font-family:Cinzel,serif;color:#a29bfe;font-size:0.85em;pointer-events:none;';
+            toast.textContent = `"${word}" added to Lexicon`;
+            document.body.appendChild(toast);
+            setTimeout(() => { toast.style.transition='opacity 0.5s'; toast.style.opacity='0'; setTimeout(()=>toast.remove(),500); }, 1600);
+        }
+        sel.removeAllRanges();
+    };
+}
+
+function renderLexiconList() {
+    const listEl = document.getElementById('lexicon-entries');
+    const emptyMsg = document.getElementById('lexicon-empty-msg');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+    if (lexiconWords.length === 0) {
+        if (emptyMsg) emptyMsg.style.display = 'block';
+        return;
+    }
+    if (emptyMsg) emptyMsg.style.display = 'none';
+    lexiconWords.forEach((entry, idx) => {
+        const chip = document.createElement('div');
+        chip.className = 'lexicon-word-chip' + (entry.defined ? ' defined' : '');
+        chip.innerHTML = `<span>${entry.word}</span>${entry.defined ? '<span title="Defined">✓</span>' : ''}<span class="chip-remove" title="Remove" data-idx="${idx}">✕</span>`;
+        chip.querySelector('.chip-remove').addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            lexiconWords.splice(idx, 1);
+            renderLexiconList();
+        });
+        listEl.appendChild(chip);
+    });
+}
+
+if (document.getElementById('btn-lexicon-quiz')) {
+    document.getElementById('btn-lexicon-quiz').addEventListener('click', () => {
+        const undefs = lexiconWords.filter(w => !w.defined);
+        if (undefs.length === 0) { alert('All collected words have already been defined! Clear the list or add new words.'); return; }
+        lexiconDefineQueue = [...undefs];
+        lexiconDefineIndex = 0;
+        lexiconDefineCorrect = 0;
+        lexiconModal.classList.add('hidden');
+        renderLexiconDefineCard();
+        lexiconDefineModal.classList.remove('hidden');
+    });
+}
+
+function renderLexiconDefineCard() {
+    const entry = lexiconDefineQueue[lexiconDefineIndex];
+    const termEl = document.getElementById('lexicon-term-display');
+    const inputEl = document.getElementById('lexicon-define-input');
+    const revealEl = document.getElementById('lexicon-define-reveal');
+    const gradeEl = document.getElementById('lexicon-define-grade');
+    const submitEl = document.getElementById('btn-lexicon-submit-def');
+    const progEl = document.getElementById('lexicon-define-progress');
+
+    if (termEl) termEl.textContent = entry.word;
+    if (inputEl) { inputEl.value = ''; inputEl.style.display = 'block'; }
+    if (revealEl) { revealEl.classList.add('hidden'); revealEl.textContent = ''; }
+    if (gradeEl) { gradeEl.classList.add('hidden'); gradeEl.style.display = 'none'; }
+    if (submitEl) submitEl.classList.remove('hidden');
+    if (progEl) progEl.textContent = `Term ${lexiconDefineIndex + 1} of ${lexiconDefineQueue.length}`;
+}
+
+if (document.getElementById('btn-lexicon-submit-def')) {
+    document.getElementById('btn-lexicon-submit-def').addEventListener('click', () => {
+        const inputEl = document.getElementById('lexicon-define-input');
+        const revealEl = document.getElementById('lexicon-define-reveal');
+        const gradeEl = document.getElementById('lexicon-define-grade');
+        const submitEl = document.getElementById('btn-lexicon-submit-def');
+        const entry = lexiconDefineQueue[lexiconDefineIndex];
+        if (!inputEl.value.trim()) return;
+
+        const hint = entry.hint || `(No flashcard context found for "${entry.word}")`;
+        revealEl.textContent = hint;
+        revealEl.classList.remove('hidden');
+        gradeEl.classList.remove('hidden');
+        gradeEl.style.display = 'flex';
+        submitEl.classList.add('hidden');
+        inputEl.style.display = 'block';
+    });
+}
+
+function advanceLexiconDefine(isCorrect) {
+    const entry = lexiconDefineQueue[lexiconDefineIndex];
+    const idx = lexiconWords.findIndex(w => w.word === entry.word);
+    if (isCorrect) {
+        lexiconDefineCorrect++;
+        const defInput = document.getElementById('lexicon-define-input');
+        if (idx !== -1 && defInput) lexiconWords[idx].definition = defInput.value.trim();
+        if (idx !== -1) lexiconWords[idx].defined = true;
+    }
+    lexiconDefineIndex++;
+    if (lexiconDefineIndex >= lexiconDefineQueue.length) {
+        const inkEarned = lexiconDefineCorrect * 3;
+        if (inkEarned > 0) awardInk(inkEarned);
+        saveToStorage();
+        alert(`Lexicon session complete!\n${lexiconDefineCorrect}/${lexiconDefineQueue.length} terms understood.\n+${inkEarned} 🖋️ Ink earned.`);
+        lexiconDefineModal.classList.add('hidden');
+        lexiconModal.classList.remove('hidden');
+        renderLexiconList();
+    } else {
+        renderLexiconDefineCard();
+    }
+}
+
+if (document.getElementById('btn-lex-right')) {
+    document.getElementById('btn-lex-right').addEventListener('click', () => advanceLexiconDefine(true));
+}
+if (document.getElementById('btn-lex-wrong')) {
+    document.getElementById('btn-lex-wrong').addEventListener('click', () => advanceLexiconDefine(false));
+}
+
+// --- FEYNMAN SIMPLIFIER ---
+let feynmanTerms = [];
+let feynmanSectionLabel = '';
+
+const feynmanModal = document.getElementById('feynman-modal');
+
+if (document.getElementById('btn-feynman-open')) {
+    document.getElementById('btn-feynman-open').addEventListener('click', openFeynmanLab);
+}
+if (document.getElementById('close-feynman')) {
+    document.getElementById('close-feynman').addEventListener('click', () => feynmanModal.classList.add('hidden'));
+}
+
+function openFeynmanLab() {
+    const world = getActiveWorld();
+    if (!world) return;
+    feynmanSectionLabel = currentReadSectionTitle;
+    feynmanTerms = (world.flashcards || [])
+        .filter(fc => fc.section === feynmanSectionLabel)
+        .map(fc => fc.answer.toLowerCase().trim())
+        .filter(a => a.length > 3);
+
+    const labelEl = document.getElementById('feynman-section-label');
+    const promptEl = document.getElementById('feynman-prompt');
+    const editorEl = document.getElementById('feynman-editor');
+    const totalEl = document.getElementById('feynman-term-total');
+    const resultEl = document.getElementById('feynman-result');
+
+    if (labelEl) labelEl.textContent = `Section: ${feynmanSectionLabel}`;
+    const prompts = [
+        `Explain everything you understand about "${feynmanSectionLabel}" as if teaching a curious child with no prior knowledge.`,
+        `A student from the outside world finds a sealed scroll about "${feynmanSectionLabel}". What is the single most important thing it teaches, and why does it matter?`,
+        `Describe the core concepts of "${feynmanSectionLabel}" using only the simplest possible language. Avoid jargon — use plain, vivid analogies.`,
+        `You have 5 minutes before the monastery library burns. Write everything essential about "${feynmanSectionLabel}" that must be remembered.`
+    ];
+    if (promptEl) promptEl.textContent = prompts[Math.floor(Math.random() * prompts.length)];
+    if (editorEl) { editorEl.value = ''; editorEl.oninput = updateFeynmanProgress; }
+    if (totalEl) totalEl.textContent = feynmanTerms.length;
+    if (resultEl) { resultEl.classList.add('hidden'); resultEl.className = 'feynman-result-box hidden'; resultEl.textContent = ''; }
+    updateFeynmanProgress();
+    feynmanModal.classList.remove('hidden');
+}
+
+function updateFeynmanProgress() {
+    const text = (document.getElementById('feynman-editor')?.value || '').toLowerCase();
+    const found = feynmanTerms.filter(term => text.includes(term)).length;
+    const total = feynmanTerms.length;
+    if (document.getElementById('feynman-term-count')) document.getElementById('feynman-term-count').textContent = found;
+    if (document.getElementById('feynman-fill')) {
+        document.getElementById('feynman-fill').style.width = total > 0 ? `${(found / total) * 100}%` : '0%';
+    }
+}
+
+if (document.getElementById('btn-feynman-submit')) {
+    document.getElementById('btn-feynman-submit').addEventListener('click', submitFeynman);
+}
+
+function submitFeynman() {
+    const text = (document.getElementById('feynman-editor')?.value || '').trim();
+    if (text.length < 30) { alert('Write at least a few sentences before submitting.'); return; }
+    const textLow = text.toLowerCase();
+    const found = feynmanTerms.filter(term => textLow.includes(term));
+    const total = feynmanTerms.length;
+    const pct = total > 0 ? (found.length / total) : 1;
+    const inkEarned = Math.max(1, found.length * 3);
+    const resultEl = document.getElementById('feynman-result');
+
+    if (pct >= 0.6 || total === 0) {
+        resultEl.className = 'feynman-result-box pass';
+        resultEl.innerHTML = `<div style="font-size:1.8em;margin-bottom:8px;">⚗️</div>The Feynman Test: Passed<br><span style="font-size:0.85em;color:#4e8a68;font-family:'Cormorant Garamond',serif;font-style:italic;">${found.length} of ${total} key terms woven in.</span><br><span style="color:#aaffcc;font-size:1em;">+${inkEarned} 🖋️ Ink</span>`;
+        awardInk(inkEarned);
+    } else {
+        resultEl.className = 'feynman-result-box fail';
+        resultEl.innerHTML = `<div style="font-size:1.8em;margin-bottom:8px;">🔬</div>Incomplete Understanding<br><span style="font-size:0.85em;color:#a06040;font-family:'Cormorant Garamond',serif;font-style:italic;">Only ${found.length} of ${total} key terms found. Go deeper.<br>Missing: ${feynmanTerms.filter(t=>!textLow.includes(t)).slice(0,4).map(t=>`"${t}"`).join(', ')}</span>`;
+    }
+    resultEl.classList.remove('hidden');
+    saveToStorage();
+}
+
+if (document.getElementById('btn-feynman-hint')) {
+    document.getElementById('btn-feynman-hint').addEventListener('click', () => {
+        const missing = feynmanTerms.filter(t => !(document.getElementById('feynman-editor')?.value || '').toLowerCase().includes(t));
+        if (missing.length === 0) { alert('You have already used all known key terms!'); return; }
+        const hint = missing[Math.floor(Math.random() * missing.length)];
+        alert(`Hint: try working the concept of "${hint}" into your explanation.`);
+    });
+}
+
+// Wire lexicon capture whenever the read modal opens content
+// (called from btn-section-read handler below)
+
+// Update scholar badge on load
+updateScholarBadge();
 
 // --- LIBRARY (UNIVERSE) SETTINGS ---
 const librarySettingsModal = document.getElementById('library-settings-modal');
@@ -1618,6 +2692,7 @@ async function bootApp() {
     // Render uploaded rewards into the store panel (if any were saved)
     try { renderUploadedRewards(); } catch (e) { /* ignore if DOM not ready */ }
     try { initMindMap(appState); } catch(e) { console.error("MindMap init error", e); }
+    try { initOwlMentor(); } catch(e) { console.error('Owl mentor init error', e); }
 }
 
 bootApp();

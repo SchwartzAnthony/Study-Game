@@ -85,6 +85,87 @@ if (excelUploadInput) {
 
 // --- FILE UPLOAD & EDITOR LOGIC ---
 let tempFilename = "New World";
+
+function parseWorldFromSyntax(finalContent, worldName) {
+    let newWorld = {
+        name: worldName || tempFilename,
+        sections: new Set(),
+        flashcards: [], quizzes: [], exams: [], tasks: [], miniGames: [], rituals: [], chronicles: [],
+        content: {}, progress: {}, background: null, coordinates: []
+    };
+
+    const lines = String(finalContent || '').split('\n');
+    let currentSection = "Intro";
+    let hasStarted = false;
+
+    lines.forEach(line => {
+        let trimmedLine = line.trim();
+        if (trimmedLine === "") return;
+
+        if (trimmedLine.startsWith('!CHAPTER! ')) {
+            currentSection = trimmedLine.replace('!CHAPTER! ', '').trim() || `Section ${newWorld.sections.size + 1}`;
+            newWorld.sections.add(currentSection);
+            newWorld.content[currentSection] = "";
+            newWorld.progress[currentSection] = { quizPassed: false, examPassed: false, gameCooldowns: {} };
+            hasStarted = true;
+            return;
+        }
+
+        if (!hasStarted) {
+            newWorld.sections.add(currentSection);
+            newWorld.content[currentSection] = "";
+            newWorld.progress[currentSection] = { quizPassed: false, examPassed: false, gameCooldowns: {} };
+            hasStarted = true;
+        }
+
+        let isSyntaxCommand = trimmedLine.startsWith('!FLASH!') ||
+            trimmedLine.startsWith('!QUIZZ!') ||
+            trimmedLine.startsWith('!EXAM!') ||
+            trimmedLine.startsWith('!RITUAL!') ||
+            trimmedLine.startsWith('!GAME!') ||
+            trimmedLine.startsWith('- [ ]') ||
+            trimmedLine.startsWith('- [x]');
+
+        if (!isSyntaxCommand) {
+            newWorld.content[currentSection] += line + '\n';
+        }
+
+        if (trimmedLine.startsWith('!FLASH!')) {
+            const parts = trimmedLine.replace('!FLASH!', '').split('::');
+            if (parts.length === 2) newWorld.flashcards.push({ section: currentSection, question: parts[0].trim(), answer: parts[1].trim(), interval: 0, ease: 2.5, nextReview: 0, burned: false });
+        }
+        if (trimmedLine.startsWith('!QUIZZ!')) {
+            const parts = trimmedLine.replace('!QUIZZ!', '').split('::');
+            if (parts.length === 2) newWorld.quizzes.push({ section: currentSection, question: parts[0].trim(), answer: parts[1].trim() });
+        }
+        if (trimmedLine.startsWith('!RITUAL!')) {
+            const parts = trimmedLine.replace('!RITUAL!', '').split('::');
+            if (parts.length === 2) {
+                newWorld.rituals.push({
+                    section: currentSection,
+                    name: parts[0].trim(),
+                    steps: parts[1].split('>').map(s => s.trim())
+                });
+            }
+        }
+        if (trimmedLine.startsWith('!EXAM!')) {
+            const parts = trimmedLine.replace('!EXAM!', '').split('::');
+            if (parts.length === 2) newWorld.exams.push({ section: currentSection, question: parts[0].trim(), answer: parts[1].trim() });
+        }
+        if (trimmedLine.includes('- [ ]') || trimmedLine.includes('- [x]')) {
+            let isCompleted = trimmedLine.includes('- [x]');
+            let taskText = trimmedLine.replace('- [ ]', '').replace('- [x]', '').trim();
+            newWorld.tasks.push({ section: currentSection, text: taskText, completed: isCompleted });
+        }
+        if (trimmedLine.startsWith('!GAME!')) {
+            newWorld.miniGames.push({ section: currentSection, name: trimmedLine.replace('!GAME!', '').trim() });
+        }
+    });
+
+    newWorld.sections = Array.from(newWorld.sections);
+    newWorld.coordinates = generateMapCoordinates(newWorld.sections.length);
+    return newWorld;
+}
 function loadFileToEditor() {
     const file = fileInput.files[0];
     if (!file) return alert("Please select a file first!");
@@ -104,81 +185,7 @@ function cancelEdit() {
 
 function saveAndProcessWorld() {
     const finalContent = editor.value;
-    let newWorld = {
-        name: tempFilename, sections: new Set(),
-        flashcards: [], quizzes: [], exams: [], tasks: [], miniGames: [], rituals: [], // <-- ADDED RITUALS ARRAY
-        content: {}, progress: {}, background: null, coordinates: []
-    };
-
-    const lines = finalContent.split('\n');
-    let currentSection = "Intro"; let hasStarted = false;
-
-    lines.forEach(line => {
-        let trimmedLine = line.trim();
-        if (trimmedLine === "") return; 
-
-        if (trimmedLine.startsWith('!CHAPTER! ')) {
-            currentSection = trimmedLine.replace('!CHAPTER! ', '').trim();
-            newWorld.sections.add(currentSection); 
-            newWorld.content[currentSection] = ""; newWorld.progress[currentSection] = { quizPassed: false, examPassed: false, gameCooldowns: {} };
-            hasStarted = true; return;
-        }
-
-        if (!hasStarted) {
-            newWorld.sections.add(currentSection); 
-            newWorld.content[currentSection] = ""; newWorld.progress[currentSection] = { quizPassed: false, examPassed: false, gameCooldowns: {} };
-            hasStarted = true;
-        }
-
-        // --- NEW: Filter out the syntax tags from the reading material ---
-        let isSyntaxCommand = trimmedLine.startsWith('!FLASH!') || 
-                              trimmedLine.startsWith('!QUIZZ!') || 
-                              trimmedLine.startsWith('!EXAM!') || 
-                              trimmedLine.startsWith('!RITUAL!') || 
-                              trimmedLine.startsWith('!GAME!') || 
-                              trimmedLine.startsWith('- [ ]') || 
-                              trimmedLine.startsWith('- [x]');
-
-        // Note: We DO NOT filter !SECTION! here. We leave it inscribed in the raw text. Let the reader split by it dynamically!
-        // Only scribe the line into the book if it is normal reading text
-        if (!isSyntaxCommand) {
-            newWorld.content[currentSection] += line + '\n';
-        }
-
-        if (trimmedLine.startsWith('!FLASH!')) {
-            const parts = trimmedLine.replace('!FLASH!', '').split('::');
-            if (parts.length === 2) newWorld.flashcards.push({ section: currentSection, question: parts[0].trim(), answer: parts[1].trim(), interval: 0, ease: 2.5, nextReview: 0, burned: false });
-        }
-        if (trimmedLine.startsWith('!QUIZZ!')) {
-            const parts = trimmedLine.replace('!QUIZZ!', '').split('::');
-            if (parts.length === 2) newWorld.quizzes.push({ section: currentSection, question: parts[0].trim(), answer: parts[1].trim() });
-        }
-        if (trimmedLine.startsWith('!RITUAL!')) {
-            const parts = trimmedLine.replace('!RITUAL!', '').split('::');
-            if (parts.length === 2) {
-                newWorld.rituals.push({ 
-                    section: currentSection, 
-                    name: parts[0].trim(), 
-                    steps: parts[1].split('>').map(s => s.trim()) 
-                });
-            }
-        }
-        if (trimmedLine.startsWith('!EXAM!')) {
-            const parts = trimmedLine.replace('!EXAM!', '').split('::');
-            if (parts.length === 2) newWorld.exams.push({ section: currentSection, question: parts[0].trim(), answer: parts[1].trim() });
-        }
-        if (trimmedLine.includes('- [ ]') || trimmedLine.includes('- [x]')) {
-            let isCompleted = trimmedLine.includes('- [x]');
-            let taskText = trimmedLine.replace('- [ ]', '').replace('- [x]', '').trim();
-            newWorld.tasks.push({ section: currentSection, text: taskText, completed: isCompleted });
-        }
-        if (trimmedLine.startsWith('!GAME!')) {
-            newWorld.miniGames.push({ section: currentSection, name: trimmedLine.replace('!GAME!', '').trim() });
-        }
-    });
-
-    newWorld.sections = Array.from(newWorld.sections);
-    newWorld.coordinates = generateMapCoordinates(newWorld.sections.length); 
+    const newWorld = parseWorldFromSyntax(finalContent, tempFilename);
     
     const hub = appState.hubs[appState.currentHubIndex];
     hub.worlds.push(newWorld); hub.currentWorldIndex = hub.worlds.length - 1;
@@ -187,6 +194,19 @@ function saveAndProcessWorld() {
     if(document.getElementById('training-card')) document.getElementById('training-card').classList.remove('locked');
     if(document.getElementById('vault-card')) document.getElementById('vault-card').classList.remove('locked');
     renderMap();
+}
+
+function createWorldFromSyntax(syntaxContent, worldName) {
+    const newWorld = parseWorldFromSyntax(syntaxContent, worldName || 'Auto Forged World');
+    const hub = appState.hubs[appState.currentHubIndex];
+    hub.worlds.push(newWorld);
+    hub.currentWorldIndex = hub.worlds.length - 1;
+
+    saveToStorage();
+    if(document.getElementById('training-card')) document.getElementById('training-card').classList.remove('locked');
+    if(document.getElementById('vault-card')) document.getElementById('vault-card').classList.remove('locked');
+    renderMap();
+    return newWorld;
 }
 
 // --- MAIN HUB BOTTOM UPLOAD LOGIC ---
@@ -223,4 +243,4 @@ if (mainHubUploadBtn && mainHubFileInput) {
 
 
 
-export { loadFileToEditor, cancelEdit, saveAndProcessWorld };
+export { loadFileToEditor, cancelEdit, saveAndProcessWorld, createWorldFromSyntax };

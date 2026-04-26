@@ -7,7 +7,12 @@ export const appState = {
     paper: {},
     library: [],
     inventory: [],
-    customRewards: [] // New field for uploaded rewards
+    customRewards: [], // New field for uploaded rewards
+    streak: 0,           // Days in a row with at least one flashcard review
+    lastReviewDate: null,  // Last date a review was completed (toDateString())
+    scholarXP: 0,        // Total words read across all sessions
+    scholarLevel: 1,     // Derived from scholarXP; displayed as a badge
+    owlMentor: { tips: [], tipIndex: 0, lastWorldName: null }
 };
 
 // Image sanitizer helper (global) — strips whitespace, validates base64 payloads and allows http/relative paths

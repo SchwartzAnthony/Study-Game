@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="style.css?v=2.2">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
@@ -35,6 +36,20 @@
             }
             // Defer check a touch so the CDN script has a chance to run (if allowed)
             if (document.readyState === 'complete') ensureXLSX(); else window.addEventListener('load', ensureXLSX);
+        })();
+    </script>
+    <script>
+        (function(){
+            function ensureTesseract() {
+                if (!window.Tesseract) {
+                    var s = document.createElement('script');
+                    s.src = 'assets/tesseract.min.js';
+                    s.onload = function(){ console.log('Loaded local tesseract fallback'); };
+                    s.onerror = function(){ console.warn('Tesseract not available from CDN or local assets. OCR fallback will be disabled.'); };
+                    document.head.appendChild(s);
+                }
+            }
+            if (document.readyState === 'complete') ensureTesseract(); else window.addEventListener('load', ensureTesseract);
         })();
     </script>
 </head>
@@ -55,6 +70,7 @@
                 <div class="header-action-buttons" style="display: flex; gap: 10px;">
                     <button id="btn-open-library" class="btn-occult">📜 Scrolls</button>
                     <button id="btn-open-store" class="btn-occult">🛒 Store</button>
+                    <span id="scholar-badge" class="scholar-badge" title="Scholar Level — earned by reading" style="display:none;">🎓 Lv.<span id="scholar-level">1</span></span>
                 </div>
             </div>
         </header>
@@ -112,6 +128,9 @@
                     <p style="color: #e0e0e0; font-family: 'Georgia', serif; font-size: 1.1em; margin-bottom: 30px;">Process your raw tomes and translate arcane texts into structured grimoires.</p>
                     
                     <div style="display: flex; flex-direction: column; gap: 15px; width: 100%;">
+                        <button id="btn-auto-forge-pdf" class="btn-occult" style="width: 100%; padding: 15px; font-size: 1.15em; border-color: #d4a843; color: #f3d98a;">Auto-Forge World from PDF (Offline)</button>
+                        <input type="file" id="pdf-auto-upload-input" accept=".pdf" style="display: none;">
+
                         <button id="btn-convert-pdf" class="btn-occult" style="width: 100%; padding: 15px; font-size: 1.2em; border-color: #2b7a4b; color: #aaffcc;">Convert PDF to MD</button>
                         <input type="file" id="pdf-upload-input" accept=".pdf" style="display: none;">
                         
@@ -152,6 +171,7 @@
                     <h3>Global Training</h3>
                     <p>Review due flashcards across the entire world.</p>
                     <button id="btn-global-flashcards">Review <span id="global-fc-count">0</span> Due</button>
+                    <div id="streak-badge" class="streak-badge" style="display: none;">🔥 <span id="streak-count">0</span> day streak</div>
                 </div>
 
                 <div class="card locked" id="vault-card">
@@ -215,6 +235,8 @@
                     <button id="btn-section-quiz" class="btn-secondary">📝 Quiz (<span id="quiz-count">0</span>)</button>
                     <button id="btn-section-exam" class="btn-secondary">🏆 Exam (<span id="exam-count">0</span>)</button>
                 </div>
+
+                <button id="btn-section-chronicle" class="btn-occult" style="width: 100%; margin-top: 10px; border-color: rgba(180,140,60,0.5); color: #d4a843;">📜 The Chronicle (<span id="chronicle-count">0</span>)</button>
             </div>
 
             <button id="close-section-modal" class="btn-danger" style="margin-top: 20px;">Return to Map</button>
@@ -225,11 +247,26 @@
         <div class="modal-content section-content" style="max-width: 700px; width: 95%; position: relative;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <h2 id="read-modal-title" style="margin: 0;">Reading Material</h2>
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <button id="toggle-bionic-btn" class="btn-occult" style="font-size: 0.9em; padding: 5px 10px; border-radius: 5px;">Toggle Bionic Reading</button>
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end;">
+                    <button id="toggle-bionic-btn" class="btn-occult read-tool-btn">👁 Bionic</button>
+                    <button id="btn-compass-mode" class="btn-occult read-tool-btn">🧭 Compass</button>
+                    <button id="btn-sprint-start" class="btn-occult read-tool-btn">⏱ Sprint</button>
+                    <button id="btn-lexicon-open" class="btn-occult read-tool-btn">📖 Lexicon</button>
+                    <button id="btn-feynman-open" class="btn-occult read-tool-btn">🔬 Feynman</button>
+                    <button id="btn-checkpoint-trigger" class="btn-occult read-tool-btn" style="border-color: rgba(76,209,55,0.4); color: #4cd137;">✅ Checkpoint</button>
                     <span id="close-read-modal" class="close-btn" style="position: static;">&times;</span>
                 </div>
             </div>
+
+            <!-- Sprint live timer bar (hidden by default) -->
+            <div id="sprint-live-bar-wrap" class="hidden" style="margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="font-family: 'Cinzel', serif; color: #00d4ff; font-size: 0.82em; letter-spacing: 1px;">FOCUS SPRINT</span>
+                    <span id="sprint-live-timer" style="font-family: 'Cinzel', serif; color: #00d4ff; font-size: 0.9em; font-weight: bold;">25:00</span>
+                </div>
+                <div class="sprint-track"><div id="sprint-live-fill" class="sprint-fill" style="width:100%;"></div></div>
+            </div>
+
             <div id="read-modal-content" class="read-text-area"></div>
         </div>
     </div>
@@ -515,7 +552,7 @@
                 </div>
                 <div class="syntax-item">
                     <code>!GAME! Name of Game</code>
-                    <p>Assigns a Mini-Game to the section level.</p>
+                    <p>Assigns a Mini-Game to the section level. Available games: <b>Arcane Defense</b>, <b>Trivia</b>, <b>Memory</b>, <b>Flash-Match</b>, <b>Spellweaver</b>, <b>Ritual Alignment</b>, <b>Cloze Trial</b>, <b>True/False Blitz</b>, <b>Glimpse & Recall</b>.</p>
                 </div>
             </div>
 
@@ -568,7 +605,293 @@
             </div>
         </div>
     </div>
-    <script type="module" src="app.js?v=2.2"></script>
+    <!-- ===================== READING SPRINT MODAL ===================== -->
+    <div id="sprint-modal" class="modal hidden" style="z-index: 10002;">
+        <div class="modal-content sprint-modal-content">
+            <span id="close-sprint-modal" class="close-btn">&times;</span>
+
+            <div id="sprint-setup-view">
+                <div class="sprint-icon-glow">⏱</div>
+                <h2 class="sprint-title">Focus Sprint</h2>
+                <p class="sprint-sub">Lock in. No distractions. Earn Ink for every minute you hold the flame.</p>
+
+                <div class="sprint-options">
+                    <button class="sprint-option-btn" data-minutes="5">5 min<span>Kindling</span></button>
+                    <button class="sprint-option-btn" data-minutes="10">10 min<span>Torch</span></button>
+                    <button class="sprint-option-btn active" data-minutes="25">25 min<span>Pyre</span></button>
+                    <button class="sprint-option-btn" data-minutes="45">45 min<span>Bonfire</span></button>
+                </div>
+
+                <div class="sprint-reward-preview">
+                    <span>🖋️ Reward on completion:</span>
+                    <span id="sprint-reward-preview-ink" style="color: #d22930; font-weight: bold; font-family: 'Cinzel', serif;">25 Ink</span>
+                </div>
+
+                <button id="btn-sprint-begin" class="btn-primary" style="width: 100%; padding: 16px; font-size: 1.2em; font-family: 'Cinzel', serif; letter-spacing: 2px; margin-top: 10px;">IGNITE THE FLAME</button>
+            </div>
+
+            <div id="sprint-active-view" class="hidden" style="text-align: center;">
+                <div class="sprint-icon-glow" id="sprint-flame-icon">🔥</div>
+                <h2 class="sprint-title" id="sprint-active-label">Pyre Sprint</h2>
+                <p class="sprint-sub">The flame burns. Keep reading.</p>
+                <div class="sprint-big-timer" id="sprint-big-timer">25:00</div>
+                <div class="sprint-track" style="margin: 18px 0;"><div id="sprint-active-fill" class="sprint-fill" style="width:100%;"></div></div>
+                <div class="sprint-xp-preview" id="sprint-xp-preview">+0 🖋️</div>
+                <button id="btn-sprint-abandon" class="btn-danger" style="margin-top: 20px; padding: 10px 30px; font-size: 0.9em;">Abandon Sprint</button>
+            </div>
+
+            <div id="sprint-complete-view" class="hidden" style="text-align: center;">
+                <div class="sprint-complete-icon">🏆</div>
+                <h2 class="sprint-title" style="color: #ffd700 !important; text-shadow: 0 0 20px rgba(255,215,0,0.5) !important;">Sprint Complete!</h2>
+                <p id="sprint-complete-msg" class="sprint-sub"></p>
+                <div id="sprint-complete-reward" class="sprint-reward-big"></div>
+                <button id="btn-sprint-again" class="btn-primary" style="margin-top: 20px; width: 100%; padding: 14px; font-family: 'Cinzel', serif; letter-spacing: 1px;">Sprint Again</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== COMPASS MODE (Fullscreen) ===================== -->
+    <div id="compass-mode-display" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #020102; z-index: 10003; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px 20px; box-sizing: border-box;">
+
+        <div class="compass-top-bar">
+            <span id="compass-progress-label" class="compass-prog-text">Paragraph 1 of N</span>
+            <div class="compass-auto-wrap">
+                <label style="color: #8a7555; font-size: 0.82em; letter-spacing: 1px; font-family: 'Cinzel', serif;">AUTO</label>
+                <input type="checkbox" id="compass-auto-toggle" style="accent-color: #d4a843; width: 16px; height: 16px; cursor: pointer;">
+                <select id="compass-speed-select" style="background: #181208; color: #c9b07a; border: 1px solid rgba(180,140,60,0.3); border-radius: 4px; padding: 3px 7px; font-family: 'Cinzel', serif; font-size: 0.8em; cursor: pointer;">
+                    <option value="4000">Slow (4s)</option>
+                    <option value="2500" selected>Normal (2.5s)</option>
+                    <option value="1500">Fast (1.5s)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="compass-paragraph-wrap" id="compass-paragraph-wrap">
+            <p id="compass-paragraph-text" class="compass-paragraph"></p>
+        </div>
+
+        <div class="compass-controls">
+            <button id="compass-prev-btn" class="compass-nav-btn">&#8592; Prev</button>
+            <div class="compass-dot-track" id="compass-dot-track"></div>
+            <button id="compass-next-btn" class="compass-nav-btn">Next &#8594;</button>
+        </div>
+
+        <button id="btn-close-compass" class="btn-secondary" style="position: absolute; top: 20px; right: 20px; padding: 8px 16px; font-size: 0.85em;">✕ Exit Compass</button>
+    </div>
+
+    <!-- ===================== COMPREHENSION CHECKPOINT ===================== -->
+    <div id="checkpoint-modal" class="modal hidden" style="z-index: 10002;">
+        <div class="modal-content checkpoint-content">
+            <span id="close-checkpoint" class="close-btn">&times;</span>
+
+            <div id="checkpoint-active-view">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h2 style="margin: 0; font-family: 'Cinzel', serif; color: #4cd137; text-shadow: 0 0 12px rgba(76,209,55,0.4); font-size: 1.3em; letter-spacing: 2px;">COMPREHENSION CHECKPOINT</h2>
+                    <span id="checkpoint-combo-badge" class="checkpoint-combo hidden">🔥 x1</span>
+                </div>
+                <div class="checkpoint-prog-wrap">
+                    <div id="checkpoint-prog-fill" class="checkpoint-prog-fill" style="width: 0%;"></div>
+                </div>
+                <p id="checkpoint-progress" style="color: #a29bfe; font-family: 'Cinzel', serif; font-size: 0.82em; text-align: right; margin: 4px 0 14px 0; letter-spacing: 1px;"></p>
+
+                <div id="checkpoint-card" class="checkpoint-card">
+                    <p id="checkpoint-question" style="font-size: 1.2em; line-height: 1.5; margin: 0;"></p>
+                    <hr style="border-color: rgba(76,209,55,0.2); margin: 18px 0;">
+                    <p id="checkpoint-answer" class="hidden" style="color: #4cd137; font-weight: bold; font-size: 1.1em; text-shadow: 0 0 8px rgba(76,209,55,0.4); margin: 0;"></p>
+                </div>
+
+                <button id="btn-checkpoint-reveal" class="btn-primary" style="width: 100%; padding: 14px; font-size: 1.1em; font-family: 'Cinzel', serif; letter-spacing: 1px; margin-top: 14px;">Reveal Answer</button>
+
+                <div id="checkpoint-grade-btns" class="hidden" style="display: flex; gap: 12px; margin-top: 12px;">
+                    <button id="btn-cp-wrong" class="btn-danger" style="flex: 1; padding: 12px; margin: 0;">✗ Forgot</button>
+                    <button id="btn-cp-right" class="btn-primary" style="flex: 1; padding: 12px; margin: 0; background: linear-gradient(180deg,#1a6b0f,#0d3a07); border-color: #4cd137;">✓ Recalled</button>
+                </div>
+            </div>
+
+            <div id="checkpoint-results-view" class="hidden" style="text-align: center; padding: 10px 0;">
+                <div id="checkpoint-result-icon" style="font-size: 3em; margin-bottom: 10px;"></div>
+                <h2 id="checkpoint-result-title" style="font-family: 'Cinzel', serif; margin-bottom: 8px;"></h2>
+                <p id="checkpoint-result-stats" style="color: #a29bfe; font-size: 1.05em; margin-bottom: 6px;"></p>
+                <p id="checkpoint-result-reward" style="color: #d22930; font-weight: bold; font-size: 1.1em;"></p>
+                <button id="btn-checkpoint-close" class="btn-primary" style="margin-top: 20px; width: 100%; padding: 14px; font-family: 'Cinzel', serif; letter-spacing: 1px;">Return to Reading</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== SCHOLAR'S LEXICON ===================== -->
+    <div id="lexicon-modal" class="modal hidden" style="z-index: 10002;">
+        <div class="modal-content lexicon-content">
+            <span id="close-lexicon" class="close-btn">&times;</span>
+            <h2 style="font-family: 'Cinzel', serif; color: #a29bfe; text-align: center; text-shadow: 0 0 15px rgba(162,155,254,0.4); letter-spacing: 2px; margin-bottom: 6px;">Scholar's Lexicon</h2>
+            <p style="color: #6c5ce7; text-align: center; font-style: italic; font-size: 0.9em; margin-bottom: 20px;">Collected while reading. Define each term to earn Ink.</p>
+
+            <div id="lexicon-instruction" class="lexicon-tip">
+                💡 While reading, double-click any word to add it to your Lexicon. Then return here to define your collected terms.
+            </div>
+
+            <div id="lexicon-entries" class="lexicon-entries-list"></div>
+
+            <div id="lexicon-empty-msg" style="text-align: center; color: #444; font-style: italic; padding: 30px 0; display: none;">
+                Your Lexicon is empty. Double-click words while reading to collect them.
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button id="btn-lexicon-quiz" class="btn-primary" style="flex: 2; padding: 12px; font-family: 'Cinzel', serif; letter-spacing: 1px;">📝 Define All Terms</button>
+                <button id="btn-lexicon-clear" class="btn-danger" style="flex: 1; padding: 12px; font-size: 0.9em;">Clear</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lexicon Define Mode (fullscreen overlay) -->
+    <div id="lexicon-define-modal" class="modal hidden" style="z-index: 10003;">
+        <div class="modal-content lexicon-content" style="max-width: 560px;">
+            <span id="close-lexicon-define" class="close-btn">&times;</span>
+            <h2 style="font-family: 'Cinzel', serif; color: #a29bfe; text-align: center; margin-bottom: 4px; letter-spacing: 2px;">Define the Term</h2>
+            <p id="lexicon-define-progress" style="color: #6c5ce7; text-align: center; font-size: 0.82em; letter-spacing: 1px; margin-bottom: 20px;"></p>
+
+            <div class="lexicon-term-display" id="lexicon-term-display"></div>
+
+            <textarea id="lexicon-define-input" class="lexicon-define-textarea" placeholder="In your own words, what does this term mean?"></textarea>
+
+            <div id="lexicon-define-reveal" class="hidden" style="background: rgba(20,15,35,0.9); border: 1px solid rgba(162,155,254,0.3); border-radius: 8px; padding: 14px; margin: 14px 0; color: #c9b0ff; font-style: italic; font-size: 1em;"></div>
+
+            <div id="lexicon-define-grade" class="hidden" style="display: flex; gap: 10px; margin-top: 10px;">
+                <button id="btn-lex-wrong" class="btn-danger" style="flex: 1; padding: 12px; margin: 0;">✗ Off Mark</button>
+                <button id="btn-lex-right" class="btn-primary" style="flex: 1; padding: 12px; margin: 0; background: linear-gradient(180deg,#4a1a8f,#2a0d5a); border-color: #a29bfe;">✓ Understood</button>
+            </div>
+
+            <button id="btn-lexicon-submit-def" class="btn-primary" style="width: 100%; padding: 14px; font-family: 'Cinzel', serif; letter-spacing: 1px; margin-top: 10px;">Submit Definition</button>
+        </div>
+    </div>
+
+    <!-- ===================== FEYNMAN SIMPLIFIER ===================== -->
+    <div id="feynman-modal" class="modal hidden" style="z-index: 10002;">
+        <div class="modal-content feynman-content">
+            <span id="close-feynman" class="close-btn">&times;</span>
+
+            <div class="feynman-header">
+                <div class="feynman-icon">🔬</div>
+                <h2 style="font-family: 'Cinzel', serif; color: #aaffcc; text-shadow: 0 0 14px rgba(100,255,150,0.4); letter-spacing: 2px; margin: 6px 0 4px 0;">The Feynman Lab</h2>
+                <p style="color: #4e8a68; font-style: italic; font-size: 0.92em; margin: 0;">"If you can't explain it simply, you don't understand it well enough."</p>
+            </div>
+
+            <div class="feynman-prompt-box">
+                <p id="feynman-section-label" style="font-family: 'Cinzel', serif; color: #4e8a68; font-size: 0.82em; letter-spacing: 1px; margin: 0 0 8px 0;"></p>
+                <p id="feynman-prompt" style="color: #c9dfc9; font-size: 1.05em; line-height: 1.6; margin: 0; font-style: italic;"></p>
+            </div>
+
+            <div class="feynman-weave-bar">
+                <span style="white-space: nowrap; color: #4e8a68; font-size: 0.82em;">Terms used:</span>
+                <span id="feynman-term-count" style="color: #aaffcc; font-weight: bold;">0</span>
+                <span style="color: #4e8a68; font-size: 0.82em;">/</span>
+                <span id="feynman-term-total" style="color: #4e8a68; font-size: 0.82em;">0</span>
+                <div class="feynman-track"><div id="feynman-fill" class="feynman-fill" style="width: 0%;"></div></div>
+            </div>
+
+            <textarea id="feynman-editor" class="feynman-textarea" placeholder="Explain this concept as simply as you can. Imagine you are teaching it to someone who has never heard of it before..."></textarea>
+
+            <div style="display: flex; gap: 10px; margin-top: 14px;">
+                <button id="btn-feynman-submit" class="btn-primary" style="flex: 2; padding: 13px; font-family: 'Cinzel', serif; letter-spacing: 1px;">⚗️ Submit Explanation</button>
+                <button id="btn-feynman-hint" class="btn-secondary" style="flex: 1; padding: 13px; font-size: 0.9em;">Hint</button>
+            </div>
+
+            <div id="feynman-result" class="hidden feynman-result-box"></div>
+        </div>
+    </div>
+
+    <!-- ========================= CHRONICLE MODAL ========================= -->
+    <div id="chronicle-modal" class="modal hidden">
+        <div class="modal-content chronicle-modal-content">
+
+            <!-- WRITE VIEW -->
+            <div id="chronicle-write-view">
+                <span id="close-chronicle" class="close-btn">&times;</span>
+
+                <div class="chronicle-header-deco" aria-hidden="true">
+                    <svg width="220" height="36" viewBox="0 0 220 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10 18 Q55 2 110 18 Q165 34 210 18" stroke="rgba(180,140,60,0.5)" stroke-width="1.2" fill="none"/>
+                        <circle cx="110" cy="18" r="4" fill="rgba(180,140,60,0.6)"/>
+                        <circle cx="10" cy="18" r="2" fill="rgba(180,140,60,0.3)"/>
+                        <circle cx="210" cy="18" r="2" fill="rgba(180,140,60,0.3)"/>
+                    </svg>
+                </div>
+
+                <h2 class="chronicle-title">The Scholar's Chronicle</h2>
+                <p id="chronicle-section-label" class="chronicle-section-label"></p>
+
+                <div class="chronicle-prompt-box">
+                    <p id="chronicle-prompt-text" style="margin: 0;"></p>
+                </div>
+
+                <div class="chronicle-weave-bar">
+                    <span style="white-space: nowrap;">Concepts woven:</span>
+                    <span id="chronicle-term-count" style="color: #d4a843; font-weight: bold;">0</span>
+                    <span>/</span>
+                    <span id="chronicle-term-total">0</span>
+                    <div class="chronicle-weave-track">
+                        <div id="chronicle-weave-fill" class="chronicle-weave-fill" style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <textarea id="chronicle-editor" class="chronicle-textarea"
+                    placeholder="In your own words, weave the story of what you have learned..."></textarea>
+
+                <div class="chronicle-actions">
+                    <button id="btn-save-chronicle" class="btn-primary" style="flex: 2; padding: 13px;">📜 Seal the Chronicle</button>
+                    <button id="btn-view-past-chronicles" class="btn-secondary" style="flex: 1; padding: 13px;">📚 Past Entries</button>
+                </div>
+            </div>
+
+            <!-- PAST ENTRIES VIEW -->
+            <div id="chronicle-list-view" class="hidden" style="position: relative;">
+                <span id="close-chronicle-from-list" class="close-btn">&times;</span>
+                <h2 class="chronicle-title">Past Chronicles</h2>
+                <p id="chronicle-list-section-label" style="color: #8a7555; text-align: center; font-style: italic; margin-bottom: 20px;"></p>
+                <div id="chronicle-entries-list" class="chronicle-entries-list"></div>
+                <button id="btn-back-to-write" class="btn-secondary" style="width: 100%; margin-top: 20px; padding: 12px;">✍️ Write New Entry</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ========================= CHRONICLE REVIEW (CLOZE) MODAL ========================= -->
+    <div id="chronicle-review-modal" class="modal hidden" style="z-index: 10001;">
+        <div class="modal-content chronicle-modal-content" style="max-width: 680px;">
+            <span id="close-chronicle-review" class="close-btn">&times;</span>
+
+            <div class="chronicle-header-deco" aria-hidden="true">
+                <svg width="220" height="36" viewBox="0 0 220 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 18 Q55 2 110 18 Q165 34 210 18" stroke="rgba(180,140,60,0.5)" stroke-width="1.2" fill="none"/>
+                    <circle cx="110" cy="18" r="4" fill="rgba(180,140,60,0.6)"/>
+                </svg>
+            </div>
+
+            <h2 class="chronicle-title">Recollection Trial</h2>
+            <p id="chronicle-review-date" style="color: #8a7555; text-align: center; font-style: italic; margin-bottom: 8px;"></p>
+            <p style="color: #dfcdb5; text-align: center; font-size: 0.95em; margin-bottom: 20px; font-family: 'Cormorant Garamond', serif; font-style: italic;">The words you wove have been hidden. Restore them from memory.</p>
+
+            <div id="chronicle-cloze-text" class="chronicle-cloze-area"></div>
+
+            <div id="chronicle-review-result" class="hidden" style="text-align: center; margin-top: 15px; padding: 15px; background: rgba(20,15,5,0.7); border-radius: 8px; border: 1px solid rgba(180,140,60,0.3);"></div>
+
+            <button id="btn-verify-recollection" class="btn-primary" style="width: 100%; margin-top: 20px; padding: 15px; font-size: 1.1em; font-family: 'Cinzel', serif; letter-spacing: 1px;">Verify Recollection</button>
+        </div>
+    </div>
+
+    <div id="owl-mentor" class="owl-mentor-wrap" aria-live="polite">
+        <button id="owl-toggle" class="owl-toggle-btn" title="Owl Mentor">🦉</button>
+        <div id="owl-panel" class="owl-panel hidden">
+            <h3 class="owl-title">Aset's Owl Mentor</h3>
+            <p id="owl-message" class="owl-message">Upload a PDF in the Workshop and I will forge a full world offline.</p>
+            <div class="owl-actions">
+                <button id="owl-prev" class="btn-secondary" style="margin: 0; padding: 8px 12px;">Prev</button>
+                <button id="owl-next" class="btn-primary" style="margin: 0; padding: 8px 12px;">Next</button>
+                <button id="owl-close" class="btn-danger" style="margin: 0; padding: 8px 12px;">Hide</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js?v=2.3"></script>
 </body>
 </html>
 

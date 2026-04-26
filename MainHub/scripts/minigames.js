@@ -701,4 +701,328 @@ function launchRitualAlignmentGame(sectionName, gameName) {
     loadRitual();
 }
 
-export { launchArcaneDefenseGame, launchTriviaGame, launchMemoryGame, startFlashMatchGame, launchSpellweaverGame, launchRitualAlignmentGame };
+// =====================================================================
+// --- CLOZE FILL-IN-THE-BLANK GAME ---
+// Show the question as context, blank a key word from the answer.
+// =====================================================================
+function launchClozeGame(flashcards, sectionName, gameName) {
+    if (!minigameBoard) return;
+
+    let deck = [...flashcards].sort(() => 0.5 - Math.random()).slice(0, 10);
+    if (deck.length < 1) return alert("You need at least 1 flashcard to play the Cloze Trial!");
+
+    let currentIndex = 0;
+    let score = 0;
+
+    function pickBlankWord(answer) {
+        const words = answer.split(/\s+/).filter(w => w.length > 1);
+        if (words.length === 0) return { before: '', blank: answer, after: '' };
+        words.sort((a, b) => b.length - a.length);
+        const chosen = words[0];
+        const idx = answer.indexOf(chosen);
+        return {
+            before: answer.substring(0, idx),
+            blank: chosen,
+            after: answer.substring(idx + chosen.length)
+        };
+    }
+
+    function loadNext() {
+        if (currentIndex >= deck.length) {
+            const goldEarned = score * 8;
+            minigameBoard.innerHTML = `
+                <div class="minigame-victory-card victory">
+                    <h2 class="minigame-victory-title victory">Cloze Trial Complete!</h2>
+                    <p class="minigame-victory-stats">You recalled ${score} of ${deck.length} passages correctly.</p>
+                    <p class="minigame-victory-reward">Gold Earned: ${goldEarned} 🪙</p>
+                </div>`;
+            awardGold(goldEarned);
+            const world = getActiveWorld();
+            if (world && world.progress[sectionName]) {
+                world.progress[sectionName].gameCooldowns[gameName] = Date.now() + (2 * 60 * 60 * 1000);
+                saveToStorage();
+            }
+            return;
+        }
+
+        const card = deck[currentIndex];
+        const { before, blank, after } = pickBlankWord(card.answer);
+        const statsEl = document.getElementById('minigame-stats');
+        if (statsEl) statsEl.innerText = `Passages: ${currentIndex + 1} / ${deck.length}  |  Correct: ${score}`;
+
+        minigameBoard.innerHTML = `
+            <div class="cloze-game-container">
+                <p class="cloze-game-context">${card.question}</p>
+                <div class="cloze-game-answer-display">
+                    ${before}<input type="text" id="cloze-game-input" class="cloze-answer-blank" autocomplete="off" spellcheck="false" placeholder="?">${after}
+                </div>
+                <button id="cloze-submit-btn" class="btn-primary" style="padding: 12px 30px; font-family: 'Cinzel', serif; letter-spacing: 1px;">Submit</button>
+                <p id="cloze-feedback" style="min-height: 24px; font-size: 1em; margin-top: 8px;"></p>
+            </div>`;
+
+        const input = document.getElementById('cloze-game-input');
+        const submitBtn = document.getElementById('cloze-submit-btn');
+        const feedback = document.getElementById('cloze-feedback');
+        input.focus();
+
+        function checkAnswer() {
+            const given = input.value.trim().toLowerCase();
+            const expected = blank.toLowerCase();
+            submitBtn.disabled = true;
+            input.disabled = true;
+            if (given === expected) {
+                score++;
+                input.style.borderBottomColor = '#4cd137';
+                input.style.color = '#4cd137';
+                feedback.style.color = '#4cd137';
+                feedback.innerText = '✔ Correct!';
+                awardGold(5);
+            } else {
+                input.style.borderBottomColor = '#ff4757';
+                input.style.color = '#ff4757';
+                feedback.style.color = '#ff4757';
+                feedback.innerText = `✘ The word was: "${blank}"`;
+            }
+            setTimeout(() => { currentIndex++; loadNext(); }, 1400);
+        }
+
+        submitBtn.onclick = checkAnswer;
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') checkAnswer(); });
+    }
+
+    loadNext();
+}
+
+// =====================================================================
+// --- TRUE / FALSE BLITZ ---
+// Is this the correct answer to the question? A timed True/False judgment.
+// =====================================================================
+function launchTrueFalseBlitz(flashcards, sectionName, gameName) {
+    if (!minigameBoard) return;
+    if (flashcards.length < 2) return alert("You need at least 2 flashcards to play True/False Blitz!");
+
+    const deck = [...flashcards].sort(() => 0.5 - Math.random()).slice(0, 12);
+    let currentIndex = 0;
+    let score = 0;
+    let lives = 3;
+    let timerInterval = null;
+    const TIME_LIMIT = 5;
+
+    function buildQuestion() {
+        const card = deck[currentIndex];
+        const isTrue = Math.random() > 0.45;
+        let shownAnswer;
+        if (isTrue) {
+            shownAnswer = card.answer;
+        } else {
+            const others = deck.filter((_, i) => i !== currentIndex);
+            const wrong = others[Math.floor(Math.random() * others.length)];
+            shownAnswer = wrong.answer;
+        }
+        return { card, shownAnswer, isTrue };
+    }
+
+    function loadNext() {
+        if (lives <= 0) { endGame(false); return; }
+        if (currentIndex >= deck.length) { endGame(true); return; }
+
+        const { card, shownAnswer, isTrue } = buildQuestion();
+        const statsEl = document.getElementById('minigame-stats');
+        if (statsEl) statsEl.innerText = `Score: ${score} / ${deck.length}  |  Lives: ${'❤️'.repeat(lives)}${'🖤'.repeat(3 - lives)}`;
+
+        minigameBoard.innerHTML = `
+            <div class="tf-container">
+                <div class="tf-stats">${score} Correct &nbsp;|&nbsp; ${'❤️'.repeat(lives)}${'🖤'.repeat(3 - lives)}</div>
+                <div class="tf-timer-track"><div class="tf-timer-fill" id="tf-timer-fill" style="width:100%;"></div></div>
+                <p class="tf-statement-label">IS THIS THE CORRECT ANSWER?</p>
+                <div class="tf-question-box">
+                    <div>
+                        <span style="color: #a29bfe; font-family: 'Cinzel', serif; font-size: 0.8em; display: block; margin-bottom: 10px; letter-spacing: 1px;">${card.question}</span>
+                        <span style="font-size: 1.2em; color: #fff; font-weight: bold;">&ldquo;${shownAnswer}&rdquo;</span>
+                    </div>
+                </div>
+                <div class="tf-buttons">
+                    <button class="tf-btn tf-btn-true" id="tf-true-btn">TRUE</button>
+                    <button class="tf-btn tf-btn-false" id="tf-false-btn">FALSE</button>
+                </div>
+                <p id="tf-feedback" style="min-height: 20px; font-size: 1em; color: #a29bfe; font-family: 'Cinzel', serif; letter-spacing: 1px;"></p>
+            </div>`;
+
+        let timeLeft = TIME_LIMIT;
+        const fill = document.getElementById('tf-timer-fill');
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            timeLeft -= 0.1;
+            const pct = (timeLeft / TIME_LIMIT) * 100;
+            if (fill) fill.style.width = Math.max(0, pct) + '%';
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                handleAnswer(null, isTrue);
+            }
+        }, 100);
+
+        function handleAnswer(playerSaysTrue, isCorrectTrue) {
+            clearInterval(timerInterval);
+            const trueBtn = document.getElementById('tf-true-btn');
+            const falseBtn = document.getElementById('tf-false-btn');
+            const feedback = document.getElementById('tf-feedback');
+            if (trueBtn) trueBtn.disabled = true;
+            if (falseBtn) falseBtn.disabled = true;
+
+            const isRight = playerSaysTrue !== null && (playerSaysTrue === isCorrectTrue);
+            if (isRight) {
+                score++;
+                awardGold(3);
+                if (feedback) { feedback.style.color = '#4cd137'; feedback.innerText = '✔ CORRECT'; }
+            } else {
+                lives--;
+                if (feedback) {
+                    feedback.style.color = '#ff4757';
+                    feedback.innerText = playerSaysTrue === null
+                        ? '⏰ TIME OUT — The answer was ' + (isCorrectTrue ? 'TRUE' : 'FALSE')
+                        : '✘ WRONG — It was ' + (isCorrectTrue ? 'TRUE' : 'FALSE');
+                }
+            }
+            currentIndex++;
+            setTimeout(() => loadNext(), 1300);
+        }
+
+        document.getElementById('tf-true-btn').onclick = () => handleAnswer(true, isTrue);
+        document.getElementById('tf-false-btn').onclick = () => handleAnswer(false, isTrue);
+    }
+
+    function endGame(isVictory) {
+        if (timerInterval) clearInterval(timerInterval);
+        const goldEarned = score * 4 + (isVictory ? 15 : 0);
+        awardGold(goldEarned);
+        minigameBoard.innerHTML = `
+            <div class="minigame-victory-card ${isVictory ? 'victory' : ''}">
+                <h2 class="minigame-victory-title ${isVictory ? 'victory' : ''}">${isVictory ? 'Blitz Complete!' : 'The flame was extinguished!'}</h2>
+                <p class="minigame-victory-stats">Correct Judgments: ${score} / ${deck.length}</p>
+                <p class="minigame-victory-reward">Gold Earned: ${goldEarned} 🪙</p>
+            </div>`;
+        const world = getActiveWorld();
+        if (world && world.progress[sectionName]) {
+            world.progress[sectionName].gameCooldowns[gameName] = Date.now() + (2 * 60 * 60 * 1000);
+            saveToStorage();
+        }
+    }
+
+    loadNext();
+}
+
+// =====================================================================
+// --- GLIMPSE & RECALL ---
+// See the answer for a few seconds — then it vanishes. Type it from memory.
+// =====================================================================
+function launchGlimpseRecall(flashcards, sectionName, gameName) {
+    if (!minigameBoard) return;
+    if (flashcards.length < 1) return alert("You need at least 1 flashcard to play Glimpse & Recall!");
+
+    const deck = [...flashcards].sort(() => 0.5 - Math.random()).slice(0, 10);
+    let currentIndex = 0;
+    let score = 0;
+    const GLIMPSE_SECONDS = 3;
+
+    function loadNext() {
+        if (currentIndex >= deck.length) {
+            const goldEarned = score * 10;
+            awardGold(goldEarned);
+            minigameBoard.innerHTML = `
+                <div class="minigame-victory-card victory">
+                    <h2 class="minigame-victory-title victory">Memory Sealed!</h2>
+                    <p class="minigame-victory-stats">Recalled ${score} of ${deck.length} answers correctly.</p>
+                    <p class="minigame-victory-reward">Gold Earned: ${goldEarned} 🪙</p>
+                </div>`;
+            const world = getActiveWorld();
+            if (world && world.progress[sectionName]) {
+                world.progress[sectionName].gameCooldowns[gameName] = Date.now() + (2 * 60 * 60 * 1000);
+                saveToStorage();
+            }
+            return;
+        }
+
+        const card = deck[currentIndex];
+        const statsEl = document.getElementById('minigame-stats');
+        if (statsEl) statsEl.innerText = `Visions: ${currentIndex + 1} / ${deck.length}  |  Recalled: ${score}`;
+
+        minigameBoard.innerHTML = `
+            <div class="glimpse-container">
+                <p style="color: #8a9bb5; font-family: 'Cinzel', serif; font-size: 0.85em; letter-spacing: 2px; margin: 0;">MEMORIZE THE ANSWER</p>
+                <div class="glimpse-question-box">${card.question}</div>
+                <div class="glimpse-answer-flash" id="glimpse-answer-box" style="transition: opacity 0.5s, transform 0.5s;">${card.answer}</div>
+                <p id="glimpse-countdown-label" class="glimpse-countdown">${GLIMPSE_SECONDS}</p>
+                <p style="color: #444; font-style: italic; font-size: 0.82em;">The vision will vanish...</p>
+            </div>`;
+
+        let countdown = GLIMPSE_SECONDS;
+        const countdownEl = document.getElementById('glimpse-countdown-label');
+        const answerBox = document.getElementById('glimpse-answer-box');
+
+        const countInterval = setInterval(() => {
+            countdown--;
+            if (countdownEl) {
+                countdownEl.innerText = countdown;
+                if (countdown <= 1) countdownEl.style.color = '#ff4757';
+            }
+            if (countdown <= 0) {
+                clearInterval(countInterval);
+                if (answerBox) { answerBox.style.opacity = '0'; answerBox.style.transform = 'scale(0.85)'; }
+                setTimeout(() => showRecallInput(card), 550);
+            }
+        }, 1000);
+    }
+
+    function showRecallInput(card) {
+        minigameBoard.innerHTML = `
+            <div class="glimpse-container">
+                <p style="color: #8a9bb5; font-family: 'Cinzel', serif; font-size: 0.85em; letter-spacing: 2px; margin: 0;">RECALL THE VISION</p>
+                <div class="glimpse-question-box">${card.question}</div>
+                <div class="glimpse-answer-flash" style="opacity: 0.07; font-size: 0.75em; letter-spacing: 8px; color: #555;">? ? ? ? ?</div>
+                <input type="text" id="glimpse-input" class="glimpse-input" placeholder="What did you see?" autocomplete="off" spellcheck="false">
+                <button id="glimpse-submit" class="btn-primary" style="padding: 12px 30px; font-family: 'Cinzel', serif; letter-spacing: 1px; margin-top: 4px;">Seal the Memory</button>
+                <p id="glimpse-feedback" style="min-height: 22px; font-size: 1em; margin-top: 6px;"></p>
+            </div>`;
+
+        const input = document.getElementById('glimpse-input');
+        const submitBtn = document.getElementById('glimpse-submit');
+        const feedback = document.getElementById('glimpse-feedback');
+        input.focus();
+
+        function checkAnswer() {
+            const given = input.value.trim().toLowerCase();
+            const expected = card.answer.trim().toLowerCase();
+            submitBtn.disabled = true;
+            input.disabled = true;
+
+            // Exact match
+            if (given === expected) {
+                score++;
+                awardGold(8);
+                input.style.borderColor = '#4cd137';
+                feedback.style.color = '#4cd137';
+                feedback.innerText = '✔ Perfect recall!';
+            // Generous partial: answer contains input and input is at least 60% as long
+            } else if (given.length > 0 && expected.includes(given) && given.length >= expected.length * 0.6) {
+                score++;
+                awardGold(4);
+                input.style.borderColor = '#ffd700';
+                feedback.style.color = '#ffd700';
+                feedback.innerText = `✔ Close enough! The vision was: "${card.answer}"`;
+            } else {
+                input.style.borderColor = '#ff4757';
+                feedback.style.color = '#ff4757';
+                feedback.innerText = `✘ The vision was: "${card.answer}"`;
+            }
+            currentIndex++;
+            setTimeout(() => loadNext(), 1700);
+        }
+
+        submitBtn.onclick = checkAnswer;
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') checkAnswer(); });
+    }
+
+    loadNext();
+}
+
+export { launchArcaneDefenseGame, launchTriviaGame, launchMemoryGame, startFlashMatchGame, launchSpellweaverGame, launchRitualAlignmentGame, launchClozeGame, launchTrueFalseBlitz, launchGlimpseRecall };
