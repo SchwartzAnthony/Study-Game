@@ -339,7 +339,8 @@ if (document.getElementById('btn-convert-pdf')) {
                 progressTitle.innerText = 'Auto-Forge Failed';
                 progressTitle.style.color = '#ff2400';
                 progressBar.style.background = '#ff2400';
-                progressStatus.innerText = 'The PDF could not be forged into a world. Try a text-based PDF or run Convert PDF to MD first.';
+                const msg = error?.message || String(error);
+                progressStatus.innerText = `Fehler: ${msg.slice(0, 200)}`;
             } finally {
                 autoForgeBtn.innerText = 'Auto-Forge World from PDF (Offline)';
                 autoForgeBtn.style.opacity = '1';

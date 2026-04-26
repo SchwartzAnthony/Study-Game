@@ -149,7 +149,7 @@ async function renderPageToCanvas(page, scale = 1.7) {
 async function runPageOCR(page, pageNum, progressCb) {
     try {
         const canvas = await renderPageToCanvas(page, 1.7);
-        const result = await window.Tesseract.recognize(canvas, 'eng', {
+        const result = await window.Tesseract.recognize(canvas, 'deu', {
             logger: (msg) => {
                 if (!msg || msg.status !== 'recognizing text') return;
                 const pct = typeof msg.progress === 'number' ? Math.floor(msg.progress * 100) : 0;
@@ -205,46 +205,10 @@ async function extractPdfPages(file, progressCb) {
             }
         }
 
-        const images = [];
-        try {
-            const ops = await page.getOperatorList();
-            for (let j = 0; j < ops.fnArray.length; j++) {
-                const fn = ops.fnArray[j];
-                if (fn !== pdfjsLib.OPS.paintImageXObject && fn !== pdfjsLib.OPS.paintJpegXObject) continue;
-                const objId = ops.argsArray[j][0];
-                const img = page.objs.get(objId);
-                if (!img || !img.data || !img.width || !img.height) continue;
-
-                const canvas = document.createElement('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                const ctx = canvas.getContext('2d');
-                const totalPixels = img.width * img.height;
-                let imageData = null;
-
-                if (img.data.length === totalPixels * 4) {
-                    imageData = new ImageData(new Uint8ClampedArray(img.data), img.width, img.height);
-                } else if (img.data.length === totalPixels * 3) {
-                    const rgba = new Uint8ClampedArray(totalPixels * 4);
-                    for (let k = 0, l = 0; k < img.data.length; k += 3, l += 4) {
-                        rgba[l] = img.data[k];
-                        rgba[l + 1] = img.data[k + 1];
-                        rgba[l + 2] = img.data[k + 2];
-                        rgba[l + 3] = 255;
-                    }
-                    imageData = new ImageData(rgba, img.width, img.height);
-                }
-
-                if (imageData) {
-                    ctx.putImageData(imageData, 0, 0);
-                    images.push(canvas.toDataURL('image/jpeg', 0.8));
-                }
-            }
-        } catch (e) {
-            // Image extraction is best-effort and intentionally non-fatal.
-        }
-
-        pages.push({ number: i, lines, images });
+        // Image extraction is intentionally skipped in the auto-forge path.
+        // Embedding base64 images into the world syntax causes localStorage quota
+        // overflows and extreme memory usage for diagram-heavy PDFs.
+        pages.push({ number: i, lines, images: [] });
     }
 
     return pages;
@@ -260,7 +224,7 @@ function buildSectionsFromPages(pages, progressCb) {
 
     function beginSection(title) {
         const section = {
-            title: title || `Section ${sections.length + 1}`,
+            title: title || `Abschnitt ${sections.length + 1}`,
             paragraphs: [],
             images: [],
             sourcePages: []
@@ -269,13 +233,15 @@ function buildSectionsFromPages(pages, progressCb) {
         current = section;
     }
 
-    beginSection('Opening Principles');
+    // Do NOT pre-create an "Opening Principles" bucket.
+    // Pre-heading text will flow into the first real section once a heading is encountered.
+    // If the entire PDF has no detectable headings it will fall into the first auto-named section below.
 
     for (let p = 0; p < pages.length; p++) {
         const page = pages[p];
         progressCb(`Structuring chapter flow (${p + 1} / ${pages.length})...`, 55 + Math.floor(((p + 1) / pages.length) * 20));
 
-        if (page.images.length > 0) {
+        if (page.images.length > 0 && current) {
             current.images.push(...page.images.slice(0, 2));
         }
 
@@ -288,12 +254,19 @@ function buildSectionsFromPages(pages, progressCb) {
             const isHeading = score >= 5 || (/^(chapter|unit|module|lesson|part|kapitel|abschnitt|lektion)\s+[\divx]/i.test(line));
 
             if (isHeading && line.length <= 120) {
-                if (paragraphBuffer.length) {
+                if (current && paragraphBuffer.length) {
                     current.paragraphs.push(paragraphBuffer.join(' '));
                     paragraphBuffer = [];
+                } else {
+                    paragraphBuffer = []; // discard pre-heading noise
                 }
                 beginSection(titleCaseFromLine(line));
                 continue;
+            }
+
+            // If no section exists yet, create one from this first line of real content
+            if (!current) {
+                beginSection(titleCaseFromLine(line.slice(0, 60)));
             }
 
             paragraphBuffer.push(line);
@@ -303,11 +276,11 @@ function buildSectionsFromPages(pages, progressCb) {
             }
         }
 
-        if (paragraphBuffer.length) {
+        if (paragraphBuffer.length && current) {
             current.paragraphs.push(paragraphBuffer.join(' '));
         }
 
-        current.sourcePages.push(page.number);
+        if (current) current.sourcePages.push(page.number);
     }
 
     sections.forEach((section, index) => {
@@ -316,29 +289,16 @@ function buildSectionsFromPages(pages, progressCb) {
             .filter(p => p.length >= 35)
             .slice(0, 40);
 
-        if (!section.paragraphs.length) {
-            section.paragraphs.push(`No clear text was detected for ${section.title}. Review the source PDF for scanned images and low OCR quality.`);
-        }
-
-        if (!section.title || /^section\s+\d+$/i.test(section.title)) {
+        if (!section.title || /^(section|abschnitt)\s+\d+$/i.test(section.title)) {
             const lead = section.paragraphs[0] || '';
             const candidate = lead.split(/[.!?]/)[0].slice(0, 60).trim();
             if (candidate.length > 10) section.title = titleCaseFromLine(candidate);
-            else section.title = `Section ${index + 1}`;
+            else section.title = `Abschnitt ${index + 1}`;
         }
     });
 
-    // Prune sections whose only content is the "No clear text" placeholder — absorb their title into the previous section
-    const pruned = [];
-    sections.forEach(section => {
-        const isPlaceholderOnly = section.paragraphs.length === 1 && /^No clear text was detected/i.test(section.paragraphs[0]);
-        if (isPlaceholderOnly && pruned.length > 0) {
-            pruned[pruned.length - 1].paragraphs.push(`(Sub-topic: ${section.title})`);
-        } else {
-            pruned.push(section);
-        }
-    });
-    return pruned.filter(s => s.paragraphs.length > 0);
+    // Drop sections with no usable paragraphs
+    return sections.filter(s => s.paragraphs.length > 0);
 }
 
 function topKeywords(text, maxWords = 18) {
@@ -567,10 +527,6 @@ function composeSyntax(worldName, sections, packs) {
         }
         out.push(paraChunks.join('\n\n!SECTION!\n\n'));
 
-        section.images.slice(0, 2).forEach(img => {
-            out.push(`!IMAGE! ${img}`);
-        });
-
         const pack = packs[idx];
         pack.flashcards.forEach(fc => out.push(`!FLASH! ${fc.q} :: ${fc.a}`));
         pack.quizzes.forEach(qz => out.push(`!QUIZZ! ${qz.q} :: ${qz.a}`));
@@ -589,7 +545,7 @@ function buildOwlTips(worldName, sections, packs) {
         .map((p, i) => ({ i, score: p.keywords.length + p.flashcards.length }))
         .sort((a, b) => b.score - a.score)[0];
 
-    const denseName = sections[densest?.i || 0]?.title || 'Opening Principles';
+    const denseName = sections[densest?.i || 0]?.title || sections[0]?.title || 'Erster Abschnitt';
 
     return [
         `The grimoire \"${worldName}\" is forged. Begin with \"${denseName}\" for highest concept density.`,
@@ -608,6 +564,10 @@ export async function forgeWorldFromPdf(file, progressCb = () => {}, apiKey = ''
 
     progressCb('Erkenne Kapitel und Abschnittsgrenzen…', 60);
     const sections = buildSectionsFromPages(pages, progressCb);
+
+    if (sections.length === 0) {
+        throw new Error('Keine lesbaren Abschnitte im PDF gefunden. Bitte prüfe, ob es ein textbasiertes PDF ist (kein Scan ohne OCR).');
+    }
 
     let packs;
     const useGPT = apiKey && apiKey.startsWith('sk-');
