@@ -73,7 +73,7 @@
 .vibe-audio-toggle {
     position: fixed;
     left: 14px;
-    bottom: 14px;
+    bottom: 122px;
     z-index: 10005;
     border: 1px solid rgba(162,155,254,0.55);
     border-radius: 999px;
@@ -97,6 +97,17 @@
     color: #8e87b5;
     border-color: rgba(120,114,168,0.35);
     box-shadow: 0 0 10px rgba(80,70,120,0.2), inset 0 0 10px rgba(0,0,0,0.35);
+}
+
+@media (max-width: 700px) {
+    .vibe-audio-toggle {
+        left: 10px;
+        bottom: 126px;
+        font-size: 0.7em;
+        padding: 7px 11px;
+        max-width: calc(100vw - 20px);
+        white-space: nowrap;
+    }
 }
 
 /* =====================================================================
