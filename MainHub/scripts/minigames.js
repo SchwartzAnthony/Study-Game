@@ -1,6 +1,7 @@
 import { awardGold } from './economy.js';
 import { saveToStorage } from './storage.js';
 import { getActiveWorld } from '../app.js';
+import { renderMathString, setRenderedText } from './mathRenderer.js';
 
 const minigameBoard = document.getElementById('minigame-board');
 
@@ -61,7 +62,7 @@ function launchArcaneDefenseGame(sectionCards, sectionName, gameName) {
         }
 
         let currentCard = deck[currentIndex];
-        anomalyText.innerText = currentCard.question;
+        anomalyText.innerHTML = renderMathString(currentCard.question, { preferMath: !!currentCard.isMath });
         incantationInput.value = '';
         incantationInput.focus();
 
@@ -214,10 +215,12 @@ function launchTriviaGame(sectionFlashcards, allWorldFlashcards, sectionName, ga
             <div style="width: 100%; padding: 10px;">
                 <div class="trivia-question">${currentCard.question}</div>
                 <div class="trivia-grid">
-                    ${options.map(opt => `<button class="trivia-btn" data-answer="${opt.replace(/"/g, '&quot;')}">${opt}</button>`).join('')}
+                    ${options.map(opt => `<button class="trivia-btn" data-answer="${opt.replace(/"/g, '&quot;')}">${renderMathString(opt, { preferMath: !!currentCard.isMath })}</button>`).join('')}
                 </div>
             </div>
         `;
+        const triviaQuestion = minigameBoard.querySelector('.trivia-question');
+        if (triviaQuestion) triviaQuestion.innerHTML = renderMathString(currentCard.question, { preferMath: !!currentCard.isMath });
         
         let buttons = minigameBoard.querySelectorAll('.trivia-btn');
         let answered = false;
@@ -261,7 +264,7 @@ function launchMemoryGame(flashcards, sectionName, gameName) {
 
     memoryCards.forEach(data => {
         const card = document.createElement('div'); card.className = 'memory-card';
-        card.innerHTML = `<div class="memory-card-inner"><div class="memory-card-front">❓</div><div class="memory-card-back">${data.text}</div></div>`;
+        card.innerHTML = `<div class="memory-card-inner"><div class="memory-card-front">❓</div><div class="memory-card-back">${renderMathString(data.text, { preferMath: false })}</div></div>`;
 
         card.addEventListener('click', () => {
             if (lockBoard || card === flippedCards[0] || card.classList.contains('is-matched')) return;
@@ -357,7 +360,7 @@ function startFlashMatchGame(sectionName, gameName) {
     tilesData.forEach((data) => {
         const tile = document.createElement('div');
         tile.className = 'match-tile';
-        tile.innerText = data.text;
+        tile.innerHTML = renderMathString(data.text, { preferMath: false });
         
         // Versteckte Daten für den Abgleich
         tile.dataset.id = data.id;
@@ -515,7 +518,7 @@ function launchSpellweaverGame(flashcards, sectionName, gameName) {
         minigameBoard.innerHTML = `
             <div class="spellweaver-container">
                 <div style="font-size:0.85em;color:#8a9bcf;letter-spacing:1px;text-align:center;">Decipher this prompt:</div>
-                <div style="font-size:1.05em;color:#d8ddf5;text-align:center;max-width:840px;line-height:1.5;">${currentCard.question || 'Spell Prompt'}</div>
+                <div id="spellweaver-prompt" style="font-size:1.05em;color:#d8ddf5;text-align:center;max-width:840px;line-height:1.5;">${renderMathString(currentCard.question || 'Spell Prompt', { preferMath: !!currentCard.isMath })}</div>
                 <div id="incantation-bar" class="incantation-bar"><span style="opacity:0.5;">Select runes to weave the spell...</span></div>
                 <div id="spellweaver-runes" class="rune-grid">
                     ${scrambledWords.map(item => `<button class="rune-btn" data-word="${item.word.replace(/"/g, '&quot;')}" data-idx="${item.idx}">${item.word}</button>`).join('')}
@@ -796,9 +799,9 @@ function launchClozeGame(flashcards, sectionName, gameName) {
 
         minigameBoard.innerHTML = `
             <div class="cloze-game-container">
-                <p class="cloze-game-context">${card.question}</p>
+                <p class="cloze-game-context">${renderMathString(card.question, { preferMath: !!card.isMath })}</p>
                 <div class="cloze-game-answer-display">
-                    ${before}<input type="text" id="cloze-game-input" class="cloze-answer-blank" autocomplete="off" spellcheck="false" placeholder="?">${after}
+                    ${renderMathString(before, { preserveLineBreaks: true })}<input type="text" id="cloze-game-input" class="cloze-answer-blank" autocomplete="off" spellcheck="false" placeholder="?">${renderMathString(after, { preserveLineBreaks: true })}
                 </div>
                 <button id="cloze-submit-btn" class="btn-primary" style="padding: 12px 30px; font-family: 'Cinzel', serif; letter-spacing: 1px;">Submit</button>
                 <p id="cloze-feedback" style="min-height: 24px; font-size: 1em; margin-top: 8px;"></p>
@@ -881,8 +884,8 @@ function launchTrueFalseBlitz(flashcards, sectionName, gameName) {
                 <p class="tf-statement-label">IS THIS THE CORRECT ANSWER?</p>
                 <div class="tf-question-box">
                     <div>
-                        <span style="color: #a29bfe; font-family: 'Cinzel', serif; font-size: 0.8em; display: block; margin-bottom: 10px; letter-spacing: 1px;">${card.question}</span>
-                        <span style="font-size: 1.2em; color: #fff; font-weight: bold;">&ldquo;${shownAnswer}&rdquo;</span>
+                        <span style="color: #a29bfe; font-family: 'Cinzel', serif; font-size: 0.8em; display: block; margin-bottom: 10px; letter-spacing: 1px;">${renderMathString(card.question, { preferMath: !!card.isMath })}</span>
+                        <span style="font-size: 1.2em; color: #fff; font-weight: bold;">${renderMathString('"' + shownAnswer + '"', { preferMath: !!card.isMath })}</span>
                     </div>
                 </div>
                 <div class="tf-buttons">
@@ -993,8 +996,8 @@ function launchGlimpseRecall(flashcards, sectionName, gameName) {
         minigameBoard.innerHTML = `
             <div class="glimpse-container">
                 <p style="color: #8a9bb5; font-family: 'Cinzel', serif; font-size: 0.85em; letter-spacing: 2px; margin: 0;">MEMORIZE THE ANSWER</p>
-                <div class="glimpse-question-box">${card.question}</div>
-                <div class="glimpse-answer-flash" id="glimpse-answer-box" style="transition: opacity 0.5s, transform 0.5s;">${card.answer}</div>
+                <div class="glimpse-question-box">${renderMathString(card.question, { preferMath: !!card.isMath })}</div>
+                <div class="glimpse-answer-flash" id="glimpse-answer-box" style="transition: opacity 0.5s, transform 0.5s;">${renderMathString(card.answer, { preferMath: !!card.isMath })}</div>
                 <p id="glimpse-countdown-label" class="glimpse-countdown">${GLIMPSE_SECONDS}</p>
                 <p style="color: #444; font-style: italic; font-size: 0.82em;">The vision will vanish...</p>
             </div>`;
@@ -1021,7 +1024,7 @@ function launchGlimpseRecall(flashcards, sectionName, gameName) {
         minigameBoard.innerHTML = `
             <div class="glimpse-container">
                 <p style="color: #8a9bb5; font-family: 'Cinzel', serif; font-size: 0.85em; letter-spacing: 2px; margin: 0;">RECALL THE VISION</p>
-                <div class="glimpse-question-box">${card.question}</div>
+                <div class="glimpse-question-box">${renderMathString(card.question, { preferMath: !!card.isMath })}</div>
                 <div class="glimpse-answer-flash" style="opacity: 0.07; font-size: 0.75em; letter-spacing: 8px; color: #555;">? ? ? ? ?</div>
                 <input type="text" id="glimpse-input" class="glimpse-input" placeholder="What did you see?" autocomplete="off" spellcheck="false">
                 <button id="glimpse-submit" class="btn-primary" style="padding: 12px 30px; font-family: 'Cinzel', serif; letter-spacing: 1px; margin-top: 4px;">Seal the Memory</button>
@@ -1052,11 +1055,11 @@ function launchGlimpseRecall(flashcards, sectionName, gameName) {
                 awardGold(4);
                 input.style.borderColor = '#ffd700';
                 feedback.style.color = '#ffd700';
-                feedback.innerText = `✔ Close enough! The vision was: "${card.answer}"`;
+                feedback.innerHTML = `✔ Close enough! The vision was: "${renderMathString(card.answer, { preferMath: !!card.isMath })}"`;
             } else {
                 input.style.borderColor = '#ff4757';
                 feedback.style.color = '#ff4757';
-                feedback.innerText = `✘ The vision was: "${card.answer}"`;
+                feedback.innerHTML = `✘ The vision was: "${renderMathString(card.answer, { preferMath: !!card.isMath })}"`;
             }
             currentIndex++;
             setTimeout(() => loadNext(), 1700);

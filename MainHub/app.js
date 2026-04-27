@@ -8,6 +8,7 @@ import { loadFileToEditor, cancelEdit, saveAndProcessWorld, createWorldFromSynta
 import { initMindMap } from './scripts/mindmapRenderer.js';
 import { forgeWorldFromPdf } from './scripts/pdfAutoForge.js';
 import { openPdfHighlighter, initHighlighterUI } from './scripts/pdfHighlighter.js';
+import { hasMathSyntax, renderMathString, setRenderedText } from './scripts/mathRenderer.js';
 
 function sanitizeRewardImages() {
     if (!appState || !Array.isArray(appState.customRewards)) return;
@@ -1184,12 +1185,12 @@ function loadFlashcard() {
     const aEl  = document.getElementById('fc-answer');
     if (qEl) {
         if (card.imageData) {
-            qEl.innerHTML = `<img src="${card.imageData}" style="max-width:100%;max-height:220px;object-fit:contain;border-radius:6px;border:1px solid rgba(255,255,255,0.1);"><br>${card.question ? `<span style="font-size:0.85em;color:#aaa;">${card.question}</span>` : ''}`;
+            qEl.innerHTML = `<img src="${card.imageData}" style="max-width:100%;max-height:220px;object-fit:contain;border-radius:6px;border:1px solid rgba(255,255,255,0.1);">${card.question ? `<div style="font-size:0.85em;color:#aaa;margin-top:8px;">${renderMathString(card.question, { preferMath: !!card.isMath })}</div>` : ''}`;
         } else {
-            qEl.innerText = card.question;
+            setRenderedText(qEl, card.question, { preferMath: !!card.isMath });
         }
     }
-    if (aEl) aEl.innerText = card.answer;
+    if (aEl) setRenderedText(aEl, card.answer, { preferMath: !!card.isMath });
     if(fcInner) fcInner.classList.remove('is-flipped'); if(btnFlipFc) btnFlipFc.classList.remove('hidden'); if(fcGradingBtns) fcGradingBtns.classList.add('hidden');
 }
 
@@ -1620,12 +1621,12 @@ function loadQuestion() {
     const aEl  = document.getElementById('assessment-answer');
     if (qEl) {
         if (q.imageData) {
-            qEl.innerHTML = `<img src="${q.imageData}" style="max-width:100%;max-height:220px;object-fit:contain;border-radius:6px;border:1px solid rgba(255,255,255,0.1);"><br>${q.question ? `<span style="font-size:0.85em;color:#aaa;">${q.question}</span>` : ''}`;
+            qEl.innerHTML = `<img src="${q.imageData}" style="max-width:100%;max-height:220px;object-fit:contain;border-radius:6px;border:1px solid rgba(255,255,255,0.1);">${q.question ? `<div style="font-size:0.85em;color:#aaa;margin-top:8px;">${renderMathString(q.question, { preferMath: !!q.isMath })}</div>` : ''}`;
         } else {
-            qEl.innerText = q.question;
+            setRenderedText(qEl, q.question, { preferMath: !!q.isMath });
         }
     }
-    if (aEl) aEl.innerText = q.answer;
+    if (aEl) setRenderedText(aEl, q.answer, { preferMath: !!q.isMath });
     if (aEl) aEl.classList.add('hidden');
     if(document.getElementById('btn-show-answer')) document.getElementById('btn-show-answer').classList.remove('hidden');
     if(document.getElementById('grading-buttons')) document.getElementById('grading-buttons').classList.add('hidden');
@@ -1748,12 +1749,10 @@ function updateReadModalContent() {
                 // Regular Text
                 const textPart = segments[i].trim();
                 if (textPart.length > 0) {
-                    if (bionicReadingEnabled) {
+                    if (bionicReadingEnabled && !hasMathSyntax(textPart)) {
                         formattedHTML += applyBionicReading(textPart);
                     } else {
-                        const tempDiv = document.createElement('div');
-                        tempDiv.innerText = textPart;
-                        formattedHTML += tempDiv.innerHTML;
+                        formattedHTML += renderMathString(textPart, { preserveLineBreaks: true });
                     }
                     formattedHTML += "<br/><br/>";
                 }
@@ -1765,10 +1764,10 @@ function updateReadModalContent() {
         contentEl.innerHTML = formattedHTML;
     } else {
         // Safe Text fallback when no images
-        if (bionicReadingEnabled) {
+        if (bionicReadingEnabled && !hasMathSyntax(baseText)) {
             contentEl.innerHTML = applyBionicReading(baseText);
         } else {
-            contentEl.innerText = baseText; 
+            contentEl.innerHTML = renderMathString(baseText, { preserveLineBreaks: true });
         }
     }
     
@@ -2092,7 +2091,7 @@ function renderCompassParagraph() {
     if (para) {
         para.style.opacity = '0';
         setTimeout(() => {
-            para.textContent = compassParagraphs[compassIndex] || '';
+            para.innerHTML = renderMathString(compassParagraphs[compassIndex] || '', { preserveLineBreaks: true });
             para.style.opacity = '1';
         }, 200);
     }
@@ -2196,8 +2195,8 @@ function openCheckpoint() {
 
 function renderCheckpointCard() {
     const card = checkpointQueue[checkpointIndex];
-    document.getElementById('checkpoint-question').textContent = card.question;
-    document.getElementById('checkpoint-answer').textContent = card.answer;
+    setRenderedText(document.getElementById('checkpoint-question'), card.question, { preferMath: !!card.isMath });
+    setRenderedText(document.getElementById('checkpoint-answer'), card.answer, { preferMath: !!card.isMath });
     document.getElementById('checkpoint-answer').classList.add('hidden');
     document.getElementById('btn-checkpoint-reveal').classList.remove('hidden');
     document.getElementById('checkpoint-grade-btns').classList.add('hidden');
@@ -2998,10 +2997,113 @@ let vibeManualPaused = true;
 let vibeMusicVolume = 0.85;
 let vibeSfxVolume = 0.85;
 let vibePlaylist = [];
+let vibeButtonSoundConfig = null;
 
 const VIBE_SCALE = [130.81, 155.56, 174.61, 196.00, 233.08, 261.63]; // C minor-ish
 const VIBE_GAIN_MULT = 2.2;
 const VIBE_PRIVATE_PLAYLIST_KEY = 'studyQuestPrivateMusicV1';
+const VIBE_BUTTON_SOUND_DEFAULTS = {
+    mainMenu: { label: 'Main Menu Buttons', enabled: true, pitch: 300, volume: 0.07 },
+    world: { label: 'World Buttons', enabled: true, pitch: 240, volume: 0.065 },
+    miniGame: { label: 'Mini-Game Buttons', enabled: true, pitch: 380, volume: 0.08 },
+    utility: { label: 'Utility Buttons', enabled: true, pitch: 210, volume: 0.06 }
+};
+
+function cloneDefaultButtonSoundConfig() {
+    const next = {};
+    Object.entries(VIBE_BUTTON_SOUND_DEFAULTS).forEach(([key, cfg]) => {
+        next[key] = { ...cfg };
+    });
+    return next;
+}
+
+function normalizeButtonSoundConfig(rawConfig) {
+    const next = cloneDefaultButtonSoundConfig();
+    if (!rawConfig || typeof rawConfig !== 'object') return next;
+
+    Object.keys(VIBE_BUTTON_SOUND_DEFAULTS).forEach((key) => {
+        const from = rawConfig[key] || {};
+        next[key].enabled = from.enabled !== false;
+        next[key].pitch = Math.max(120, Math.min(880, Number(from.pitch) || next[key].pitch));
+        next[key].volume = _clamp01(from.volume ?? next[key].volume);
+    });
+    return next;
+}
+
+function classifyButtonSoundCategory(interactiveEl) {
+    if (!interactiveEl) return 'utility';
+
+    if (interactiveEl.closest('#btn-goto-worlds,#btn-goto-global,#btn-goto-workshop,#app-title-btn,#btn-back-home,#btn-back-home-from-workshop')) {
+        return 'mainMenu';
+    }
+
+    if (interactiveEl.closest('.game-list-btn,#btn-global-flashcards,#btn-section-game,#btn-open-vault,#btn-sprint-start,#btn-compass-mode,#btn-checkpoint-trigger')) {
+        return 'miniGame';
+    }
+
+    if (interactiveEl.closest('.map-node,#prev-map,#next-map,#btn-back-universe,#btn-speed-read,#settings-btn,#btn-edit-world,#btn-reshuffle-map,#btn-rename-world,#delete-page-btn,#delete-world-btn')) {
+        return 'world';
+    }
+
+    return 'utility';
+}
+
+function renderVibeButtonSoundPanel() {
+    const panel = document.getElementById('vibe-button-sounds-panel');
+    if (!panel || !vibeButtonSoundConfig) return;
+
+    panel.innerHTML = Object.keys(VIBE_BUTTON_SOUND_DEFAULTS).map((key) => {
+        const cfg = vibeButtonSoundConfig[key];
+        return [
+            '<div class="vibe-bs-row">',
+            `<div class="vibe-bs-head"><span>${cfg.label}</span><label class="vibe-bs-toggle"><input type="checkbox" class="vibe-bs-enabled" data-cat="${key}" ${cfg.enabled ? 'checked' : ''}><span>On</span></label></div>`,
+            `<div class="vibe-bs-control"><label>Pitch</label><input type="range" min="120" max="880" step="1" class="vibe-bs-slider" data-cat="${key}" data-field="pitch" value="${Math.round(cfg.pitch)}"><span class="vibe-bs-value" data-cat="${key}" data-field="pitch">${Math.round(cfg.pitch)}</span></div>`,
+            `<div class="vibe-bs-control"><label>Volume</label><input type="range" min="0" max="100" step="1" class="vibe-bs-slider" data-cat="${key}" data-field="volume" value="${Math.round(_clamp01(cfg.volume) * 100)}"><span class="vibe-bs-value" data-cat="${key}" data-field="volume">${Math.round(_clamp01(cfg.volume) * 100)}%</span></div>`,
+            '</div>'
+        ].join('');
+    }).join('');
+}
+
+function bindVibeButtonSoundPanelEvents() {
+    const panel = document.getElementById('vibe-button-sounds-panel');
+    if (!panel || panel.dataset.bound === '1') return;
+
+    panel.addEventListener('input', (e) => {
+        const target = e.target;
+        if (!(target instanceof HTMLElement)) return;
+        if (!target.classList.contains('vibe-bs-slider')) return;
+
+        const cat = target.dataset.cat;
+        const field = target.dataset.field;
+        if (!cat || !field || !vibeButtonSoundConfig[cat]) return;
+
+        if (field === 'pitch') {
+            vibeButtonSoundConfig[cat].pitch = Math.max(120, Math.min(880, Number(target.value) || vibeButtonSoundConfig[cat].pitch));
+            const valueEl = panel.querySelector(`.vibe-bs-value[data-cat="${cat}"][data-field="pitch"]`);
+            if (valueEl) valueEl.textContent = String(Math.round(vibeButtonSoundConfig[cat].pitch));
+        } else if (field === 'volume') {
+            vibeButtonSoundConfig[cat].volume = _clamp01((Number(target.value) || 0) / 100);
+            const valueEl = panel.querySelector(`.vibe-bs-value[data-cat="${cat}"][data-field="volume"]`);
+            if (valueEl) valueEl.textContent = `${Math.round(vibeButtonSoundConfig[cat].volume * 100)}%`;
+        }
+
+        appState.vibeButtonSounds = vibeButtonSoundConfig;
+        saveToStorage();
+    });
+
+    panel.addEventListener('change', (e) => {
+        const target = e.target;
+        if (!(target instanceof HTMLElement)) return;
+        if (!target.classList.contains('vibe-bs-enabled')) return;
+        const cat = target.dataset.cat;
+        if (!cat || !vibeButtonSoundConfig[cat]) return;
+        vibeButtonSoundConfig[cat].enabled = !!target.checked;
+        appState.vibeButtonSounds = vibeButtonSoundConfig;
+        saveToStorage();
+    });
+
+    panel.dataset.bound = '1';
+}
 
 function getVibeTrackTitle(track) {
     if (track && track.name) return String(track.name);
@@ -3490,6 +3592,7 @@ function initGameVibeSystem() {
     vibeManualPaused = appState.vibeManualPaused !== false;
     vibeMusicVolume = _clamp01(appState.vibeMusicVolume ?? 0.85);
     vibeSfxVolume = _clamp01(appState.vibeSfxVolume ?? 0.85);
+    vibeButtonSoundConfig = normalizeButtonSoundConfig(appState.vibeButtonSounds);
 
     let playBtn = document.getElementById('vibe-play-toggle');
     if (!playBtn) {
@@ -3524,6 +3627,8 @@ function initGameVibeSystem() {
             '<div class="vibe-slider-row"><label for="vibe-music-slider">Music Volume</label><input id="vibe-music-slider" type="range" min="0" max="100" step="1"></div>',
             '<div class="vibe-slider-row"><label for="vibe-sfx-slider">Button Sound</label><input id="vibe-sfx-slider" type="range" min="0" max="100" step="1"></div>',
             '<div class="vibe-menu-row"><button id="vibe-skip-btn" class="vibe-audio-toggle vibe-menu-btn" type="button">⏭ Skip</button><button id="vibe-loop-btn" class="vibe-audio-toggle vibe-menu-btn" type="button">🔁 Loop: OFF</button></div>',
+            '<button id="vibe-button-sounds-btn" class="vibe-audio-toggle vibe-menu-btn" type="button">🎛 Button Sounds</button>',
+            '<div id="vibe-button-sounds-panel" class="vibe-button-sounds hidden"></div>',
             '<div class="vibe-playlist-head">Playlist</div>',
             '<div id="vibe-playlist-empty" class="vibe-playlist-empty">No songs uploaded yet. Tap Upload Songs and choose audio files from your iPhone Files app or local device.</div>',
             '<div class="vibe-menu-row"><button id="vibe-upload-btn" class="vibe-audio-toggle vibe-menu-btn" type="button">⬆ Upload Songs</button><button id="vibe-clear-playlist-btn" class="vibe-audio-toggle vibe-menu-btn" type="button">🗑 Clear</button></div>',
@@ -3542,6 +3647,8 @@ function initGameVibeSystem() {
     const uploadBtn = document.getElementById('vibe-upload-btn');
     const uploadInput = document.getElementById('vibe-upload-input');
     const clearPlaylistBtn = document.getElementById('vibe-clear-playlist-btn');
+    const buttonSoundsBtn = document.getElementById('vibe-button-sounds-btn');
+    const buttonSoundsPanel = document.getElementById('vibe-button-sounds-panel');
 
     if (musicSlider) musicSlider.value = String(Math.round(vibeMusicVolume * 100));
     if (sfxSlider) sfxSlider.value = String(Math.round(vibeSfxVolume * 100));
@@ -3610,6 +3717,12 @@ function initGameVibeSystem() {
         });
         loopBtn.dataset.vibeLoopBound = '1';
     }
+    if (buttonSoundsBtn && buttonSoundsPanel && buttonSoundsBtn.dataset.vibeButtonSoundBound !== '1') {
+        buttonSoundsBtn.addEventListener('click', () => {
+            buttonSoundsPanel.classList.toggle('hidden');
+        });
+        buttonSoundsBtn.dataset.vibeButtonSoundBound = '1';
+    }
     if (uploadBtn && uploadInput && uploadBtn.dataset.vibeUploadBound !== '1') {
         uploadBtn.addEventListener('click', () => uploadInput.click());
         uploadInput.addEventListener('change', async (e) => {
@@ -3677,6 +3790,9 @@ function initGameVibeSystem() {
         sfxSlider.dataset.vibeSfxBound = '1';
     }
 
+    renderVibeButtonSoundPanel();
+    bindVibeButtonSoundPanelEvents();
+
     if (document.body.dataset.vibeUnlockBound !== '1') {
         const unlock = () => {
             if (!_isAmbienceEnabled()) return;
@@ -3704,7 +3820,11 @@ function initGameVibeSystem() {
         if (e.clientX && e.clientY) spawnButtonRipple(interactive, e.clientX, e.clientY);
 
         if (_isSfxEnabled()) {
-            playUiTone(220 + Math.random() * 140, 0.07, 'triangle', 0.06);
+            const category = classifyButtonSoundCategory(interactive);
+            const cfg = (vibeButtonSoundConfig && vibeButtonSoundConfig[category]) ? vibeButtonSoundConfig[category] : null;
+            if (cfg && cfg.enabled) {
+                playUiTone(Number(cfg.pitch) || 260, 0.07, 'triangle', Number(cfg.volume) || 0.06);
+            }
         }
     }, true);
 

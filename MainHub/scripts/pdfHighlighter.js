@@ -1,7 +1,7 @@
 ﻿
 // =============================================================================
-// PDF HIGHLIGHTER WIZARD v3
-// 8 Stages: Images -> Chapters -> Content -> Flashcards -> Quiz -> Exam -> Tasks -> Publish
+// PDF HIGHLIGHTER WIZARD v4
+// Intro Gate + 9 Stages: Images -> Chapters -> Content -> Math -> Flashcards -> Quiz -> Exam -> Tasks -> Publish
 // =============================================================================
 
 export const TYPE_CONFIG = {
@@ -14,20 +14,33 @@ const STAGES = [
     { id: 'images',   label: 'Bilder',         icon: '1',  mode: 'canvas' },
     { id: 'chapters', label: 'Kapitel',         icon: '2',  mode: 'text'   },
     { id: 'content',  label: 'Kapitelinhalte',  icon: '3',  mode: 'text'   },
-    { id: 'flash',    label: 'Lernkarten',      icon: '4',  mode: 'text'   },
-    { id: 'quiz',     label: 'Quiz',            icon: '5',  mode: 'text'   },
-    { id: 'exam',     label: 'Pruefung',        icon: '6',  mode: 'text'   },
-    { id: 'tasks',    label: 'Tasks',           icon: '7',  mode: null     },
-    { id: 'publish',  label: 'Veroeffentlichen',icon: '8',  mode: null     },
+    { id: 'math',     label: 'Mathe',           icon: '4',  mode: 'text'   },
+    { id: 'flash',    label: 'Lernkarten',      icon: '5',  mode: 'text'   },
+    { id: 'quiz',     label: 'Quiz',            icon: '6',  mode: 'text'   },
+    { id: 'exam',     label: 'Pruefung',        icon: '7',  mode: 'text'   },
+    { id: 'tasks',    label: 'Tasks',           icon: '8',  mode: null     },
+    { id: 'publish',  label: 'Veroeffentlichen',icon: '9',  mode: null     },
+];
+
+const MATH_TARGET_OPTIONS = [
+    { id: 'flashcards', label: 'Flashcards' },
+    { id: 'quizzes', label: 'Quiz' },
+    { id: 'exams', label: 'Exam' },
+    { id: 'tasks', label: 'Tasks' },
+    { id: 'minigames', label: 'Mini-Games' },
+    { id: 'content', label: 'Section Content' }
 ];
 
 let hlDoc    = null;
 let hlStage  = 0;
-let hlDraft  = { pdfName:'', images:[], chapters:[], chapterTexts:{}, flashcards:[], quizzes:[], exams:[], tasks:[] };
+let hlIntroGate = true;
+let hlDraft  = { pdfName:'', images:[], chapters:[], chapterTexts:{}, mathItems:[], flashcards:[], quizzes:[], exams:[], tasks:[] };
 let hlRenderToken = 0;
 let qaTarget = 'question';
 let pendingQA = { section:'', q:{text:'',imageId:null}, a:{text:'',imageId:null} };
 let pendingQAMode = 'flashcards';
+let mathTarget = 'question';
+let pendingMath = { section:'', q:'', latex:'', a:'', category:'flashcards' };
 let activeChapter = '';
 let _selectedHubIndex = 0;
 let _appState=null, _saveStore=null, _renderMap=null, _genCoords=null, _showToast=null;
@@ -48,9 +61,11 @@ export async function openPdfHighlighter(file, deps) {
     _renderMap = deps.renderMap || null;
     _genCoords = deps.generateMapCoordinates || null;
     _showToast = deps.showToast || null;
-    hlDoc = null; hlStage = 0;
-    hlDraft = { pdfName: file.name.replace(/\.[^.]+$/, '').trim(), images:[], chapters:[], chapterTexts:{}, flashcards:[], quizzes:[], exams:[], tasks:[] };
+    hlDoc = null; hlStage = 0; hlIntroGate = true;
+    hlDraft = { pdfName: file.name.replace(/\.[^.]+$/, '').trim(), images:[], chapters:[], chapterTexts:{}, mathItems:[], flashcards:[], quizzes:[], exams:[], tasks:[] };
     pendingQA = _emptyPending();
+    pendingMath = { section:'', q:'', latex:'', a:'', category:'flashcards' };
+    mathTarget = 'question';
     activeChapter = '';
     _selectedHubIndex = (_appState && _appState.currentHubIndex) ? _appState.currentHubIndex : 0;
     try {
@@ -72,12 +87,65 @@ export function getHighlightItems() { return []; }
 // ---------------------------------------------------------------------------
 
 function _renderStage() {
+    if (hlIntroGate) {
+        _renderIntroGate();
+        return;
+    }
     var token = ++hlRenderToken;
     _renderStageHeader();
     _renderStagePDF(token).then(function(){
         if (token !== hlRenderToken) return;
         _renderStagePanel();
     });
+}
+
+function _renderIntroGate() {
+    var hdr = _el('hl-stage-header');
+    var left = _el('hl-pdf-content');
+    var panel = _el('hl-stage-panel');
+    if (!hdr || !left || !panel) return;
+
+    hdr.innerHTML = [
+        '<div style="display:flex;align-items:center;gap:9px;padding:10px 14px;background:#0e0e14;border-bottom:1px solid rgba(162,155,254,0.25);">',
+        '<span style="font-size:0.95em;color:#a29bfe;font-family:Cinzel,serif;font-weight:bold;">PDF Wizard Introduction</span>',
+        '<span style="font-size:0.72em;color:#4f4f68;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_esc(hlDraft.pdfName)+'</span>',
+        '<button id="btn-hl-intro-back" style="padding:6px 13px;background:#1c1c28;border:1px solid #333;color:#aaa;border-radius:5px;cursor:pointer;font-size:0.82em;">Zurueck</button>',
+        '<button id="btn-hl-intro-start" style="padding:6px 16px;background:linear-gradient(135deg,#6c56cc,#a29bfe);border:none;color:#fff;border-radius:5px;cursor:pointer;font-size:0.85em;font-weight:bold;">Start Wizard</button>',
+        '</div>'
+    ].join('');
+
+    left.innerHTML = [
+        '<div style="max-width:860px;margin:18px auto 30px;padding:16px 18px;border:1px solid rgba(162,155,254,0.28);border-radius:10px;background:rgba(17,14,29,0.62);">',
+        '<h3 style="margin:0 0 10px;color:#d8d4ff;font-family:Cinzel,serif;">How Highlight Features Work</h3>',
+        '<p style="margin:0 0 10px;color:#b8b3d7;font-size:0.88em;line-height:1.6;">Highlight directly in the PDF. Each wizard step stores a different content type and builds your world automatically on publish.</p>',
+        '<ul style="margin:0;padding-left:18px;color:#a8a3cc;font-size:0.84em;line-height:1.65;">',
+        '<li><strong>Bilder:</strong> Drag a rectangle to capture diagrams.</li>',
+        '<li><strong>Kapitel:</strong> Highlight headings to create world sections.</li>',
+        '<li><strong>Kapitelinhalte:</strong> Highlight core text for each section.</li>',
+        '<li><strong>Mathe:</strong> Highlight equations/questions, optionally assign target category (Flashcard/Quiz/Exam/Task/Mini-Game/Content). You can skip this step.</li>',
+        '<li><strong>Lernkarten & Quiz:</strong> Build Q/A study pairs.</li>',
+        '<li><strong>Pruefung:</strong> Add deeper exam prompts.</li>',
+        '<li><strong>Tasks:</strong> Create action checklist items.</li>',
+        '<li><strong>Veroeffentlichen:</strong> Choose hub, create world, and save.</li>',
+        '</ul>',
+        '</div>'
+    ].join('');
+
+    panel.innerHTML = [
+        '<div style="padding:14px;display:flex;flex-direction:column;gap:10px;">',
+        '<p style="margin:0;color:#a29bfe;font-size:0.8em;text-transform:uppercase;letter-spacing:1px;">Before You Start</p>',
+        '<p style="margin:0;color:#8b86b0;font-size:0.8em;line-height:1.55;">Use Start Wizard to begin extraction. Use Zurueck to return to the previous menu without changing anything.</p>',
+        '<button id="btn-hl-intro-start-2" style="padding:9px 12px;background:linear-gradient(135deg,#6c56cc,#a29bfe);border:none;color:#fff;border-radius:6px;cursor:pointer;font-size:0.84em;font-weight:bold;">Start Wizard</button>',
+        '<button id="btn-hl-intro-back-2" style="padding:8px 12px;background:#1c1c28;border:1px solid #333;color:#aaa;border-radius:6px;cursor:pointer;font-size:0.82em;">Zurueck</button>',
+        '</div>'
+    ].join('');
+
+    function _start() { hlIntroGate = false; _renderStage(); }
+    function _back() { document.getElementById('pdf-highlighter-modal').classList.add('hidden'); }
+    var s1 = _el('btn-hl-intro-start'); if (s1) s1.addEventListener('click', _start);
+    var s2 = _el('btn-hl-intro-start-2'); if (s2) s2.addEventListener('click', _start);
+    var b1 = _el('btn-hl-intro-back'); if (b1) b1.addEventListener('click', _back);
+    var b2 = _el('btn-hl-intro-back-2'); if (b2) b2.addEventListener('click', _back);
 }
 
 function _renderStageHeader() {
@@ -145,6 +213,7 @@ async function _renderTextPages(container, stageId, token) {
     var HINTS = {
         chapters:'Kapitelueberschriften im PDF auswaehlen (werden zu Sections auf der Weltkarte).',
         content:'Text markieren. Aktives Kapitel rechts waehlen.',
+        math:'Mathe-Ausdruecke markieren. Danach rechts Kategorie waehlen und Hinzufuegen (oder Schritt ueberspringen).',
         flash:'LILA = Frage  |  BLAU = Antwort.  Modus rechts waehlen, markieren, dann Hinzufuegen.',
         quiz:'LILA = Frage  |  BLAU = Antwort.  Modus rechts waehlen, markieren, dann Hinzufuegen.',
         exam:'Text als Pruefungsstoff markieren — oder rechts aus Lernkarten/Quiz uebernehmen.'
@@ -319,6 +388,7 @@ function _onTextMouseUp() {
     var id=STAGES[hlStage].id;
     if(id==='chapters')      _doChapterCapture(text,range);
     else if(id==='content')  _doContentCapture(text,range);
+    else if(id==='math')     _doMathCapture(text,range);
     else if(id==='flash')    _doQACapture(text,range);
     else if(id==='quiz')     _doQACapture(text,range);
     else if(id==='exam')     _doExamCapture(text,range);
@@ -355,6 +425,14 @@ function _doQACapture(text,range) {
     _renderStagePanel();
 }
 
+function _doMathCapture(text,range) {
+    var isQ = mathTarget === 'question';
+    _wrapMark(range, isQ?'#ffd166':'#67e8f9', isQ?'rgba(255,209,102,0.28)':'rgba(103,232,249,0.20)');
+    if (isQ) pendingMath.q = text.trim();
+    else pendingMath.a = text.trim();
+    _renderStagePanel();
+}
+
 function _doExamCapture(text,range) {
     if(!activeChapter){ alert('Bitte zuerst ein aktives Kapitel rechts auswaehlen!'); return; }
     _wrapMark(range,'#ff7675','rgba(255,118,117,0.2)');
@@ -373,11 +451,152 @@ function _renderStagePanel() {
     if(id==='images')   _renderPanelImages(panel);
     else if(id==='chapters') _renderPanelChapters(panel);
     else if(id==='content')  _renderPanelContent(panel);
+    else if(id==='math')     _renderPanelMath(panel);
     else if(id==='flash')    _renderPanelQA(panel,'flashcards');
     else if(id==='quiz')     _renderPanelQA(panel,'quizzes');
     else if(id==='exam')     _renderPanelExam(panel);
     else if(id==='tasks')    _renderPanelTasks(panel);
     else if(id==='publish')  _renderPanelPublish(panel);
+}
+
+// ---------------------------------------------------------------------------
+// Math panel (Stage 4, optional)
+// ---------------------------------------------------------------------------
+function _renderPanelMath(panel) {
+    var chapters = hlDraft.chapters.map(function(c){ return c.name; });
+    if (!pendingMath.section && chapters.length) pendingMath.section = chapters[0];
+    var chOpts = chapters.map(function(c){ return '<option value="'+_esc(c)+'"'+(c===pendingMath.section?' selected':'')+'>'+_esc(c)+'</option>'; }).join('');
+    var catOpts = MATH_TARGET_OPTIONS.map(function(o){ return '<option value="'+o.id+'"'+(o.id===pendingMath.category?' selected':'')+'>'+o.label+'</option>'; }).join('');
+    var canAdd = (pendingMath.q||'').trim().length > 0;
+
+    panel.innerHTML = [
+        '<div style="padding:10px 12px;border-bottom:1px solid #1a1a2e;display:flex;flex-direction:column;gap:7px;">',
+          '<p style="margin:0;font-size:0.7em;color:#666;text-transform:uppercase;letter-spacing:1px;">Math Equation / Question</p>',
+          '<select id="hl-math-ch" style="width:100%;padding:5px;background:#111;border:1px solid #2a2a3a;color:#bbb;border-radius:4px;font-size:0.82em;">'+chOpts+'</select>',
+          '<div style="display:flex;gap:5px;">',
+            '<button id="btn-math-q" style="flex:1;padding:6px;border-radius:4px;cursor:pointer;font-size:0.82em;font-weight:bold;'
+              +'background:'+(mathTarget==='question'?'rgba(255,209,102,0.26)':'#181820')
+              +';border:2px solid '+(mathTarget==='question'?'#ffd166':'#333')
+              +';color:'+(mathTarget==='question'?'#ffd98e':'#555')+';">Formula / Prompt</button>',
+            '<button id="btn-math-a" style="flex:1;padding:6px;border-radius:4px;cursor:pointer;font-size:0.82em;font-weight:bold;'
+              +'background:'+(mathTarget==='answer'?'rgba(103,232,249,0.22)':'#181820')
+              +';border:2px solid '+(mathTarget==='answer'?'#67e8f9':'#333')
+              +';color:'+(mathTarget==='answer'?'#67e8f9':'#555')+';">Answer / Note</button>',
+          '</div>',
+          '<textarea id="hl-math-qtxt" rows="2" placeholder="Highlighted math or prompt from the PDF" style="width:100%;background:#0a0a12;border:1px solid #2a2a3a;color:#f6db95;border-radius:3px;padding:5px 6px;font-size:0.9em;box-sizing:border-box;resize:vertical;">'+_esc(pendingMath.q)+'</textarea>',
+          '<textarea id="hl-math-latex" rows="2" placeholder="Canonical math / LaTeX (recommended for complex equations, e.g. \\frac{a}{b} = c)" style="width:100%;background:#0a0a12;border:1px solid rgba(103,232,249,0.35);color:#c7f4ff;border-radius:3px;padding:5px 6px;font-size:0.9em;box-sizing:border-box;resize:vertical;">'+_esc(pendingMath.latex||'')+'</textarea>',
+          '<textarea id="hl-math-atxt" rows="2" placeholder="Optional answer / explanation" style="width:100%;background:#0a0a12;border:1px solid #2a2a3a;color:#a0e8f8;border-radius:3px;padding:5px 6px;font-size:0.9em;box-sizing:border-box;resize:vertical;">'+_esc(pendingMath.a)+'</textarea>',
+          '<label style="font-size:0.72em;color:#7d7899;">Category</label>',
+          '<select id="hl-math-cat" style="width:100%;padding:5px;background:#111;border:1px solid rgba(255,209,102,0.35);color:#e8dbaf;border-radius:4px;font-size:0.82em;">'+catOpts+'</select>',
+          '<div style="display:flex;gap:6px;">',
+            '<button id="btn-math-add" '+(canAdd?'':'disabled')+' style="flex:1;padding:7px;background:'+(canAdd?'rgba(102,255,153,0.15)':'#141414')+';border:1px solid '+(canAdd?'#66ff99':'#2a2a2a')+';color:'+(canAdd?'#66ff99':'#444')+';border-radius:5px;cursor:'+(canAdd?'pointer':'not-allowed')+';font-weight:bold;font-size:0.84em;">+ Add Math Item</button>',
+            '<button id="btn-math-skip" style="padding:7px 11px;background:#1c1c28;border:1px solid #333;color:#aaa;border-radius:5px;cursor:pointer;font-size:0.82em;">Skip</button>',
+          '</div>',
+        '</div>',
+        '<div id="hl-math-list" style="flex:1;overflow-y:auto;padding:10px;">',
+          '<p style="margin:0 0 6px;font-size:0.7em;color:#555;text-transform:uppercase;letter-spacing:1px;">'+hlDraft.mathItems.length+' Math item(s)</p>',
+        '</div>'
+    ].join('');
+
+    var chSel = _el('hl-math-ch'); if (chSel) chSel.addEventListener('change', function(e){ pendingMath.section = e.target.value; });
+    var qBtn = _el('btn-math-q'); if (qBtn) qBtn.addEventListener('click', function(){ mathTarget='question'; _renderStagePanel(); });
+    var aBtn = _el('btn-math-a'); if (aBtn) aBtn.addEventListener('click', function(){ mathTarget='answer'; _renderStagePanel(); });
+    var qTxt = _el('hl-math-qtxt'); if (qTxt) qTxt.addEventListener('input', function(e){
+        pendingMath.q = e.target.value;
+        var b = _el('btn-math-add');
+        if (b) {
+            var ok = (pendingMath.q || '').trim().length > 0;
+            b.disabled = !ok;
+            b.style.background = ok ? 'rgba(102,255,153,0.15)' : '#141414';
+            b.style.borderColor = ok ? '#66ff99' : '#2a2a2a';
+            b.style.color = ok ? '#66ff99' : '#444';
+            b.style.cursor = ok ? 'pointer' : 'not-allowed';
+        }
+    });
+    var latexTxt = _el('hl-math-latex'); if (latexTxt) latexTxt.addEventListener('input', function(e){ pendingMath.latex = e.target.value; });
+    var aTxt = _el('hl-math-atxt'); if (aTxt) aTxt.addEventListener('input', function(e){ pendingMath.a = e.target.value; });
+    var catSel = _el('hl-math-cat'); if (catSel) catSel.addEventListener('change', function(e){ pendingMath.category = e.target.value; });
+
+    var addBtn = _el('btn-math-add');
+    if (addBtn) addBtn.addEventListener('click', function(){
+        var q = (pendingMath.q || '').trim();
+        if (!q) return;
+        hlDraft.mathItems.push({
+            id: _uid(),
+            section: pendingMath.section || (hlDraft.chapters[0] ? hlDraft.chapters[0].name : 'Allgemein'),
+            q: q,
+            latex: (pendingMath.latex || '').trim(),
+            a: (pendingMath.a || '').trim(),
+            category: pendingMath.category || 'flashcards'
+        });
+        pendingMath.q = '';
+        pendingMath.latex = '';
+        pendingMath.a = '';
+        mathTarget = 'question';
+        _renderStagePanel();
+    });
+
+    var skipBtn = _el('btn-math-skip');
+    if (skipBtn) skipBtn.addEventListener('click', function(){
+        if (hlStage < STAGES.length - 1) {
+            hlStage++;
+            _renderStage();
+        }
+    });
+
+    var list = _el('hl-math-list');
+    hlDraft.mathItems.forEach(function(item, i){
+        var row = document.createElement('div');
+        row.style.cssText = 'margin-bottom:9px;border:1px solid rgba(255,209,102,0.25);border-radius:6px;padding:8px;background:#14120b;font-size:0.76em;';
+        var catOptions = MATH_TARGET_OPTIONS.map(function(o){ return '<option value="'+o.id+'"'+(item.category===o.id?' selected':'')+'>'+o.label+'</option>'; }).join('');
+        row.innerHTML = [
+            '<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:5px;">',
+              '<span style="color:#cdbd86;">'+_esc(item.section)+'</span>',
+              '<button class="hl-math-del" data-idx="'+i+'" style="background:none;border:none;color:#f66;cursor:pointer;font-size:0.9em;">&#x1F5D1;</button>',
+            '</div>',
+            '<label style="color:#bda76a;font-size:0.86em;">Equation / Prompt</label>',
+            '<textarea class="hl-math-qe" data-idx="'+i+'" rows="2" style="width:100%;background:#0a0a12;border:1px solid #2a2a3a;color:#f6db95;border-radius:3px;padding:4px 5px;font-size:0.95em;box-sizing:border-box;resize:vertical;">'+_esc(item.q)+'</textarea>',
+            '<label style="color:#8feaff;font-size:0.86em;">Canonical Math / LaTeX</label>',
+            '<textarea class="hl-math-le" data-idx="'+i+'" rows="2" style="width:100%;background:#0a0a12;border:1px solid rgba(103,232,249,0.35);color:#c7f4ff;border-radius:3px;padding:4px 5px;font-size:0.95em;box-sizing:border-box;resize:vertical;">'+_esc(item.latex||'')+'</textarea>',
+            '<label style="color:#9fd8e3;font-size:0.86em;">Answer / Note</label>',
+            '<textarea class="hl-math-ae" data-idx="'+i+'" rows="2" style="width:100%;background:#0a0a12;border:1px solid #2a2a3a;color:#9fd8e3;border-radius:3px;padding:4px 5px;font-size:0.95em;box-sizing:border-box;resize:vertical;">'+_esc(item.a||'')+'</textarea>',
+            '<label style="color:#7d7899;font-size:0.8em;">Category</label>',
+            '<select class="hl-math-cat-e" data-idx="'+i+'" style="width:100%;padding:5px;background:#111;border:1px solid rgba(255,209,102,0.35);color:#e8dbaf;border-radius:4px;font-size:0.82em;">'+catOptions+'</select>'
+        ].join('');
+        list.appendChild(row);
+    });
+
+    list.querySelectorAll('.hl-math-del').forEach(function(btn){
+        btn.addEventListener('click', function(e){
+            var idx = parseInt(e.target.dataset.idx);
+            hlDraft.mathItems.splice(idx, 1);
+            _renderStagePanel();
+        });
+    });
+    list.querySelectorAll('.hl-math-qe').forEach(function(ta){
+        ta.addEventListener('input', function(e){
+            var idx = parseInt(e.target.dataset.idx);
+            if (hlDraft.mathItems[idx]) hlDraft.mathItems[idx].q = e.target.value;
+        });
+    });
+    list.querySelectorAll('.hl-math-le').forEach(function(ta){
+        ta.addEventListener('input', function(e){
+            var idx = parseInt(e.target.dataset.idx);
+            if (hlDraft.mathItems[idx]) hlDraft.mathItems[idx].latex = e.target.value;
+        });
+    });
+    list.querySelectorAll('.hl-math-ae').forEach(function(ta){
+        ta.addEventListener('input', function(e){
+            var idx = parseInt(e.target.dataset.idx);
+            if (hlDraft.mathItems[idx]) hlDraft.mathItems[idx].a = e.target.value;
+        });
+    });
+    list.querySelectorAll('.hl-math-cat-e').forEach(function(sel){
+        sel.addEventListener('change', function(e){
+            var idx = parseInt(e.target.dataset.idx);
+            if (hlDraft.mathItems[idx]) hlDraft.mathItems[idx].category = e.target.value;
+        });
+    });
 }
 
 function _renderPanelImages(panel) {
@@ -825,7 +1044,7 @@ function _renderPanelPublish(panel) {
             '<span style="color:#a29bfe;">Zusammenfassung:</span><br>',
             hlDraft.chapters.length+' Kapitel &nbsp; '+hlDraft.images.length+' Bilder<br>',
                         hlDraft.flashcards.length+' Lernkarten &nbsp; '+hlDraft.quizzes.length+' Quiz-Fragen &nbsp; '+hlDraft.exams.length+' Pruefungsaufgaben<br>',
-                        (hlDraft.tasks||[]).length+' Task(s)',
+                        (hlDraft.tasks||[]).length+' Task(s) &nbsp; '+(hlDraft.mathItems||[]).length+' Math item(s)',
           '</div>',
           '<button id="btn-pub-go" style="padding:12px;background:linear-gradient(135deg,#5e4bb0,#a29bfe);border:none;color:#fff;border-radius:7px;cursor:pointer;font-size:0.95em;font-weight:bold;font-family:Cinzel,serif;letter-spacing:0.5px;margin-top:auto;">Welt erstellen &amp; speichern</button>',
         '</div>',
@@ -929,6 +1148,41 @@ function _buildWorldFromDraft(worldName) {
     var DEFAULT_GAMES=['Flash Match','Spellweaver','Cloze Trial'];
     sections.forEach(function(sec){
         DEFAULT_GAMES.forEach(function(name){ world.miniGames.push({section:sec,name:name}); });
+    });
+    (hlDraft.mathItems||[]).forEach(function(m){
+        var sec = m.section || sections[0] || 'Allgemein';
+        var rawQ = (m.q || '').trim();
+        var latexQ = (m.latex || '').trim();
+        var q = latexQ || rawQ;
+        var a = (m.a || '').trim();
+        var cat = m.category || 'flashcards';
+        if (!q) return;
+
+        if (cat === 'flashcards') {
+            world.flashcards.push({ section:sec, question:q, rawQuestion:rawQ, mathLatex:latexQ||q, answer:a||'Review this equation.', interval:0,ease:2.5,nextReview:0,burned:false, isMath:true });
+            return;
+        }
+        if (cat === 'quizzes') {
+            world.quizzes.push({ section:sec, question:q, rawQuestion:rawQ, mathLatex:latexQ||q, answer:a||'See notes/solution.', isMath:true });
+            return;
+        }
+        if (cat === 'exams') {
+            world.exams.push({ section:sec, question:q, rawQuestion:rawQ, mathLatex:latexQ||q, answer:a||'Provide a full derivation.', isMath:true });
+            return;
+        }
+        if (cat === 'tasks') {
+            world.tasks.push({ section:sec, text:'Solve: '+q+(a?(' -> '+a):''), rawQuestion:rawQ, mathLatex:latexQ||q, completed:false, isMath:true });
+            return;
+        }
+        if (cat === 'minigames') {
+            world.flashcards.push({ section:sec, question:q, rawQuestion:rawQ, mathLatex:latexQ||q, answer:a||'Review this equation.', interval:0,ease:2.5,nextReview:0,burned:false, isMath:true });
+            if (!world.miniGames.some(function(g){ return g.section===sec && (String(g.name||'').toLowerCase()==='cloze trial'); })) {
+                world.miniGames.push({ section:sec, name:'Cloze Trial' });
+            }
+            return;
+        }
+        if (!world.content[sec]) world.content[sec] = '';
+        world.content[sec] += '\n\n[MATH] '+q+(rawQ && rawQ !== q ? ('\nSource Text: '+rawQ) : '')+(a?('\nSolution: '+a):'');
     });
     if(_genCoords) world.coordinates=_genCoords(sections.length);
     return world;
