@@ -1,7 +1,7 @@
 ﻿
 // =============================================================================
 // PDF HIGHLIGHTER WIZARD v3
-// 7 Stages: Images -> Chapters -> Content -> Flashcards -> Quiz -> Exam -> Publish
+// 8 Stages: Images -> Chapters -> Content -> Flashcards -> Quiz -> Exam -> Tasks -> Publish
 // =============================================================================
 
 export const TYPE_CONFIG = {
@@ -17,14 +17,17 @@ const STAGES = [
     { id: 'flash',    label: 'Lernkarten',      icon: '4',  mode: 'text'   },
     { id: 'quiz',     label: 'Quiz',            icon: '5',  mode: 'text'   },
     { id: 'exam',     label: 'Pruefung',        icon: '6',  mode: 'text'   },
-    { id: 'publish',  label: 'Veroeffentlichen',icon: '7',  mode: null     },
+    { id: 'tasks',    label: 'Tasks',           icon: '7',  mode: null     },
+    { id: 'publish',  label: 'Veroeffentlichen',icon: '8',  mode: null     },
 ];
 
 let hlDoc    = null;
 let hlStage  = 0;
-let hlDraft  = { pdfName:'', images:[], chapters:[], chapterTexts:{}, flashcards:[], quizzes:[], exams:[] };
+let hlDraft  = { pdfName:'', images:[], chapters:[], chapterTexts:{}, flashcards:[], quizzes:[], exams:[], tasks:[] };
+let hlRenderToken = 0;
 let qaTarget = 'question';
 let pendingQA = { section:'', q:{text:'',imageId:null}, a:{text:'',imageId:null} };
+let pendingQAMode = 'flashcards';
 let activeChapter = '';
 let _selectedHubIndex = 0;
 let _appState=null, _saveStore=null, _renderMap=null, _genCoords=null, _showToast=null;
@@ -46,7 +49,7 @@ export async function openPdfHighlighter(file, deps) {
     _genCoords = deps.generateMapCoordinates || null;
     _showToast = deps.showToast || null;
     hlDoc = null; hlStage = 0;
-    hlDraft = { pdfName: file.name.replace(/\.[^.]+$/, '').trim(), images:[], chapters:[], chapterTexts:{}, flashcards:[], quizzes:[], exams:[] };
+    hlDraft = { pdfName: file.name.replace(/\.[^.]+$/, '').trim(), images:[], chapters:[], chapterTexts:{}, flashcards:[], quizzes:[], exams:[], tasks:[] };
     pendingQA = _emptyPending();
     activeChapter = '';
     _selectedHubIndex = (_appState && _appState.currentHubIndex) ? _appState.currentHubIndex : 0;
@@ -69,8 +72,12 @@ export function getHighlightItems() { return []; }
 // ---------------------------------------------------------------------------
 
 function _renderStage() {
+    var token = ++hlRenderToken;
     _renderStageHeader();
-    _renderStagePDF().then(function(){ _renderStagePanel(); });
+    _renderStagePDF(token).then(function(){
+        if (token !== hlRenderToken) return;
+        _renderStagePanel();
+    });
 }
 
 function _renderStageHeader() {
@@ -87,7 +94,7 @@ function _renderStageHeader() {
     hdr.innerHTML = '<div style="display:flex;align-items:center;gap:9px;padding:8px 14px;background:#0e0e14;border-bottom:1px solid rgba(162,155,254,0.25);flex-wrap:wrap;">'
         +'<span id="hl-close-btn" style="font-size:1.55em;cursor:pointer;color:#777;line-height:1;flex-shrink:0;">&times;</span>'
         +'<div style="display:flex;align-items:center;gap:3px;">'+dots+'</div>'
-        +'<span style="font-size:0.9em;color:#a29bfe;font-family:Cinzel,serif;font-weight:bold;flex-shrink:0;">Schritt '+(hlStage+1)+'/7 &middot; '+stage.label+'</span>'
+        +'<span style="font-size:0.9em;color:#a29bfe;font-family:Cinzel,serif;font-weight:bold;flex-shrink:0;">Schritt '+(hlStage+1)+'/'+STAGES.length+' &middot; '+stage.label+'</span>'
         +'<span style="font-size:0.72em;color:#444;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_esc(hlDraft.pdfName)+'</span>'
         +'<button id="btn-hl-back" style="padding:5px 13px;background:#1c1c28;border:1px solid #333;color:#aaa;border-radius:5px;cursor:pointer;font-size:0.82em;"'+(hlStage===0?' disabled':'')+'>Zurueck</button>'
         +'<button id="btn-hl-next" style="padding:5px 16px;background:linear-gradient(135deg,#6c56cc,#a29bfe);border:none;color:#fff;border-radius:5px;cursor:pointer;font-size:0.85em;font-weight:bold;">'+(isLast?'Fertig':'Weiter')+'</button>'
@@ -116,13 +123,13 @@ function _validateStage() {
     return true;
 }
 
-async function _renderStagePDF() {
+async function _renderStagePDF(token) {
     var stage = STAGES[hlStage];
     var container = _el('hl-pdf-content');
     if(!container || !hlDoc) return;
     container.removeEventListener('mouseup', _onTextMouseUp);
-    if(stage.mode==='canvas') await _renderCanvasPages(container);
-    else if(stage.mode==='text') await _renderTextPages(container, stage.id);
+    if(stage.mode==='canvas') await _renderCanvasPages(container, token);
+    else if(stage.mode==='text') await _renderTextPages(container, stage.id, token);
     else container.innerHTML='';
 }
 
@@ -130,7 +137,8 @@ async function _renderStagePDF() {
 // PDF Rendering
 // ---------------------------------------------------------------------------
 
-async function _renderTextPages(container, stageId) {
+async function _renderTextPages(container, stageId, token) {
+    if (token !== hlRenderToken) return;
     container.innerHTML = '<p style="color:#555;text-align:center;margin-top:60px;font-family:Cinzel,serif;">Lade Text...</p>';
     container.style.cursor = 'text';
     container.innerHTML='';
@@ -148,7 +156,9 @@ async function _renderTextPages(container, stageId) {
     }
 
     for (var i=1; i<=hlDoc.numPages; i++) {
+        if (token !== hlRenderToken) return;
         var page = await hlDoc.getPage(i);
+        if (token !== hlRenderToken) return;
         var baseVp = page.getViewport({ scale: 1 });
         var scale = Math.min(1.35, Math.max(0.85, (container.clientWidth - 40) / baseVp.width));
         var vp = page.getViewport({ scale: scale });
@@ -172,6 +182,7 @@ async function _renderTextPages(container, stageId) {
             console.warn('Page '+i+' text-view render error', e);
             continue;
         }
+        if (token !== hlRenderToken) return;
 
         pageWrap.appendChild(canvas);
 
@@ -181,6 +192,7 @@ async function _renderTextPages(container, stageId) {
         textLayer.style.cssText='position:absolute;inset:0;line-height:1;user-select:text;-webkit-user-select:text;color:transparent;';
 
         var tc = await page.getTextContent({ includeMarkedContent: true });
+        if (token !== hlRenderToken) return;
         for (var ti=0; ti<tc.items.length; ti++) {
             var item = tc.items[ti];
             if (!item || !item.str) continue;
@@ -213,15 +225,20 @@ async function _renderTextPages(container, stageId) {
 }
 
 async function _renderCanvasPages(container) {
+    var token = arguments[1];
+    if (token !== hlRenderToken) return;
     container.innerHTML='<p style="color:#555;text-align:center;margin-top:60px;font-family:Cinzel,serif;">Rendere Seiten...</p>';
     container.style.cursor='default';
     await new Promise(function(r){setTimeout(r,20);});
+    if (token !== hlRenderToken) return;
     container.innerHTML='';
     var hint=document.createElement('p');
     hint.style.cssText='text-align:center;color:#666;font-size:0.8em;margin:6px 0 14px;';
     hint.textContent='Rechteck aufziehen um ein Bild zu erfassen.'; container.appendChild(hint);
     for(var i=1;i<=hlDoc.numPages;i++){
+        if (token !== hlRenderToken) return;
         var page=await hlDoc.getPage(i);
+        if (token !== hlRenderToken) return;
         var baseVp=page.getViewport({scale:1});
         var scale=Math.min(1.5,Math.max(0.8,(container.clientWidth-40)/baseVp.width));
         var vp=page.getViewport({scale:scale});
@@ -235,6 +252,7 @@ async function _renderCanvasPages(container) {
         canvas.style.cssText='display:block;border:1px solid #2a2a3a;border-radius:4px;width:100%;height:auto;';
         try{ await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise; }
         catch(e){ console.warn('Page '+i+' render error',e); continue; }
+        if (token !== hlRenderToken) return;
         var overlay=document.createElement('div');
         overlay.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair;';
         wrapper.appendChild(canvas); wrapper.appendChild(overlay); container.appendChild(wrapper);
@@ -358,6 +376,7 @@ function _renderStagePanel() {
     else if(id==='flash')    _renderPanelQA(panel,'flashcards');
     else if(id==='quiz')     _renderPanelQA(panel,'quizzes');
     else if(id==='exam')     _renderPanelExam(panel);
+    else if(id==='tasks')    _renderPanelTasks(panel);
     else if(id==='publish')  _renderPanelPublish(panel);
 }
 
@@ -474,7 +493,18 @@ function _renderPanelContent(panel) {
 // Q/A panel shared by Flashcard (stage 4) and Quiz (stage 5)
 // ---------------------------------------------------------------------------
 function _renderPanelQA(panel,target) {
-    var items=hlDraft[target];
+    var stageId = (STAGES[hlStage] && STAGES[hlStage].id) ? STAGES[hlStage].id : '';
+    var qaStoreKey = stageId === 'quiz' ? 'quizzes' : (stageId === 'flash' ? 'flashcards' : target);
+    if (qaStoreKey !== 'flashcards' && qaStoreKey !== 'quizzes') qaStoreKey = target === 'quizzes' ? 'quizzes' : 'flashcards';
+    if (pendingQAMode !== qaStoreKey) {
+        var keepSection = pendingQA && pendingQA.section ? pendingQA.section : '';
+        pendingQA = _emptyPending();
+        pendingQA.section = keepSection;
+        qaTarget = 'question';
+        pendingQAMode = qaStoreKey;
+    }
+
+    var items=Array.isArray(hlDraft[qaStoreKey]) ? hlDraft[qaStoreKey] : [];
     var chapters=hlDraft.chapters.map(function(c){return c.name;});
     if(!pendingQA.section&&chapters.length) pendingQA.section=chapters[0];
     var chOpts=chapters.map(function(c){return '<option value="'+_esc(c)+'"'+(c===pendingQA.section?' selected':'')+'>'+_esc(c)+'</option>';}).join('');
@@ -482,7 +512,7 @@ function _renderPanelQA(panel,target) {
     var qImg=pendingQA.q.imageId?hlDraft.images.find(function(x){return String(x.id)===String(pendingQA.q.imageId);}):null;
     var aImg=pendingQA.a.imageId?hlDraft.images.find(function(x){return String(x.id)===String(pendingQA.a.imageId);}):null;
     var canAdd=(pendingQA.q.text||qImg)&&(pendingQA.a.text||aImg);
-    var label=target==='flashcards'?'Lernkarte(n)':'Quiz-Frage(n)';
+    var label=qaStoreKey==='flashcards'?'Lernkarte(n)':'Quiz-Frage(n)';
 
     panel.innerHTML=[
         '<div style="padding:10px 12px;border-bottom:1px solid #1a1a2e;display:flex;flex-direction:column;gap:7px;">',
@@ -557,11 +587,16 @@ function _renderPanelQA(panel,target) {
     }
 
     var addBtn=_el('btn-qa-add');
-    if(addBtn&&canAdd){
+    if(addBtn){
         addBtn.addEventListener('click',function(){
+            var qImgObjNow=pendingQA.q.imageId?hlDraft.images.find(function(x){return String(x.id)===String(pendingQA.q.imageId);}):null;
+            var aImgObjNow=pendingQA.a.imageId?hlDraft.images.find(function(x){return String(x.id)===String(pendingQA.a.imageId);}):null;
+            var qOk=((pendingQA.q.text||'').trim()||qImgObjNow);
+            var aOk=((pendingQA.a.text||'').trim()||aImgObjNow);
+            if(!qOk || !aOk) return;
             var qImgObj=pendingQA.q.imageId?hlDraft.images.find(function(x){return String(x.id)===String(pendingQA.q.imageId);}):null;
             var aImgObj=pendingQA.a.imageId?hlDraft.images.find(function(x){return String(x.id)===String(pendingQA.a.imageId);}):null;
-            hlDraft[target].push({
+            hlDraft[qaStoreKey].push({
                 id:_uid(),
                 section:pendingQA.section||(hlDraft.chapters[0]?hlDraft.chapters[0].name:'Allgemein'),
                 q:{text:pendingQA.q.text,imageData:qImgObj?qImgObj.dataURL:null},
@@ -579,14 +614,14 @@ function _renderPanelQA(panel,target) {
         div.innerHTML=[
             '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">',
               '<span style="color:#666;font-size:0.9em;">'+_esc(item.section)+'</span>',
-              '<button class="hl-qa-del" data-target="'+target+'" data-idx="'+i+'" style="background:none;border:none;color:#f66;cursor:pointer;font-size:0.9em;">&#x1F5D1;</button>',
+              '<button class="hl-qa-del" data-target="'+qaStoreKey+'" data-idx="'+i+'" style="background:none;border:none;color:#f66;cursor:pointer;font-size:0.9em;">&#x1F5D1;</button>',
             '</div>',
             '<p style="margin:0 0 2px;color:#b39dfe;font-weight:bold;font-size:0.9em;">&#10067;</p>',
             item.q.imageData?'<img src="'+item.q.imageData+'" style="max-width:100%;max-height:40px;object-fit:contain;border-radius:2px;margin-bottom:2px;display:block;">':'',
-            '<textarea class="hl-qa-qt" data-target="'+target+'" data-idx="'+i+'" rows="2" style="width:100%;background:#0a0a12;border:1px solid #2a2a3a;color:#d0c8f8;border-radius:3px;padding:3px 5px;font-size:0.95em;box-sizing:border-box;resize:vertical;">'+_esc(item.q.text)+'</textarea>',
+            '<textarea class="hl-qa-qt" data-target="'+qaStoreKey+'" data-idx="'+i+'" rows="2" style="width:100%;background:#0a0a12;border:1px solid #2a2a3a;color:#d0c8f8;border-radius:3px;padding:3px 5px;font-size:0.95em;box-sizing:border-box;resize:vertical;">'+_esc(item.q.text)+'</textarea>',
             '<p style="margin:4px 0 2px;color:#67e8f9;font-weight:bold;font-size:0.9em;">&#128161;</p>',
             item.a.imageData?'<img src="'+item.a.imageData+'" style="max-width:100%;max-height:40px;object-fit:contain;border-radius:2px;margin-bottom:2px;display:block;">':'',
-            '<textarea class="hl-qa-at" data-target="'+target+'" data-idx="'+i+'" rows="2" style="width:100%;background:#0a0a12;border:1px solid #2a2a3a;color:#a0e8f8;border-radius:3px;padding:3px 5px;font-size:0.95em;box-sizing:border-box;resize:vertical;">'+_esc(item.a.text)+'</textarea>',
+            '<textarea class="hl-qa-at" data-target="'+qaStoreKey+'" data-idx="'+i+'" rows="2" style="width:100%;background:#0a0a12;border:1px solid #2a2a3a;color:#a0e8f8;border-radius:3px;padding:3px 5px;font-size:0.95em;box-sizing:border-box;resize:vertical;">'+_esc(item.a.text)+'</textarea>',
         ].join('');
         listEl.appendChild(div);
     });
@@ -682,6 +717,90 @@ function _renderPanelExam(panel) {
 }
 
 // ---------------------------------------------------------------------------
+// Tasks panel (Stage 7)
+// ---------------------------------------------------------------------------
+function _renderPanelTasks(panel) {
+    var chapters=hlDraft.chapters.map(function(c){return c.name;});
+    if(!activeChapter && chapters.length) activeChapter=chapters[0];
+    var chOpts=chapters.map(function(c){return '<option value="'+_esc(c)+'"'+(c===activeChapter?' selected':'')+'>'+_esc(c)+'</option>';}).join('');
+    var currentTasks=(hlDraft.tasks||[]).filter(function(t){return t.section===activeChapter;});
+    var allTasks=(hlDraft.tasks||[]);
+
+    panel.innerHTML=[
+        '<div style="padding:10px 12px;border-bottom:1px solid #1a1a2e;display:flex;flex-direction:column;gap:7px;">',
+          '<p style="margin:0;font-size:0.7em;color:#666;text-transform:uppercase;letter-spacing:1px;">Tasks vor dem Veroeffentlichen</p>',
+          chapters.length
+            ? ('<select id="hl-task-ch" style="width:100%;padding:5px;background:#111;border:1px solid #2a2a3a;color:#bbb;border-radius:4px;font-size:0.82em;">'+chOpts+'</select>')
+            : '<p style="font-size:0.78em;color:#666;margin:0;">Erst Kapitel im vorherigen Schritt markieren.</p>',
+          '<p style="margin:0;font-size:0.75em;color:#666;">Format: [ ] Task Text (oder einfach Text eingeben).</p>',
+          '<div style="display:flex;gap:6px;">',
+            '<input id="hl-task-text" type="text" placeholder="[ ] Read section summary" style="flex:1;padding:6px 8px;background:#111;border:1px solid #2a2a3a;color:#ddd;border-radius:4px;font-size:0.82em;box-sizing:border-box;">',
+            '<button id="btn-task-add" style="padding:6px 10px;background:rgba(102,255,153,0.15);border:1px solid #66ff99;color:#66ff99;border-radius:4px;cursor:pointer;font-size:0.8em;">+ Add</button>',
+          '</div>',
+          '<p style="margin:0;font-size:0.74em;color:#555;">Gesamt: '+allTasks.length+' Task(s)</p>',
+        '</div>',
+        '<div id="hl-task-list" style="flex:1;overflow-y:auto;padding:10px;"></div>',
+    ].join('');
+
+    var chSel=_el('hl-task-ch');
+    if(chSel) chSel.addEventListener('change', function(e){ activeChapter=e.target.value; _renderStagePanel(); });
+
+    var addBtn=_el('btn-task-add');
+    if(addBtn) addBtn.addEventListener('click', function(){
+        if(!activeChapter){ alert('Bitte zuerst ein Kapitel auswaehlen.'); return; }
+        var inp=_el('hl-task-text');
+        var raw=(inp && inp.value ? inp.value : '').trim();
+        if(!raw) return;
+        var cleaned=raw.replace(/^\[(?:\s|x|X)?\]\s*/, '').trim();
+        if(!cleaned) return;
+        hlDraft.tasks.push({ id:_uid(), section:activeChapter, text:cleaned, completed:false });
+        if(inp) inp.value='';
+        _renderStagePanel();
+    });
+
+    var taskList=_el('hl-task-list');
+    if(!taskList) return;
+    if(!currentTasks.length){
+        taskList.innerHTML='<p style="color:#444;font-size:0.8em;text-align:center;margin-top:18px;">Keine Tasks fuer dieses Kapitel.</p>';
+        return;
+    }
+
+    currentTasks.forEach(function(task){
+        var gidx=hlDraft.tasks.indexOf(task);
+        var row=document.createElement('div');
+        row.style.cssText='margin-bottom:8px;border:1px solid rgba(102,255,153,0.25);border-radius:6px;padding:7px 8px;background:rgba(102,255,153,0.06);display:flex;align-items:center;gap:7px;';
+        row.innerHTML=[
+            '<input class="hl-task-done" data-gidx="'+gidx+'" type="checkbox" '+(task.completed?'checked':'')+' style="accent-color:#66ff99;cursor:pointer;">',
+            '<input class="hl-task-edit" data-gidx="'+gidx+'" type="text" value="'+_esc(task.text)+'" style="flex:1;padding:4px 6px;background:#0a0a12;border:1px solid #2a2a3a;color:#ddd;border-radius:4px;font-size:0.8em;box-sizing:border-box;">',
+            '<button class="hl-task-del" data-gidx="'+gidx+'" style="background:none;border:none;color:#f66;cursor:pointer;font-size:0.9em;">&#x1F5D1;</button>',
+        ].join('');
+        taskList.appendChild(row);
+    });
+
+    taskList.querySelectorAll('.hl-task-done').forEach(function(cb){
+        cb.addEventListener('change', function(e){
+            var g=parseInt(e.target.dataset.gidx);
+            if(hlDraft.tasks[g]) hlDraft.tasks[g].completed=!!e.target.checked;
+        });
+    });
+    taskList.querySelectorAll('.hl-task-edit').forEach(function(inp){
+        inp.addEventListener('input', function(e){
+            var g=parseInt(e.target.dataset.gidx);
+            if(!hlDraft.tasks[g]) return;
+            hlDraft.tasks[g].text=e.target.value.replace(/^\[(?:\s|x|X)?\]\s*/, '').trimStart();
+        });
+    });
+    taskList.querySelectorAll('.hl-task-del').forEach(function(btn){
+        btn.addEventListener('click', function(e){
+            var g=parseInt(e.target.dataset.gidx);
+            if(isNaN(g)||!hlDraft.tasks[g]) return;
+            hlDraft.tasks.splice(g,1);
+            _renderStagePanel();
+        });
+    });
+}
+
+// ---------------------------------------------------------------------------
 // Publish panel (Stage 7)
 // ---------------------------------------------------------------------------
 function _renderPanelPublish(panel) {
@@ -705,7 +824,8 @@ function _renderPanelPublish(panel) {
           '<div style="border-top:1px solid #2a2a3a;padding-top:8px;font-size:0.76em;color:#888;line-height:1.9;">',
             '<span style="color:#a29bfe;">Zusammenfassung:</span><br>',
             hlDraft.chapters.length+' Kapitel &nbsp; '+hlDraft.images.length+' Bilder<br>',
-            hlDraft.flashcards.length+' Lernkarten &nbsp; '+hlDraft.quizzes.length+' Quiz-Fragen &nbsp; '+hlDraft.exams.length+' Pruefungsaufgaben',
+                        hlDraft.flashcards.length+' Lernkarten &nbsp; '+hlDraft.quizzes.length+' Quiz-Fragen &nbsp; '+hlDraft.exams.length+' Pruefungsaufgaben<br>',
+                        (hlDraft.tasks||[]).length+' Task(s)',
           '</div>',
           '<button id="btn-pub-go" style="padding:12px;background:linear-gradient(135deg,#5e4bb0,#a29bfe);border:none;color:#fff;border-radius:7px;cursor:pointer;font-size:0.95em;font-weight:bold;font-family:Cinzel,serif;letter-spacing:0.5px;margin-top:auto;">Welt erstellen &amp; speichern</button>',
         '</div>',
@@ -799,6 +919,13 @@ function _buildWorldFromDraft(worldName) {
             answerImageData:ex.aImageData||null,
         });
     });
+    world.tasks=(hlDraft.tasks||[]).map(function(t){
+        return {
+            section:t.section||sections[0]||'Allgemein',
+            text:(t.text||'').trim(),
+            completed:!!t.completed,
+        };
+    }).filter(function(t){ return !!t.text; });
     var DEFAULT_GAMES=['Flash Match','Spellweaver','Cloze Trial'];
     sections.forEach(function(sec){
         DEFAULT_GAMES.forEach(function(name){ world.miniGames.push({section:sec,name:name}); });

@@ -4,7 +4,7 @@ import { saveToStorage } from './scripts/storage.js';
 import { generateMapCoordinates } from './scripts/mapRenderer.js';
 import { launchArcaneDefenseGame, launchTriviaGame, launchMemoryGame, startFlashMatchGame, launchSpellweaverGame, launchRitualAlignmentGame, launchClozeGame, launchTrueFalseBlitz, launchGlimpseRecall } from './scripts/minigames.js';
 import { buyItem, renderStore, renderUploadedRewards, deleteUploadedReward, buyCustomReward } from './scripts/store.js';
-import { loadFileToEditor, cancelEdit, saveAndProcessWorld, createWorldFromSyntax } from './scripts/parser.js';
+import { loadFileToEditor, cancelEdit, saveAndProcessWorld, createWorldFromSyntax, openWorldInEditor } from './scripts/parser.js';
 import { initMindMap } from './scripts/mindmapRenderer.js';
 import { forgeWorldFromPdf } from './scripts/pdfAutoForge.js';
 import { openPdfHighlighter, initHighlighterUI } from './scripts/pdfHighlighter.js';
@@ -2629,6 +2629,17 @@ if (document.getElementById('btn-rename-world')) {
         }
     });
 }
+if (document.getElementById('btn-edit-world')) {
+    document.getElementById('btn-edit-world').addEventListener('click', () => {
+        const hub = appState.hubs[appState.currentHubIndex];
+        if (!hub || !hub.worlds || hub.worlds.length === 0) {
+            alert('No world available to edit.');
+            return;
+        }
+        if (settingsModal) settingsModal.classList.add('hidden');
+        openWorldInEditor(appState.currentHubIndex, hub.currentWorldIndex || 0);
+    });
+}
 if (document.getElementById('close-settings')) {
     document.getElementById('close-settings').addEventListener('click', () => { if(settingsModal) settingsModal.classList.add('hidden') });
 }
@@ -2715,10 +2726,21 @@ if (document.getElementById('reset-app-btn')) {
         if (confirm("WARNING: Delete ALL worlds?")) { if (confirm("ABSOLUTELY sure?")) { localStorage.removeItem('studyQuestData'); location.reload(); } }
     });
 }
+if (document.getElementById('reset-empty-btn')) {
+    document.getElementById('reset-empty-btn').addEventListener('click', () => {
+        if (!confirm("FULL RESET: Start completely empty?\n\nThis deletes all local worlds/progress and disables automatic cloud auto-import until you manually sync.")) return;
+        if (!confirm("ABSOLUTELY sure? This cannot be undone.")) return;
+        localStorage.removeItem('studyQuestData');
+        localStorage.setItem('studyQuestDisableAutoCloudSync', '1');
+        location.reload();
+    });
+}
 if (document.getElementById('btn-export-cloud')) {
     document.getElementById('btn-export-cloud').addEventListener('click', () => {
         appState.lastExported = Date.now(); // Stamp it so the phone knows it's the newest!
         saveToStorage();
+        // Re-enable automatic cloud sync once a new canonical save is exported.
+        localStorage.removeItem('studyQuestDisableAutoCloudSync');
         
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 4));
         const downloadAnchorNode = document.createElement('a');
@@ -2803,11 +2825,11 @@ if (document.getElementById('btn-force-sync')) {
                     location.reload(); 
                 }
             } else {
-                alert("Could not load saveData.json. Make sure you pushed it to GitHub!");
+                alert("Could not load saveData.json.\n\nIf this is a fresh install, create/import worlds first, then use 'Export PC Save to Cloud' to generate your first saveData.json.\n\nIf you already exported one, make sure it is in MainHub and published.");
             }
         } catch(e) {
             console.error(e);
-            alert("Network error or saveData.json is missing.");
+            alert("Network error or saveData.json is missing.\n\nFresh install tip: you can still use the app without cloud sync, then export your first save when ready.");
         }
     });
 }
@@ -2817,6 +2839,13 @@ async function bootApp() {
     loadFromStorage();
     // Bind Owl controls immediately so the button responds even during cloud sync fetch.
     try { initOwlMentor(); } catch(e) { console.error('Owl mentor init error', e); }
+
+    if (localStorage.getItem('studyQuestDisableAutoCloudSync') === '1') {
+        console.log('Auto cloud sync disabled for this browser (full empty reset mode).');
+        try { renderUploadedRewards(); } catch (e) { /* ignore if DOM not ready */ }
+        try { initMindMap(appState); } catch(e) { console.error("MindMap init error", e); }
+        return;
+    }
     
     // Attempt Cloud Sync Fetch
     try {
@@ -2965,22 +2994,81 @@ let vibeSessionId = 0;
 let vibeTrackAudio = null;
 let vibeTrackIndex = 0;
 let vibeLoopTrack = false;
-let vibeManualPaused = false;
+let vibeManualPaused = true;
+let vibeMusicVolume = 0.85;
+let vibeSfxVolume = 0.85;
+let vibePlaylist = [];
 
 const VIBE_SCALE = [130.81, 155.56, 174.61, 196.00, 233.08, 261.63]; // C minor-ish
 const VIBE_GAIN_MULT = 2.2;
-const VIBE_PLAYLIST = [
-    'assets/Spiritual Moment - Sith Meditation - A Dark Atmospheric Ambient Journey - Deep and Mysterious Sith Ambient Music (1970)/01. Spiritual Moment - Samsara.m4a',
-    'assets/Spiritual Moment - Sith Meditation - A Dark Atmospheric Ambient Journey - Deep and Mysterious Sith Ambient Music (1970)/02. Spiritual Moment - Mandala.m4a',
-    'assets/Spiritual Moment - Sith Meditation - A Dark Atmospheric Ambient Journey - Deep and Mysterious Sith Ambient Music (1970)/03. Spiritual Moment - Vipassana.m4a',
-    'assets/Spiritual Moment - Sith Meditation - A Dark Atmospheric Ambient Journey - Deep and Mysterious Sith Ambient Music (1970)/04. Spiritual Moment - Arhat.m4a',
-    'assets/Spiritual Moment - Sith Meditation - A Dark Atmospheric Ambient Journey - Deep and Mysterious Sith Ambient Music (1970)/05. Spiritual Moment - Aten.m4a',
-    'assets/Spiritual Moment - Sith Meditation - A Dark Atmospheric Ambient Journey - Deep and Mysterious Sith Ambient Music (1970)/06. Spiritual Moment - Bhavana.m4a',
-    'assets/Spiritual Moment - Sith Meditation - A Dark Atmospheric Ambient Journey - Deep and Mysterious Sith Ambient Music (1970)/07. Spiritual Moment - Mysticism.m4a',
-    'assets/Spiritual Moment - Sith Meditation - A Dark Atmospheric Ambient Journey - Deep and Mysterious Sith Ambient Music (1970)/08. Spiritual Moment - Moksha.m4a',
-    'assets/Spiritual Moment - Sith Meditation - A Dark Atmospheric Ambient Journey - Deep and Mysterious Sith Ambient Music (1970)/09. Spiritual Moment - Samatha.m4a',
-    'assets/Spiritual Moment - Sith Meditation - A Dark Atmospheric Ambient Journey - Deep and Mysterious Sith Ambient Music (1970)/10. Spiritual Moment - Sangha.m4a'
-].map((p) => encodeURI(p));
+const VIBE_PRIVATE_PLAYLIST_KEY = 'studyQuestPrivateMusicV1';
+
+function getVibeTrackTitle(track) {
+    if (track && track.name) return String(track.name);
+    const trackPath = track && track.src ? track.src : track;
+    const raw = decodeURIComponent(String(trackPath || '').split('/').pop() || '');
+    const noExt = raw.replace(/\.[^.]+$/, '');
+    return noExt.replace(/^\d+\.\s*/, '').trim() || 'Unknown Track';
+}
+
+function loadPrivateVibePlaylist() {
+    try {
+        const raw = localStorage.getItem(VIBE_PRIVATE_PLAYLIST_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(parsed)) return [];
+        return parsed
+            .filter(item => item && typeof item.src === 'string' && /^data:audio\//i.test(item.src))
+            .map(item => ({ name: String(item.name || 'Uploaded Track').trim() || 'Uploaded Track', src: item.src }));
+    } catch (e) {
+        return [];
+    }
+}
+
+function savePrivateVibePlaylist() {
+    localStorage.setItem(VIBE_PRIVATE_PLAYLIST_KEY, JSON.stringify(vibePlaylist));
+}
+
+function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error || new Error('Failed to read audio file.'));
+        reader.readAsDataURL(file);
+    });
+}
+
+function removeVibeTrack(index) {
+    if (index < 0 || index >= vibePlaylist.length) return;
+    const removingCurrent = index === vibeTrackIndex;
+    vibePlaylist.splice(index, 1);
+    if (vibeTrackIndex >= vibePlaylist.length) vibeTrackIndex = 0;
+
+    if (!vibePlaylist.length) {
+        vibeManualPaused = true;
+        appState.vibeManualPaused = true;
+        saveToStorage();
+        stopVibeMusic();
+    } else if (removingCurrent) {
+        loadVibeTrack(vibeTrackIndex);
+        if (!vibeManualPaused && _isAmbienceEnabled()) {
+            playVibeTrack();
+        }
+    }
+
+    try { savePrivateVibePlaylist(); } catch (e) { /* noop */ }
+    updateVibePlaybackUI();
+}
+
+function clearVibePlaylist() {
+    vibePlaylist = [];
+    vibeTrackIndex = 0;
+    vibeManualPaused = true;
+    appState.vibeManualPaused = true;
+    saveToStorage();
+    stopVibeMusic();
+    try { savePrivateVibePlaylist(); } catch (e) { /* noop */ }
+    updateVibePlaybackUI();
+}
 
 function _isAmbienceEnabled() {
     return vibeEnabled && !vibeMutedAll;
@@ -2988,6 +3076,16 @@ function _isAmbienceEnabled() {
 
 function _isSfxEnabled() {
     return !vibeMutedAll;
+}
+
+function _clamp01(n) {
+    return Math.max(0, Math.min(1, Number(n) || 0));
+}
+
+function _sfxGainScalar() {
+    const v = _clamp01(vibeSfxVolume);
+    // Blend linear and curved response for a practical middle loudness.
+    return (0.3 * v) + (0.7 * Math.pow(v, 1.8));
 }
 
 function initVibeTrackPlayer() {
@@ -3007,20 +3105,21 @@ function initVibeTrackPlayer() {
 }
 
 function loadVibeTrack(index) {
-    if (!VIBE_PLAYLIST.length) return;
+    if (!vibePlaylist.length) return;
     initVibeTrackPlayer();
-    const len = VIBE_PLAYLIST.length;
+    const len = vibePlaylist.length;
     vibeTrackIndex = ((index % len) + len) % len;
-    vibeTrackAudio.src = VIBE_PLAYLIST[vibeTrackIndex];
+    vibeTrackAudio.src = vibePlaylist[vibeTrackIndex].src;
     vibeTrackAudio.load();
     updateVibePlaybackUI();
 }
 
 function playVibeTrack() {
     if (!_isAmbienceEnabled()) return;
-    if (!VIBE_PLAYLIST.length) return;
+    if (!vibePlaylist.length) return;
     initVibeTrackPlayer();
     if (!vibeTrackAudio.src) loadVibeTrack(vibeTrackIndex);
+    vibeTrackAudio.volume = _clamp01(0.9 * vibeMusicVolume);
     vibeTrackAudio.play().then(() => {
         vibeStarted = true;
         updateVibePlaybackUI();
@@ -3034,7 +3133,7 @@ function pauseVibeTrack() {
 }
 
 function nextVibeTrack(autoPlay = false) {
-    if (!VIBE_PLAYLIST.length) return;
+    if (!vibePlaylist.length) return;
     const shouldPlay = autoPlay || (_isAmbienceEnabled() && !vibeManualPaused);
     loadVibeTrack(vibeTrackIndex + 1);
     if (shouldPlay) playVibeTrack();
@@ -3043,15 +3142,67 @@ function nextVibeTrack(autoPlay = false) {
 function updateVibePlaybackUI() {
     const playBtn = document.getElementById('vibe-play-toggle');
     const loopBtn = document.getElementById('vibe-loop-btn');
+    const hasTracks = vibePlaylist.length > 0;
     const playing = !!(vibeTrackAudio && !vibeTrackAudio.paused && !_isAmbienceEnabled() === false);
     if (playBtn) {
         playBtn.innerHTML = playing ? '⏸ Pause' : '▶ Play';
-        playBtn.classList.toggle('off', !playing);
+        playBtn.classList.toggle('off', !playing || !hasTracks);
+        playBtn.title = hasTracks ? 'Play/Pause ambience' : 'Upload songs first';
     }
     if (loopBtn) {
         loopBtn.innerHTML = vibeLoopTrack ? '🔁 Loop: ON' : '🔁 Loop: OFF';
         loopBtn.classList.toggle('off', !vibeLoopTrack);
     }
+    renderVibePlaylist();
+}
+
+function renderVibePlaylist() {
+    const playlistEl = document.getElementById('vibe-playlist');
+    const emptyEl = document.getElementById('vibe-playlist-empty');
+    if (!playlistEl) return;
+    playlistEl.innerHTML = '';
+
+    if (emptyEl) emptyEl.classList.toggle('hidden', vibePlaylist.length > 0);
+
+    vibePlaylist.forEach((track, i) => {
+        const row = document.createElement('div');
+        row.className = 'vibe-playlist-row';
+
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'vibe-playlist-item';
+        item.textContent = `${String(i + 1).padStart(2, '0')}. ${getVibeTrackTitle(track)}`;
+        item.title = getVibeTrackTitle(track);
+
+        const isCurrent = i === vibeTrackIndex;
+        const isPlayingCurrent = !!(vibeTrackAudio && !vibeTrackAudio.paused && isCurrent);
+        if (isCurrent) item.classList.add('is-active');
+        if (isPlayingCurrent) item.classList.add('is-playing');
+
+        item.addEventListener('click', () => {
+            if (vibeMutedAll) return;
+            if (!vibeEnabled) setVibeEnabled(true);
+            vibeManualPaused = false;
+            appState.vibeManualPaused = false;
+            saveToStorage();
+            loadVibeTrack(i);
+            startVibeMusic(vibeSessionId);
+        });
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'vibe-playlist-remove';
+        removeBtn.innerText = '✕';
+        removeBtn.title = 'Remove track';
+        removeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            removeVibeTrack(i);
+        });
+
+        row.appendChild(item);
+        row.appendChild(removeBtn);
+        playlistEl.appendChild(row);
+    });
 }
 
 function ensureVibeAudio() {
@@ -3182,6 +3333,8 @@ function initFallbackAudio() {
 
 function playFallbackClick(isHover) {
     if (!_isSfxEnabled()) return;
+    const sfxScalar = _sfxGainScalar();
+    if (sfxScalar <= 0.001) return;
     initFallbackAudio();
     if (!vibeFallbackReady) return;
     const pool = isHover ? vibeFallbackHoverPool : vibeFallbackClickPool;
@@ -3189,6 +3342,7 @@ function playFallbackClick(isHover) {
     const idx = isHover ? (vibeFallbackHoverIndex++ % pool.length) : (vibeFallbackClickIndex++ % pool.length);
     const a = pool[idx];
     try {
+        a.volume = _clamp01((isHover ? 0.26 : 0.46) * sfxScalar);
         a.currentTime = 0;
         a.play().catch(() => {});
     } catch (e) { /* noop */ }
@@ -3198,6 +3352,7 @@ function startFallbackAmbience(sessionId = vibeSessionId) {
     initFallbackAudio();
     if (!_isAmbienceEnabled() || sessionId !== vibeSessionId) return;
     if (!vibeFallbackReady || !vibeFallbackAmbience) return;
+    vibeFallbackAmbience.volume = _clamp01(0.65 * vibeMusicVolume);
     vibeFallbackAmbience.play().catch(() => {});
 }
 
@@ -3209,6 +3364,8 @@ function stopFallbackAmbience() {
 
 function playUiTone(freq, duration = 0.06, type = 'triangle', volume = 0.018) {
     if (!_isSfxEnabled()) return;
+    const sfxScalar = _sfxGainScalar();
+    if (sfxScalar <= 0.001) return;
     ensureVibeAudioRunning().then((ok) => {
         if (!ok || !vibeAudioCtx || !vibeMasterGain) {
             playFallbackClick(false);
@@ -3224,7 +3381,7 @@ function playUiTone(freq, duration = 0.06, type = 'triangle', volume = 0.018) {
         osc.frequency.exponentialRampToValueAtTime(Math.max(60, freq * 0.85), t0 + duration);
 
         g.gain.setValueAtTime(0.0001, t0);
-        g.gain.exponentialRampToValueAtTime(Math.min(0.5, volume * VIBE_GAIN_MULT), t0 + 0.01);
+        g.gain.exponentialRampToValueAtTime(Math.max(0.0001, Math.min(0.5, volume * VIBE_GAIN_MULT * sfxScalar)), t0 + 0.01);
         g.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
 
         osc.connect(g);
@@ -3260,14 +3417,14 @@ function stopVibeMusic() {
 }
 
 function updateVibeToggleUI() {
-    const btn = document.getElementById('vibe-audio-toggle');
+    const btn = document.getElementById('vibe-menu-ambience-toggle');
     if (!btn) return;
     btn.classList.toggle('off', !vibeEnabled || vibeMutedAll);
     btn.innerHTML = vibeEnabled ? '♫ Ambience: ON' : '♫ Ambience: OFF';
 }
 
 function updateMuteToggleUI() {
-    const btn = document.getElementById('vibe-mute-toggle');
+    const btn = document.getElementById('vibe-menu-mute-toggle');
     if (!btn) return;
     btn.classList.toggle('off', !vibeMutedAll ? false : true);
     btn.innerHTML = vibeMutedAll ? '🔇 All Sound: OFF' : '🔊 All Sound: ON';
@@ -3282,11 +3439,10 @@ function setMuteAll(nextMuted) {
 
     if (vibeMutedAll) {
         vibeStarted = false;
+        vibeManualPaused = true;
+        appState.vibeManualPaused = true;
+        saveToStorage();
         stopVibeMusic();
-    } else if (vibeEnabled) {
-        vibeManualPaused = false;
-        startVibeMusic(vibeSessionId);
-        playUiTone(392.0, 0.09, 'triangle', 0.10);
     }
     updateVibePlaybackUI();
 }
@@ -3298,14 +3454,14 @@ function setVibeEnabled(nextEnabled) {
     saveToStorage();
     updateVibeToggleUI();
 
-    if (_isAmbienceEnabled()) {
-        vibeManualPaused = false;
-        startVibeMusic(vibeSessionId);
-        playUiTone(261.63, 0.12, 'triangle', 0.12); // audible confirmation ping
-    } else {
-        vibeStarted = false;
-        stopVibeMusic();
+    if (vibeEnabled) {
+        // Keep ambience armed but paused until the user explicitly presses Play.
+        vibeManualPaused = true;
+        appState.vibeManualPaused = true;
+        saveToStorage();
     }
+    vibeStarted = false;
+    stopVibeMusic();
     updateVibePlaybackUI();
 }
 
@@ -3328,78 +3484,119 @@ function spawnButtonRipple(target, clientX, clientY) {
 }
 
 function initGameVibeSystem() {
-    let floatingToggle = document.getElementById('vibe-audio-toggle');
-    if (!floatingToggle) {
-        floatingToggle = document.createElement('button');
-        floatingToggle.id = 'vibe-audio-toggle';
-        floatingToggle.className = 'vibe-audio-toggle';
-        floatingToggle.type = 'button';
-        floatingToggle.title = 'Toggle ambient soundtrack and UI sounds';
-        document.body.appendChild(floatingToggle);
-    }
-
+    vibePlaylist = loadPrivateVibePlaylist();
     vibeEnabled = appState.vibeAudioOn !== false;
     vibeMutedAll = appState.vibeMuteAll === true;
+    vibeManualPaused = appState.vibeManualPaused !== false;
+    vibeMusicVolume = _clamp01(appState.vibeMusicVolume ?? 0.85);
+    vibeSfxVolume = _clamp01(appState.vibeSfxVolume ?? 0.85);
+
+    let playBtn = document.getElementById('vibe-play-toggle');
+    if (!playBtn) {
+        playBtn = document.createElement('button');
+        playBtn.id = 'vibe-play-toggle';
+        playBtn.className = 'vibe-audio-toggle vibe-main-play-btn';
+        playBtn.type = 'button';
+        playBtn.title = 'Play/Pause ambience';
+        document.body.appendChild(playBtn);
+    }
+
+    let menuBtn = document.getElementById('vibe-sound-menu-btn');
+    if (!menuBtn) {
+        menuBtn = document.createElement('button');
+        menuBtn.id = 'vibe-sound-menu-btn';
+        menuBtn.className = 'vibe-audio-toggle vibe-sound-menu-btn';
+        menuBtn.type = 'button';
+        menuBtn.title = 'Open sound settings';
+        menuBtn.innerHTML = '⚙ Sound';
+        document.body.appendChild(menuBtn);
+    }
+
+    let menuPanel = document.getElementById('vibe-sound-menu');
+    if (!menuPanel) {
+        menuPanel = document.createElement('div');
+        menuPanel.id = 'vibe-sound-menu';
+        menuPanel.className = 'vibe-sound-menu hidden';
+        menuPanel.innerHTML = [
+            '<div class="vibe-sound-menu-head">Sound Menu</div>',
+            '<button id="vibe-menu-ambience-toggle" class="vibe-audio-toggle vibe-menu-btn" type="button">♫ Ambience: ON</button>',
+            '<button id="vibe-menu-mute-toggle" class="vibe-audio-toggle vibe-menu-btn" type="button">🔊 All Sound: ON</button>',
+            '<div class="vibe-slider-row"><label for="vibe-music-slider">Music Volume</label><input id="vibe-music-slider" type="range" min="0" max="100" step="1"></div>',
+            '<div class="vibe-slider-row"><label for="vibe-sfx-slider">Button Sound</label><input id="vibe-sfx-slider" type="range" min="0" max="100" step="1"></div>',
+            '<div class="vibe-menu-row"><button id="vibe-skip-btn" class="vibe-audio-toggle vibe-menu-btn" type="button">⏭ Skip</button><button id="vibe-loop-btn" class="vibe-audio-toggle vibe-menu-btn" type="button">🔁 Loop: OFF</button></div>',
+            '<div class="vibe-playlist-head">Playlist</div>',
+            '<div id="vibe-playlist-empty" class="vibe-playlist-empty">No songs uploaded yet. Tap Upload Songs and choose audio files from your iPhone Files app or local device.</div>',
+            '<div class="vibe-menu-row"><button id="vibe-upload-btn" class="vibe-audio-toggle vibe-menu-btn" type="button">⬆ Upload Songs</button><button id="vibe-clear-playlist-btn" class="vibe-audio-toggle vibe-menu-btn" type="button">🗑 Clear</button></div>',
+            '<input id="vibe-upload-input" type="file" accept="audio/*" multiple class="hidden">',
+            '<div id="vibe-playlist" class="vibe-playlist" role="listbox" aria-label="Music playlist"></div>'
+        ].join('');
+        document.body.appendChild(menuPanel);
+    }
+
+    const ambienceBtn = document.getElementById('vibe-menu-ambience-toggle');
+    const muteBtn = document.getElementById('vibe-menu-mute-toggle');
+    const skipBtn = document.getElementById('vibe-skip-btn');
+    const loopBtn = document.getElementById('vibe-loop-btn');
+    const musicSlider = document.getElementById('vibe-music-slider');
+    const sfxSlider = document.getElementById('vibe-sfx-slider');
+    const uploadBtn = document.getElementById('vibe-upload-btn');
+    const uploadInput = document.getElementById('vibe-upload-input');
+    const clearPlaylistBtn = document.getElementById('vibe-clear-playlist-btn');
+
+    if (musicSlider) musicSlider.value = String(Math.round(vibeMusicVolume * 100));
+    if (sfxSlider) sfxSlider.value = String(Math.round(vibeSfxVolume * 100));
+
     updateVibeToggleUI();
-
-    let muteToggle = document.getElementById('vibe-mute-toggle');
-    if (!muteToggle) {
-        muteToggle = document.createElement('button');
-        muteToggle.id = 'vibe-mute-toggle';
-        muteToggle.className = 'vibe-audio-toggle vibe-mute-toggle';
-        muteToggle.type = 'button';
-        muteToggle.title = 'Mute or unmute all game sounds';
-        document.body.appendChild(muteToggle);
-    }
     updateMuteToggleUI();
-
-    let controls = document.getElementById('vibe-mini-controls');
-    if (!controls) {
-        controls = document.createElement('div');
-        controls.id = 'vibe-mini-controls';
-        controls.className = 'vibe-mini-controls';
-        controls.innerHTML = '<button id="vibe-play-toggle" class="vibe-audio-toggle vibe-mini-btn" type="button">▶ Play</button>'
-            + '<button id="vibe-skip-btn" class="vibe-audio-toggle vibe-mini-btn" type="button">⏭ Skip</button>'
-            + '<button id="vibe-loop-btn" class="vibe-audio-toggle vibe-mini-btn" type="button">🔁 Loop: OFF</button>';
-        document.body.appendChild(controls);
-    }
 
     initVibeTrackPlayer();
     if (!vibeTrackAudio || !vibeTrackAudio.src) loadVibeTrack(vibeTrackIndex);
     updateVibePlaybackUI();
 
-    if (floatingToggle.dataset.vibeBound !== '1') {
-        floatingToggle.addEventListener('click', () => setVibeEnabled(!vibeEnabled));
-        floatingToggle.dataset.vibeBound = '1';
-    }
-
-    if (muteToggle.dataset.vibeMuteBound !== '1') {
-        muteToggle.addEventListener('click', () => setMuteAll(!vibeMutedAll));
-        muteToggle.dataset.vibeMuteBound = '1';
-    }
-
-    const playBtn = document.getElementById('vibe-play-toggle');
-    const skipBtn = document.getElementById('vibe-skip-btn');
-    const loopBtn = document.getElementById('vibe-loop-btn');
-    if (playBtn && playBtn.dataset.vibePlayBound !== '1') {
+    if (playBtn && playBtn.dataset.vibePlayMainBound !== '1') {
         playBtn.addEventListener('click', () => {
             if (vibeMutedAll) return;
+            if (!vibePlaylist.length) {
+                menuPanel.classList.remove('hidden');
+                showToast('Upload songs first to start ambience music.');
+                return;
+            }
             if (!vibeEnabled) setVibeEnabled(true);
             if (vibeTrackAudio && !vibeTrackAudio.paused) {
                 vibeManualPaused = true;
+                appState.vibeManualPaused = true;
+                saveToStorage();
                 pauseVibeTrack();
                 vibeStarted = false;
             } else {
                 vibeManualPaused = false;
+                appState.vibeManualPaused = false;
+                saveToStorage();
                 startVibeMusic(vibeSessionId);
             }
             updateVibePlaybackUI();
         });
-        playBtn.dataset.vibePlayBound = '1';
+        playBtn.dataset.vibePlayMainBound = '1';
+    }
+    if (menuBtn.dataset.vibeMenuBound !== '1') {
+        menuBtn.addEventListener('click', () => menuPanel.classList.toggle('hidden'));
+        menuBtn.dataset.vibeMenuBound = '1';
+    }
+    if (ambienceBtn && ambienceBtn.dataset.vibeAmbBound !== '1') {
+        ambienceBtn.addEventListener('click', () => setVibeEnabled(!vibeEnabled));
+        ambienceBtn.dataset.vibeAmbBound = '1';
+    }
+    if (muteBtn && muteBtn.dataset.vibeMuteBound !== '1') {
+        muteBtn.addEventListener('click', () => setMuteAll(!vibeMutedAll));
+        muteBtn.dataset.vibeMuteBound = '1';
     }
     if (skipBtn && skipBtn.dataset.vibeSkipBound !== '1') {
         skipBtn.addEventListener('click', () => {
             if (vibeMutedAll) return;
+            if (!vibePlaylist.length) {
+                showToast('No songs in playlist. Upload tracks first.');
+                return;
+            }
             nextVibeTrack(true);
             vibeStarted = true;
             vibeManualPaused = false;
@@ -3413,27 +3610,90 @@ function initGameVibeSystem() {
         });
         loopBtn.dataset.vibeLoopBound = '1';
     }
+    if (uploadBtn && uploadInput && uploadBtn.dataset.vibeUploadBound !== '1') {
+        uploadBtn.addEventListener('click', () => uploadInput.click());
+        uploadInput.addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files || []);
+            e.target.value = '';
+            if (!files.length) return;
+
+            const existing = [...vibePlaylist];
+            const additions = [];
+
+            for (const file of files) {
+                if (!file.type || !file.type.startsWith('audio/')) continue;
+                try {
+                    const src = await readFileAsDataUrl(file);
+                    additions.push({ name: file.name, src });
+                } catch (err) {
+                    console.warn('Could not import track', err);
+                }
+            }
+
+            if (!additions.length) {
+                showToast('No valid audio files selected.');
+                return;
+            }
+
+            try {
+                vibePlaylist = existing.concat(additions);
+                savePrivateVibePlaylist();
+            } catch (err) {
+                vibePlaylist = existing;
+                showToast('Upload failed: storage is full on this device.');
+                return;
+            }
+
+            if (vibePlaylist.length && (!vibeTrackAudio || !vibeTrackAudio.src)) loadVibeTrack(vibeTrackIndex);
+            updateVibePlaybackUI();
+            showToast(`Added ${additions.length} track(s) to your private playlist.`);
+        });
+        uploadBtn.dataset.vibeUploadBound = '1';
+    }
+    if (clearPlaylistBtn && clearPlaylistBtn.dataset.vibeClearBound !== '1') {
+        clearPlaylistBtn.addEventListener('click', () => {
+            if (!vibePlaylist.length) return;
+            if (!confirm('Remove all uploaded playlist songs from this device?')) return;
+            clearVibePlaylist();
+        });
+        clearPlaylistBtn.dataset.vibeClearBound = '1';
+    }
+    if (musicSlider && musicSlider.dataset.vibeMusicBound !== '1') {
+        musicSlider.addEventListener('input', (e) => {
+            vibeMusicVolume = _clamp01(parseInt(e.target.value, 10) / 100);
+            appState.vibeMusicVolume = vibeMusicVolume;
+            saveToStorage();
+            if (vibeTrackAudio) vibeTrackAudio.volume = _clamp01(0.9 * vibeMusicVolume);
+            if (vibeFallbackAmbience) vibeFallbackAmbience.volume = _clamp01(0.65 * vibeMusicVolume);
+        });
+        musicSlider.dataset.vibeMusicBound = '1';
+    }
+    if (sfxSlider && sfxSlider.dataset.vibeSfxBound !== '1') {
+        sfxSlider.addEventListener('input', (e) => {
+            vibeSfxVolume = _clamp01(parseInt(e.target.value, 10) / 100);
+            appState.vibeSfxVolume = vibeSfxVolume;
+            saveToStorage();
+        });
+        sfxSlider.dataset.vibeSfxBound = '1';
+    }
 
     if (document.body.dataset.vibeUnlockBound !== '1') {
         const unlock = () => {
             if (!_isAmbienceEnabled()) return;
-            const unlockSession = vibeSessionId;
-            ensureVibeAudioRunning().then((ok) => {
-                if (!_isAmbienceEnabled() || unlockSession !== vibeSessionId) return;
-                if (!ok) {
-                    playFallbackClick(false);
-                } else {
-                    if (!vibeManualPaused) startVibeMusic(unlockSession);
-                    playUiTone(329.63, 0.12, 'triangle', 0.14);
-                }
-            });
+            ensureVibeAudioRunning().catch(() => {});
         };
         document.addEventListener('pointerdown', unlock, { once: true, capture: true });
         document.body.dataset.vibeUnlockBound = '1';
     }
 
+    if (document.body.dataset.vibeLeaveBound !== '1') {
+        window.addEventListener('pagehide', stopVibeMusic);
+        window.addEventListener('beforeunload', stopVibeMusic);
+        document.body.dataset.vibeLeaveBound = '1';
+    }
+
     document.addEventListener('click', (e) => {
-        if (e.target.closest('#vibe-audio-toggle') || e.target.closest('#vibe-mute-toggle')) return;
+        if (e.target.closest('#vibe-play-toggle') || e.target.closest('#vibe-sound-menu-btn') || e.target.closest('#vibe-sound-menu')) return;
         const interactive = e.target.closest('button,.btn-primary,.btn-secondary,.btn-danger,.upload-btn,.nav-btn,.game-list-btn,.close-btn,.sprint-option-btn,.rune-btn,.map-node');
         if (!interactive) return;
 
@@ -3445,7 +3705,6 @@ function initGameVibeSystem() {
 
         if (_isSfxEnabled()) {
             playUiTone(220 + Math.random() * 140, 0.07, 'triangle', 0.06);
-            if (_isAmbienceEnabled() && !vibeStarted && !vibeManualPaused) startVibeMusic(vibeSessionId);
         }
     }, true);
 

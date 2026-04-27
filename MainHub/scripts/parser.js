@@ -85,8 +85,114 @@ if (excelUploadInput) {
 
 // --- FILE UPLOAD & EDITOR LOGIC ---
 let tempFilename = "New World";
+let editorMode = 'create';
+let editTarget = null;
 
 const DEFAULT_MINIGAMES = ['Flash Match', 'Spellweaver', 'Cloze Trial'];
+
+function setEditorMode(mode, target = null) {
+    editorMode = mode;
+    editTarget = target;
+    const saveBtn = document.getElementById('btn-save-world');
+    if (saveBtn) {
+        saveBtn.innerText = mode === 'edit' ? 'Save Changes to World' : 'Save & Initialize World';
+    }
+}
+
+function escapeSyntaxValue(value) {
+    return String(value || '').replace(/\n/g, ' ').trim();
+}
+
+function worldToSyntax(world) {
+    if (!world) return '';
+
+    const lines = [];
+    const sections = Array.isArray(world.sections) ? world.sections : [];
+    const sectionSet = new Set(sections);
+
+    sections.forEach((sectionName, idx) => {
+        lines.push(`!CHAPTER! ${sectionName}`);
+
+        const sectionText = String((world.content && world.content[sectionName]) || '').replace(/\r\n/g, '\n');
+        if (sectionText.trim()) {
+            lines.push(sectionText.trimEnd());
+        }
+
+        (world.tasks || []).filter(t => t.section === sectionName).forEach(t => {
+            lines.push(`- [${t.completed ? 'x' : ' '}] ${escapeSyntaxValue(t.text)}`);
+        });
+
+        (world.flashcards || []).filter(fc => fc.section === sectionName).forEach(fc => {
+            lines.push(`!FLASH! ${escapeSyntaxValue(fc.question)} :: ${escapeSyntaxValue(fc.answer)}`);
+        });
+
+        (world.quizzes || []).filter(q => q.section === sectionName).forEach(q => {
+            lines.push(`!QUIZ! ${escapeSyntaxValue(q.question)} :: ${escapeSyntaxValue(q.answer)}`);
+        });
+
+        (world.exams || []).filter(ex => ex.section === sectionName).forEach(ex => {
+            lines.push(`!EXAM! ${escapeSyntaxValue(ex.question)} :: ${escapeSyntaxValue(ex.answer)}`);
+        });
+
+        (world.rituals || []).filter(r => r.section === sectionName).forEach(r => {
+            const steps = Array.isArray(r.steps) ? r.steps.map(s => escapeSyntaxValue(s)).filter(Boolean).join(' > ') : '';
+            lines.push(`!RITUAL! ${escapeSyntaxValue(r.name)} :: ${steps}`);
+        });
+
+        (world.miniGames || []).filter(g => g.section === sectionName).forEach(g => {
+            lines.push(`!GAME! ${escapeSyntaxValue(g.name)}`);
+        });
+
+        if (idx < sections.length - 1) lines.push('');
+    });
+
+    // Preserve sectionless chronicles by appending at end as plain notes.
+    (world.chronicles || []).forEach(ch => {
+        if (ch && ch.section && !sectionSet.has(ch.section)) {
+            lines.push(`\n# Chronicle (${ch.section})`);
+            lines.push(String(ch.text || '').trim());
+        }
+    });
+
+    return lines.join('\n').trim() + '\n';
+}
+
+function mergeProgressData(oldWorld, newWorld) {
+    if (!oldWorld || !newWorld) return;
+
+    newWorld.background = oldWorld.background || newWorld.background || null;
+    newWorld.readProgress = {};
+
+    (newWorld.sections || []).forEach(section => {
+        if (oldWorld.progress && oldWorld.progress[section]) {
+            newWorld.progress[section] = oldWorld.progress[section];
+            if (!newWorld.progress[section].gameCooldowns) newWorld.progress[section].gameCooldowns = {};
+        }
+        if (oldWorld.readProgress && oldWorld.readProgress[section]) {
+            newWorld.readProgress[section] = oldWorld.readProgress[section];
+        }
+    });
+
+    const oldFlashByKey = new Map((oldWorld.flashcards || []).map(fc => [`${fc.section}|||${fc.question}`, fc]));
+    (newWorld.flashcards || []).forEach(fc => {
+        const old = oldFlashByKey.get(`${fc.section}|||${fc.question}`);
+        if (!old) return;
+        fc.interval = old.interval;
+        fc.ease = old.ease;
+        fc.nextReview = old.nextReview;
+        fc.burned = old.burned;
+    });
+
+    const oldTaskByKey = new Map((oldWorld.tasks || []).map(t => [`${t.section}|||${t.text}`, t]));
+    (newWorld.tasks || []).forEach(t => {
+        const old = oldTaskByKey.get(`${t.section}|||${t.text}`);
+        if (old) t.completed = !!old.completed;
+    });
+
+    // Keep existing chronicles that still belong to current sections.
+    const validSections = new Set(newWorld.sections || []);
+    newWorld.chronicles = (oldWorld.chronicles || []).filter(c => c && validSections.has(c.section));
+}
 
 function ensureSectionSkeleton(world, sectionName) {
     if (!world.content[sectionName]) world.content[sectionName] = '';
@@ -401,6 +507,7 @@ function parseWorldFromSyntax(finalContent, worldName) {
 function loadFileToEditor() {
     const file = fileInput.files[0];
     if (!file) return alert("Please select a file first!");
+    setEditorMode('create');
     tempFilename = file.name.replace(/\.[^/.]+$/, "");
     const reader = new FileReader();
     reader.onload = function(event) {
@@ -411,6 +518,7 @@ function loadFileToEditor() {
 }
 
 function cancelEdit() {
+    setEditorMode('create');
     editor.value = ""; fileInput.value = "";
     editorScreen.classList.add('hidden'); hubScreen.classList.remove('hidden');
 }
@@ -423,7 +531,18 @@ function saveAndProcessWorld() {
     delete newWorld._normalizedCommands;
     
     const hub = appState.hubs[appState.currentHubIndex];
-    hub.worlds.push(newWorld); hub.currentWorldIndex = hub.worlds.length - 1;
+    if (editorMode === 'edit' && editTarget && appState.hubs[editTarget.hubIndex] && appState.hubs[editTarget.hubIndex].worlds[editTarget.worldIndex]) {
+        const targetHub = appState.hubs[editTarget.hubIndex];
+        const oldWorld = targetHub.worlds[editTarget.worldIndex];
+        newWorld.name = oldWorld.name;
+        mergeProgressData(oldWorld, newWorld);
+        targetHub.worlds[editTarget.worldIndex] = newWorld;
+        appState.currentHubIndex = editTarget.hubIndex;
+        targetHub.currentWorldIndex = editTarget.worldIndex;
+    } else {
+        hub.worlds.push(newWorld);
+        hub.currentWorldIndex = hub.worlds.length - 1;
+    }
 
     saveToStorage(); cancelEdit();
     if(document.getElementById('training-card')) document.getElementById('training-card').classList.remove('locked');
@@ -455,6 +574,24 @@ function createWorldFromSyntax(syntaxContent, worldName) {
     return newWorld;
 }
 
+function openWorldInEditor(hubIndex, worldIndex) {
+    const hub = appState.hubs[hubIndex];
+    if (!hub || !hub.worlds || !hub.worlds[worldIndex]) return;
+
+    const world = hub.worlds[worldIndex];
+    appState.currentHubIndex = hubIndex;
+    hub.currentWorldIndex = worldIndex;
+
+    tempFilename = world.name || 'Edited World';
+    setEditorMode('edit', { hubIndex, worldIndex });
+    editor.value = worldToSyntax(world);
+    hubScreen.classList.add('hidden');
+    editorScreen.classList.remove('hidden');
+
+    const owlPanelEl = document.getElementById('owl-panel');
+    if (owlPanelEl) owlPanelEl.classList.add('hidden');
+}
+
 // --- MAIN HUB BOTTOM UPLOAD LOGIC ---
 const mainHubUploadBtn = document.getElementById('main-hub-upload-world-btn');
 
@@ -462,6 +599,7 @@ const mainHubUploadBtn = document.getElementById('main-hub-upload-world-btn');
 if (mainHubUploadBtn && mainHubFileInput) {
     // 1. Clicking the button opens your computer's file explorer
     mainHubUploadBtn.addEventListener('click', () => {
+        setEditorMode('create');
         mainHubFileInput.click();
     });
 
@@ -474,6 +612,7 @@ if (mainHubUploadBtn && mainHubFileInput) {
         reader.onload = function(e) {
             // Put the text from the file into the editor
             document.getElementById('markdown-editor').value = e.target.result;
+            setEditorMode('create');
             
             // Switch screens
             document.getElementById('hub-screen').classList.add('hidden');
@@ -492,4 +631,4 @@ if (mainHubUploadBtn && mainHubFileInput) {
 
 
 
-export { loadFileToEditor, cancelEdit, saveAndProcessWorld, createWorldFromSyntax };
+export { loadFileToEditor, cancelEdit, saveAndProcessWorld, createWorldFromSyntax, openWorldInEditor };
