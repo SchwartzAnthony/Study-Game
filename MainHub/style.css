@@ -24,6 +24,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    width: 100%;
 }
 
 .workshop-bench-toggle,
@@ -35,6 +36,13 @@
 
 .workshop-bench-toggle {
     position: relative;
+    list-style: none;
+    margin-top: 0;
+    display: block;
+}
+
+.workshop-bench-toggle::-webkit-details-marker {
+    display: none;
 }
 
 .workshop-bench-toggle::after {
@@ -47,7 +55,7 @@
     opacity: 0.8;
 }
 
-.workshop-bench-toggle[aria-expanded="true"]::after {
+.workshop-bench-group[open] .workshop-bench-toggle::after {
     content: '-';
 }
 
@@ -61,7 +69,7 @@
     background: rgba(3, 8, 6, 0.78);
 }
 
-.workshop-bench-panel.hidden {
+.workshop-bench-group:not([open]) .workshop-bench-panel {
     display: none;
 }
 
@@ -3722,6 +3730,71 @@ button:hover {
 
     /* Force button layout fixes without breaking close buttons */
     .btn-occult, .nav-btn { width: auto; font-size: 0.9em; padding: 12px; text-align: center; }
+
+    .hub-header-mobile-override {
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 10px !important;
+    }
+
+    .hub-header-mobile-override button {
+        width: auto !important;
+        flex: 0 0 auto;
+        margin: 0 !important;
+    }
+
+    #workshop-screen {
+        min-height: auto !important;
+        padding-bottom: 20px;
+    }
+
+    #workshop-screen .card {
+        max-width: 100% !important;
+        padding: 20px 16px !important;
+        border-radius: 12px !important;
+        box-sizing: border-box !important;
+    }
+
+    #workshop-screen h2 {
+        font-size: 1.35rem !important;
+        margin-bottom: 16px !important;
+    }
+
+    #workshop-screen p {
+        font-size: 0.95rem !important;
+    }
+
+    .workshop-bench-groups {
+        gap: 12px;
+    }
+
+    .workshop-bench-toggle,
+    .workshop-bench-action {
+        font-size: 1rem !important;
+        line-height: 1.3;
+        padding: 14px 44px 14px 14px !important;
+        white-space: normal;
+        text-align: left;
+    }
+
+    .workshop-bench-action {
+        padding-right: 14px !important;
+        text-align: center;
+    }
+
+    .workshop-bench-toggle::after {
+        right: 14px;
+    }
+
+    .workshop-bench-panel {
+        padding: 12px;
+        gap: 8px;
+    }
+
+    .workshop-bench-note {
+        font-size: 0.86rem;
+    }
 }
 
 /* Standardize All Buttons */
@@ -3764,6 +3837,43 @@ button, .btn-occult, .btn-primary, .btn-secondary, .nav-btn { font-family: 'Cinz
 @media (max-width: 420px) {
     body { padding: 4px !important; overflow-x: hidden !important; }
     .container { padding: 4px !important; overflow-x: hidden !important; }
+
+    #workshop-screen > div {
+        padding-left: 4px !important;
+        padding-right: 4px !important;
+    }
+
+    #workshop-screen .card {
+        padding: 16px 12px !important;
+    }
+
+    #workshop-screen h2 {
+        font-size: 1.18rem !important;
+        letter-spacing: 0.8px !important;
+    }
+
+    #workshop-screen p {
+        font-size: 0.9rem !important;
+    }
+
+    .workshop-bench-toggle,
+    .workshop-bench-action {
+        font-size: 0.92rem !important;
+        padding: 13px 40px 13px 12px !important;
+        border-radius: 8px;
+    }
+
+    .workshop-bench-action {
+        padding-right: 12px !important;
+    }
+
+    .workshop-bench-panel {
+        padding: 10px;
+    }
+
+    .workshop-bench-note {
+        font-size: 0.82rem;
+    }
     
     /* Stack Library Cards vertically but make them horizontal in shape */
     .library-cards-wrapper {

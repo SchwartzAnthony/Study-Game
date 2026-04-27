@@ -84,26 +84,6 @@ if (document.getElementById('app-title-btn')) {
     });
 }
 
-document.querySelectorAll('.workshop-bench-toggle').forEach((toggleBtn) => {
-    toggleBtn.addEventListener('click', () => {
-        const targetId = toggleBtn.getAttribute('data-target');
-        const targetPanel = targetId ? document.getElementById(targetId) : null;
-        if (!targetPanel) return;
-
-        const willOpen = targetPanel.classList.contains('hidden');
-
-        document.querySelectorAll('.workshop-bench-toggle').forEach((otherBtn) => {
-            const otherTargetId = otherBtn.getAttribute('data-target');
-            const otherPanel = otherTargetId ? document.getElementById(otherTargetId) : null;
-            otherBtn.setAttribute('aria-expanded', 'false');
-            if (otherPanel) otherPanel.classList.add('hidden');
-        });
-
-        toggleBtn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-        targetPanel.classList.toggle('hidden', !willOpen);
-    });
-});
-
 // --- WORKSHOP PDF CONVERSION ---
 if (document.getElementById('btn-convert-pdf')) {
     const pdfUploadBtn = document.getElementById('btn-convert-pdf');

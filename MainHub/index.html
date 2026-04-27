@@ -16,7 +16,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cormorant+Garamond:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 
-    <link rel="stylesheet" href="style.css?v=2.2">
+    <link rel="stylesheet" href="style.css?v=2.4">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -130,34 +130,34 @@
                     <p style="color: #e0e0e0; font-family: 'Georgia', serif; font-size: 1.1em; margin-bottom: 30px;">Process your raw tomes and translate arcane texts into structured grimoires.</p>
                     
                     <div class="workshop-bench-groups">
-                        <div class="workshop-bench-group">
-                            <button id="btn-workshop-manual-highlight" class="btn-occult workshop-bench-toggle" data-target="workshop-manual-highlight-panel" aria-expanded="false" style="border-color: #a29bfe; color: #d6d1ff;">Manual Highlight (Best)</button>
-                            <div id="workshop-manual-highlight-panel" class="workshop-bench-panel hidden">
+                        <details class="workshop-bench-group">
+                            <summary id="btn-workshop-manual-highlight" class="btn-occult workshop-bench-toggle" style="border-color: #a29bfe; color: #d6d1ff;">Manual Highlight (Best)</summary>
+                            <div id="workshop-manual-highlight-panel" class="workshop-bench-panel">
                                 <p class="workshop-bench-note">Best when you want full control over sections, flashcards, equations, and world structure.</p>
                                 <button id="btn-open-highlighter" class="btn-occult workshop-bench-action" style="border-color: #a29bfe; color: #d6d1ff;">PDF Markierung Button</button>
                                 <input type="file" id="pdf-highlighter-input" accept=".pdf" style="display: none;">
                             </div>
-                        </div>
+                        </details>
 
-                        <div class="workshop-bench-group">
-                            <button id="btn-workshop-auto-pdf" class="btn-occult workshop-bench-toggle" data-target="workshop-auto-pdf-panel" aria-expanded="false" style="border-color: #d4a843; color: #f3d98a;">Auto PDF Wizard (Worst)</button>
-                            <div id="workshop-auto-pdf-panel" class="workshop-bench-panel hidden">
+                        <details class="workshop-bench-group">
+                            <summary id="btn-workshop-auto-pdf" class="btn-occult workshop-bench-toggle" style="border-color: #d4a843; color: #f3d98a;">Auto PDF Wizard (Worst)</summary>
+                            <div id="workshop-auto-pdf-panel" class="workshop-bench-panel">
                                 <p class="workshop-bench-note">Fastest route, but least reliable for complex layouts and study structure.</p>
                                 <button id="btn-auto-forge-pdf" class="btn-occult workshop-bench-action" style="border-color: #d4a843; color: #f3d98a;">Auto Forge World from PDF</button>
                                 <input type="file" id="pdf-auto-upload-input" accept=".pdf" style="display: none;">
                             </div>
-                        </div>
+                        </details>
 
-                        <div class="workshop-bench-group">
-                            <button id="btn-workshop-manual-syntax" class="btn-occult workshop-bench-toggle" data-target="workshop-manual-syntax-panel" aria-expanded="false" style="border-color: #2b7a4b; color: #aaffcc;">Manual Syntax (Flexibillity)</button>
-                            <div id="workshop-manual-syntax-panel" class="workshop-bench-panel hidden">
+                        <details class="workshop-bench-group">
+                            <summary id="btn-workshop-manual-syntax" class="btn-occult workshop-bench-toggle" style="border-color: #2b7a4b; color: #aaffcc;">Manual Syntax (Flexibillity)</summary>
+                            <div id="workshop-manual-syntax-panel" class="workshop-bench-panel">
                                 <p class="workshop-bench-note">Most flexible workflow: clean the markdown first, then convert it into syntax.</p>
                                 <button id="btn-convert-pdf" class="btn-occult workshop-bench-action" style="border-color: #2b7a4b; color: #aaffcc;">Convert PDF to MD</button>
                                 <input type="file" id="pdf-upload-input" accept=".pdf" style="display: none;">
                                 <button id="btn-convert-txt-syntax" class="btn-occult workshop-bench-action" style="border-color: #2b7a4b; color: #aaffcc;">Convert MD to Syntax</button>
                                 <input type="file" id="txt-syntax-upload-input" accept=".md,.txt" style="display: none;">
                             </div>
-                        </div>
+                        </details>
 
                         <button id="btn-edit-syntax-rules" class="btn-occult" style="width: 100%; padding: 15px; font-size: 1.2em; border-color: #2b7a4b; color: #aaffcc;">Edit Syntax Rules</button>
                     </div>
@@ -963,7 +963,7 @@
         </div>
     </div>
 
-    <script type="module" src="app.js?v=3.5"></script>
+    <script type="module" src="app.js?v=3.6"></script>
 </body>
 </html>
 
