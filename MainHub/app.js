@@ -3,12 +3,14 @@ import { awardGold, awardInk, awardPaper, updateEconomyUI } from './scripts/econ
 import { saveToStorage } from './scripts/storage.js';
 import { generateMapCoordinates } from './scripts/mapRenderer.js';
 import { launchArcaneDefenseGame, launchTriviaGame, launchMemoryGame, startFlashMatchGame, launchSpellweaverGame, launchRitualAlignmentGame, launchClozeGame, launchTrueFalseBlitz, launchGlimpseRecall } from './scripts/minigames.js';
-import { buyItem, renderStore, renderUploadedRewards, deleteUploadedReward, buyCustomReward } from './scripts/store.js';
+import { buyItem, renderStore, renderUploadedRewards, deleteUploadedReward, buyCustomReward, tradeForSpecialPaper } from './scripts/store.js';
 import { loadFileToEditor, cancelEdit, saveAndProcessWorld, createWorldFromSyntax, openWorldInEditor } from './scripts/parser.js';
 import { initMindMap } from './scripts/mindmapRenderer.js';
 import { forgeWorldFromPdf } from './scripts/pdfAutoForge.js';
 import { openPdfHighlighter, initHighlighterUI } from './scripts/pdfHighlighter.js';
 import { hasMathSyntax, renderMathString, setRenderedText } from './scripts/mathRenderer.js';
+import { ensureDesignSystemState, loadDesignSystemConfig, getDesignSystemConfig } from './scripts/designSystem.js';
+import { initWorkshopItems } from './scripts/workshop.js';
 
 function sanitizeRewardImages() {
     if (!appState || !Array.isArray(appState.customRewards)) return;
@@ -35,12 +37,61 @@ const hubScreen = document.getElementById('hub-screen');
 const editorScreen = document.getElementById('editor-screen');
 const homeScreen = document.getElementById('home-screen');
 const workshopScreen = document.getElementById('workshop-screen');
+const voidScreen = document.getElementById('void-screen');
+const housingScreen = document.getElementById('housing-screen');
+const mainHeader = document.querySelector('.main-header');
 const fileInput = document.getElementById('fileUpload');
 const editor = document.getElementById('markdown-editor');
 const mapSection = document.getElementById('map-section');
 const mapContainer = document.getElementById('map-container');
 const worldTitle = document.getElementById('world-title');
 const hubSelector = document.getElementById('hub-selector');
+const btnOpenReminderScroller = document.getElementById('btn-open-reminder-scroller');
+const btnOpenWorldVoid = document.getElementById('btn-open-world-void');
+const voidScreenScope = document.getElementById('void-screen-scope');
+const voidModalTitle = document.getElementById('void-modal-title');
+const reminderScrollerMeta = document.getElementById('reminder-scroller-meta');
+const reminderScrollerEmpty = document.getElementById('reminder-scroller-empty');
+const reminderScrollerCard = document.getElementById('reminder-scroller-card');
+const reminderCardSection = document.getElementById('reminder-card-section');
+const reminderCardBurn = document.getElementById('reminder-card-burn');
+const reminderCardText = document.getElementById('reminder-card-text');
+const reminderCardImageWrap = document.getElementById('reminder-card-image-wrap');
+const reminderCardImage = document.getElementById('reminder-card-image');
+const reminderCardStats = document.getElementById('reminder-card-stats');
+const btnGotoHousing = document.getElementById('btn-goto-housing');
+const btnBackHomeFromHousing = document.getElementById('btn-back-home-from-housing');
+const housingSummary = document.getElementById('housing-summary');
+const housingRoomStats = document.getElementById('housing-room-stats');
+const housingOwnedList = document.getElementById('housing-owned-list');
+const housingCatalog = document.getElementById('housing-catalog');
+const btnHousingExpandSlot = document.getElementById('btn-housing-expand-slot');
+const btnHousingCycleTheme = document.getElementById('btn-housing-cycle-theme');
+
+const workshopSettingsModal = document.getElementById('workshop-settings-modal');
+const workshopReminderEnabled = document.getElementById('workshop-reminders-enabled');
+const workshopReminderDaily = document.getElementById('workshop-reminders-daily');
+const workshopReminderDailyVal = document.getElementById('workshop-reminders-daily-val');
+const workshopReminderRandom = document.getElementById('workshop-reminders-random');
+const workshopReminderRandomVal = document.getElementById('workshop-reminders-random-val');
+const workshopReminderBurn = document.getElementById('workshop-reminders-burn');
+const workshopReminderBurnVal = document.getElementById('workshop-reminders-burn-val');
+const worldObjectSettingsModal = document.getElementById('world-object-settings-modal');
+const worldObjectSettingsList = document.getElementById('world-object-settings-list');
+
+const REMINDER_SETTINGS_DEFAULTS = {
+    enabled: true,
+    dailyLimit: 12,
+    randomFactor: 0.65,
+    burnThreshold: 8
+};
+
+let activeReminderEntry = null;
+let activeVoidScope = 'all';
+let activeVoidWorldRef = null;
+let activeVoidOrigin = 'home';
+let voidSwipe = { active:false, startX:0, startY:0, lastDx:0, lastDy:0 };
+let voidSceneTimer = null;
 
 if (document.getElementById('btn-goto-worlds')) {
     document.getElementById('btn-goto-worlds').addEventListener('click', () => {
@@ -55,21 +106,46 @@ if (document.getElementById('btn-goto-workshop')) {
         workshopScreen.classList.remove('hidden');
     });
 }
+if (btnGotoHousing) {
+    btnGotoHousing.addEventListener('click', () => {
+        homeScreen.classList.add('hidden');
+        if (voidScreen) voidScreen.classList.add('hidden');
+        if (workshopScreen) workshopScreen.classList.add('hidden');
+        if (universeScreen) universeScreen.classList.add('hidden');
+        if (hubScreen) hubScreen.classList.add('hidden');
+        if (housingScreen) housingScreen.classList.remove('hidden');
+        renderHousingScreen();
+    });
+}
+if (btnBackHomeFromHousing) {
+    btnBackHomeFromHousing.addEventListener('click', () => {
+        if (housingScreen) housingScreen.classList.add('hidden');
+        homeScreen.classList.remove('hidden');
+        renderHomeReminderStrip();
+    });
+}
 if (document.getElementById('btn-back-home')) {
     document.getElementById('btn-back-home').addEventListener('click', () => {
         universeScreen.classList.add('hidden');
+        if (voidScreen) voidScreen.classList.add('hidden');
+        if (housingScreen) housingScreen.classList.add('hidden');
         homeScreen.classList.remove('hidden');
+        renderHomeReminderStrip();
     });
 }
 if (document.getElementById('btn-back-home-from-workshop')) {
     document.getElementById('btn-back-home-from-workshop').addEventListener('click', () => {
         workshopScreen.classList.add('hidden');
+        if (voidScreen) voidScreen.classList.add('hidden');
+        if (housingScreen) housingScreen.classList.add('hidden');
         homeScreen.classList.remove('hidden');
+        renderHomeReminderStrip();
     });
 }
 if (document.getElementById('btn-back-universe')) {
     document.getElementById('btn-back-universe').addEventListener('click', () => {
         hubScreen.classList.add('hidden');
+        if (voidScreen) voidScreen.classList.add('hidden');
         universeScreen.classList.remove('hidden');
         renderShelf();
     });
@@ -79,10 +155,964 @@ if (document.getElementById('app-title-btn')) {
     document.getElementById('app-title-btn').addEventListener('click', () => {
         universeScreen.classList.add('hidden');
         hubScreen.classList.add('hidden');
+        if (voidScreen) voidScreen.classList.add('hidden');
+        if (housingScreen) housingScreen.classList.add('hidden');
         if (workshopScreen) workshopScreen.classList.add('hidden');
         homeScreen.classList.remove('hidden');
+        renderHomeReminderStrip();
     });
 }
+if (btnHousingExpandSlot) {
+    btnHousingExpandSlot.addEventListener('click', unlockHousingSlot);
+}
+if (btnHousingCycleTheme) {
+    btnHousingCycleTheme.addEventListener('click', cycleHousingTheme);
+}
+
+function getTodayKey() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function getReminderSettings() {
+    if (!appState.reminderSettings) appState.reminderSettings = Object.assign({}, REMINDER_SETTINGS_DEFAULTS);
+    appState.reminderSettings = Object.assign({}, REMINDER_SETTINGS_DEFAULTS, appState.reminderSettings || {});
+    return appState.reminderSettings;
+}
+
+function ensureWorldReminderSchema(world) {
+    if (!world) return;
+    if (!Array.isArray(world.reminders)) world.reminders = [];
+    if (!world.reminderScroller || typeof world.reminderScroller !== 'object') world.reminderScroller = { cursor: 0, dailyShown: {} };
+    if (!world.reminderScroller.dailyShown || typeof world.reminderScroller.dailyShown !== 'object') world.reminderScroller.dailyShown = {};
+    if (!world.voidConfig || typeof world.voidConfig !== 'object') world.voidConfig = { objectFlags: {}, states: {} };
+    if (!world.voidConfig.objectFlags || typeof world.voidConfig.objectFlags !== 'object') world.voidConfig.objectFlags = {};
+    if (!world.voidConfig.states || typeof world.voidConfig.states !== 'object') world.voidConfig.states = {};
+
+    world.reminders.forEach((rem, index) => {
+        if (!rem || typeof rem !== 'object') {
+            world.reminders[index] = {
+                id: `rem-${index}`,
+                section: 'Allgemein',
+                text: '',
+                imageData: null,
+                shownCount: 0,
+                burned: false,
+                stability: 1,
+                dueAt: 0,
+                lastShownDay: '',
+                burnCycles: 0
+            };
+            rem = world.reminders[index];
+        }
+        rem.id = rem.id || `rem-${index}-${String(rem.text || '').slice(0, 24)}`;
+        rem.section = rem.section || 'Allgemein';
+        rem.text = String(rem.text || '').trim();
+        rem.imageData = rem.imageData || null;
+        rem.shownCount = Number(rem.shownCount || 0);
+        rem.burned = !!rem.burned;
+        rem.stability = Math.max(0.6, Number(rem.stability || 1));
+        rem.dueAt = Number(rem.dueAt || 0);
+        rem.lastShownDay = rem.lastShownDay || '';
+        rem.burnCycles = Number(rem.burnCycles || 0);
+        rem.voidEnabled = rem.voidEnabled !== false;
+    });
+    world.reminders = world.reminders.filter(rem => (rem.text || '').trim().length > 0);
+
+    // Migrate old reminder-only state into new per-object void state map.
+    world.reminders.forEach((rem, idx) => {
+        rem.id = rem.id || `rem-${idx}-${String(rem.text || '').slice(0, 24)}`;
+        rem.voidKey = rem.voidKey || `reminder:${rem.id}`;
+        if (!world.voidConfig.objectFlags[rem.voidKey]) {
+            world.voidConfig.objectFlags[rem.voidKey] = {
+                void: rem.voidEnabled !== false,
+                quiz: false,
+                minigame: false,
+                image: !!rem.imageData
+            };
+        }
+        if (!world.voidConfig.states[rem.voidKey]) {
+            world.voidConfig.states[rem.voidKey] = {
+                shownCount: Number(rem.shownCount || 0),
+                burned: !!rem.burned,
+                stability: Math.max(0.6, Number(rem.stability || 1)),
+                dueAt: Number(rem.dueAt || 0),
+                lastShownDay: rem.lastShownDay || '',
+                burnCycles: Number(rem.burnCycles || 0)
+            };
+        }
+    });
+}
+
+function ensureReminderDataModel() {
+    getReminderSettings();
+    if (!appState.reminderRuntime || typeof appState.reminderRuntime !== 'object') appState.reminderRuntime = { dailyShown: {} };
+    if (!appState.reminderRuntime.dailyShown || typeof appState.reminderRuntime.dailyShown !== 'object') appState.reminderRuntime.dailyShown = {};
+    if (!appState.reminderRuntime.voidProgress || typeof appState.reminderRuntime.voidProgress !== 'object') appState.reminderRuntime.voidProgress = { scrolledCount: 0 };
+    if (!Number.isFinite(Number(appState.reminderRuntime.voidProgress.scrolledCount))) appState.reminderRuntime.voidProgress.scrolledCount = 0;
+    (appState.hubs || []).forEach(hub => {
+        (hub.worlds || []).forEach(world => ensureWorldReminderSchema(world));
+    });
+}
+
+function ensureObjectKey(item, prefix, index) {
+    if (!item || typeof item !== 'object') return `${prefix}:${index}`;
+    if (!item.id) {
+        const base = String(item.section || item.question || item.text || item.label || index).replace(/[^a-zA-Z0-9_-]+/g, '-').slice(0, 32);
+        item.id = `${prefix}-${index}-${base}`;
+    }
+    if (!item.voidKey) item.voidKey = `${prefix}:${item.id}`;
+    return item.voidKey;
+}
+
+function collectWorldObjects(world, includeContent = false) {
+    ensureWorldReminderSchema(world);
+    const list = [];
+
+    (world.flashcards || []).forEach((fc, i) => {
+        const key = ensureObjectKey(fc, 'flash', i);
+        list.push({ key, type: 'flashcard', section: fc.section || 'Allgemein', text: fc.question || fc.answer || '', imageData: fc.questionImageData || fc.imageData || null, defaultVoid: fc.voidEnabled !== false, ref: fc });
+    });
+    (world.quizzes || []).forEach((q, i) => {
+        const key = ensureObjectKey(q, 'quiz', i);
+        list.push({ key, type: 'quiz', section: q.section || 'Allgemein', text: q.question || q.answer || '', imageData: q.questionImageData || q.imageData || null, defaultVoid: q.voidEnabled !== false, ref: q });
+    });
+    (world.exams || []).forEach((e, i) => {
+        const key = ensureObjectKey(e, 'exam', i);
+        list.push({ key, type: 'exam', section: e.section || 'Allgemein', text: e.question || e.answer || '', imageData: e.questionImageData || e.imageData || null, defaultVoid: e.voidEnabled !== false, ref: e });
+    });
+    (world.tasks || []).forEach((t, i) => {
+        const key = ensureObjectKey(t, 'task', i);
+        list.push({ key, type: 'task', section: t.section || 'Allgemein', text: t.text || '', imageData: null, defaultVoid: t.voidEnabled !== false, ref: t });
+    });
+    (world.reminders || []).forEach((r, i) => {
+        const key = ensureObjectKey(r, 'reminder', i);
+        list.push({ key, type: 'reminder', section: r.section || 'Allgemein', text: r.text || '', imageData: r.imageData || null, defaultVoid: r.voidEnabled !== false, ref: r });
+    });
+    (world.imageLibrary || []).forEach((img, i) => {
+        const key = ensureObjectKey(img, 'image', i);
+        list.push({ key, type: 'image', section: 'Image Library', text: img.label || `Image ${i + 1}`, imageData: img.dataURL || null, defaultVoid: img.voidEnabled === true, ref: img });
+    });
+
+    if (includeContent) {
+        Object.entries(world.content || {}).forEach(([section, raw]) => {
+            const segments = String(raw || '').split(/\n{2,}/).map(s => s.trim()).filter(Boolean);
+            segments.forEach((seg, i) => {
+                const faux = { id: `${section}-${i}`, voidEnabled: false };
+                const key = ensureObjectKey(faux, 'content', i);
+                list.push({ key, type: 'content', section, text: seg.slice(0, 260), imageData: null, defaultVoid: false, ref: faux });
+            });
+        });
+    }
+
+    // Ensure defaults exist and prune stale flags/states.
+    const validKeys = new Set(list.map(x => x.key));
+    list.forEach(obj => {
+        if (!world.voidConfig.objectFlags[obj.key]) {
+            world.voidConfig.objectFlags[obj.key] = {
+                void: !!obj.defaultVoid,
+                quiz: obj.type === 'quiz',
+                minigame: false,
+                image: !!obj.imageData || obj.type === 'image'
+            };
+        }
+        if (!world.voidConfig.states[obj.key]) {
+            world.voidConfig.states[obj.key] = { shownCount: 0, burned: false, stability: 1, dueAt: 0, lastShownDay: '', burnCycles: 0 };
+        }
+    });
+
+    Object.keys(world.voidConfig.objectFlags).forEach(key => { if (!validKeys.has(key)) delete world.voidConfig.objectFlags[key]; });
+    Object.keys(world.voidConfig.states).forEach(key => { if (!validKeys.has(key)) delete world.voidConfig.states[key]; });
+
+    return list;
+}
+
+function getFlaggedSectionObjects(world, sectionName, flagName) {
+    if (!world || !sectionName || !flagName) return [];
+    ensureWorldReminderSchema(world);
+    return collectWorldObjects(world).filter(obj => {
+        const flags = world.voidConfig.objectFlags[obj.key] || {};
+        if (!flags[flagName]) return false;
+        if (obj.type === 'image') return true;
+        return obj.section === sectionName;
+    });
+}
+
+function mapObjectToQuizItem(obj) {
+    if (!obj || !obj.ref) return null;
+    if (obj.type === 'quiz') return null;
+
+    if (obj.type === 'flashcard') {
+        const q = String(obj.ref.question || obj.text || '').trim();
+        const a = String(obj.ref.answer || '').trim();
+        if (!q || !a) return null;
+        return { section: obj.section, question: q, answer: a, imageData: obj.ref.questionImageData || obj.ref.imageData || obj.imageData || null, isMath: !!obj.ref.isMath, _synthetic: true };
+    }
+    if (obj.type === 'exam') {
+        const q = String(obj.ref.question || obj.text || '').trim();
+        const a = String(obj.ref.elaboration || obj.ref.answer || '').trim() || 'Review and explain this topic in detail.';
+        if (!q) return null;
+        return { section: obj.section, question: q, answer: a, imageData: obj.ref.questionImageData || obj.ref.imageData || obj.imageData || null, isMath: !!obj.ref.isMath, _synthetic: true };
+    }
+    if (obj.type === 'task') {
+        const t = String(obj.ref.text || obj.text || '').trim();
+        if (!t) return null;
+        return { section: obj.section, question: `Task: ${t}`, answer: `Completion path: ${t}`, imageData: null, isMath: !!obj.ref.isMath, _synthetic: true };
+    }
+    if (obj.type === 'reminder') {
+        const t = String(obj.ref.text || obj.text || '').trim();
+        if (!t) return null;
+        return { section: obj.section, question: t, answer: 'Recall and restate this reminder in your own words.', imageData: obj.ref.imageData || obj.imageData || null, isMath: !!obj.ref.isMath, _synthetic: true };
+    }
+    if (obj.type === 'image') {
+        const label = String(obj.ref.label || obj.text || 'Image prompt').trim();
+        return { section: obj.section, question: label, answer: label, imageData: obj.ref.dataURL || obj.imageData || null, isMath: false, _synthetic: true };
+    }
+    return null;
+}
+
+function mapObjectToFlashcardLike(obj) {
+    if (!obj || !obj.ref) return null;
+    if (obj.type === 'flashcard') return obj.ref;
+
+    if (obj.type === 'quiz') {
+        const q = String(obj.ref.question || obj.text || '').trim();
+        const a = String(obj.ref.answer || '').trim();
+        if (!q || !a) return null;
+        return { section: obj.section, question: q, answer: a, imageData: obj.ref.questionImageData || obj.ref.imageData || obj.imageData || null, isMath: !!obj.ref.isMath, _synthetic: true };
+    }
+    if (obj.type === 'exam') {
+        const q = String(obj.ref.question || obj.text || '').trim();
+        const a = String(obj.ref.elaboration || obj.ref.answer || '').trim() || 'Provide a complete explanation.';
+        if (!q) return null;
+        return { section: obj.section, question: q, answer: a, imageData: obj.ref.questionImageData || obj.ref.imageData || obj.imageData || null, isMath: !!obj.ref.isMath, _synthetic: true };
+    }
+    if (obj.type === 'task') {
+        const t = String(obj.ref.text || obj.text || '').trim();
+        if (!t) return null;
+        return { section: obj.section, question: `Task: ${t}`, answer: t, imageData: null, isMath: !!obj.ref.isMath, _synthetic: true };
+    }
+    if (obj.type === 'reminder') {
+        const t = String(obj.ref.text || obj.text || '').trim();
+        if (!t) return null;
+        return { section: obj.section, question: t, answer: t, imageData: obj.ref.imageData || obj.imageData || null, isMath: !!obj.ref.isMath, _synthetic: true };
+    }
+    if (obj.type === 'image') {
+        const label = String(obj.ref.label || obj.text || 'Image').trim();
+        return { section: obj.section, question: label, answer: label, imageData: obj.ref.dataURL || obj.imageData || null, isMath: false, _synthetic: true };
+    }
+    return null;
+}
+
+function buildSectionQuizPool(world, sectionName) {
+    if (!world || !sectionName) return [];
+    const base = (world.quizzes || []).filter(q => q.section === sectionName);
+    const pool = [...base];
+    const seen = new Set(pool.map(q => `${String(q.question || '').trim().toLowerCase()}::${String(q.answer || '').trim().toLowerCase()}`));
+
+    getFlaggedSectionObjects(world, sectionName, 'quiz').forEach(obj => {
+        const item = mapObjectToQuizItem(obj);
+        if (!item) return;
+        const sig = `${String(item.question || '').trim().toLowerCase()}::${String(item.answer || '').trim().toLowerCase()}`;
+        if (seen.has(sig)) return;
+        seen.add(sig);
+        pool.push(item);
+    });
+    return pool;
+}
+
+function buildSectionMinigameDeck(world, sectionName) {
+    if (!world || !sectionName) return [];
+    const base = (world.flashcards || []).filter(fc => fc.section === sectionName);
+    const deck = [...base];
+    const seen = new Set(deck.map(c => `${String(c.question || '').trim().toLowerCase()}::${String(c.answer || '').trim().toLowerCase()}`));
+
+    getFlaggedSectionObjects(world, sectionName, 'minigame').forEach(obj => {
+        const card = mapObjectToFlashcardLike(obj);
+        if (!card) return;
+        const sig = `${String(card.question || '').trim().toLowerCase()}::${String(card.answer || '').trim().toLowerCase()}`;
+        if (seen.has(sig)) return;
+        seen.add(sig);
+        deck.push(card);
+    });
+    return deck;
+}
+
+function buildWorldMinigameDeck(world) {
+    if (!world) return [];
+    const deck = [...(world.flashcards || [])];
+    const seen = new Set(deck.map(c => `${String(c.question || '').trim().toLowerCase()}::${String(c.answer || '').trim().toLowerCase()}`));
+
+    collectWorldObjects(world).forEach(obj => {
+        const flags = world.voidConfig.objectFlags[obj.key] || {};
+        if (!flags.minigame) return;
+        const card = mapObjectToFlashcardLike(obj);
+        if (!card) return;
+        const sig = `${String(card.question || '').trim().toLowerCase()}::${String(card.answer || '').trim().toLowerCase()}`;
+        if (seen.has(sig)) return;
+        seen.add(sig);
+        deck.push(card);
+    });
+    return deck;
+}
+
+function getSectionPlayableGames(world, sectionName) {
+    const configured = (world.miniGames || []).filter(g => g.section === sectionName);
+    if (configured.length > 0) return configured;
+
+    const hasFlaggedMinigameObjects = getFlaggedSectionObjects(world, sectionName, 'minigame').length > 0;
+    if (!hasFlaggedMinigameObjects) return configured;
+
+    return [
+        { section: sectionName, name: 'Memory' },
+        { section: sectionName, name: 'Trivia' },
+        { section: sectionName, name: 'Spellweaver' },
+        { section: sectionName, name: 'Flash Match' }
+    ];
+}
+
+function buildSectionImageSnippets(world, sectionName) {
+    if (!world || !sectionName) return [];
+    const snippets = [];
+    const seen = new Set();
+    getFlaggedSectionObjects(world, sectionName, 'image').forEach(obj => {
+        const imageSrc = obj.type === 'image'
+            ? (obj.ref && obj.ref.dataURL) || obj.imageData || null
+            : (obj.ref && (obj.ref.imageData || obj.ref.questionImageData)) || obj.imageData || null;
+        if (!imageSrc || seen.has(imageSrc)) return;
+        seen.add(imageSrc);
+        snippets.push(`!IMAGE! ${imageSrc}`);
+    });
+    return snippets;
+}
+
+function getDailyShownCount() {
+    const day = getTodayKey();
+    return Number((appState.reminderRuntime && appState.reminderRuntime.dailyShown && appState.reminderRuntime.dailyShown[day]) || 0);
+}
+
+function getVoidEntries(scope) {
+    ensureReminderDataModel();
+    const worlds = [];
+    if (scope === 'world' && activeVoidWorldRef) {
+        worlds.push(activeVoidWorldRef);
+    } else if (scope === 'world') {
+        const current = getActiveWorld();
+        if (current) worlds.push(current);
+    } else {
+        (appState.hubs || []).forEach(h => (h.worlds || []).forEach(w => worlds.push(w)));
+    }
+
+    const entries = [];
+    worlds.forEach(world => {
+        collectWorldObjects(world).forEach(obj => {
+            const flags = world.voidConfig.objectFlags[obj.key] || {};
+            if (!flags.void) return;
+            if (!String(obj.text || '').trim() && !obj.imageData) return;
+            entries.push({ world, object: obj, state: world.voidConfig.states[obj.key], flags });
+        });
+    });
+    return entries;
+}
+
+function getDueReminderEntries(scope) {
+    const now = Date.now();
+    return getVoidEntries(scope).filter(entry => Number((entry.state && entry.state.dueAt) || 0) <= now);
+}
+
+function pickNextReminderEntry(scope) {
+    const settings = getReminderSettings();
+    if (!settings.enabled) return null;
+    if (getDailyShownCount() >= Number(settings.dailyLimit || REMINDER_SETTINGS_DEFAULTS.dailyLimit)) return null;
+
+    const due = getDueReminderEntries(scope);
+    if (!due.length) return null;
+    const now = Date.now();
+    const randomFactor = Math.max(0.2, Math.min(1, Number(settings.randomFactor || REMINDER_SETTINGS_DEFAULTS.randomFactor)));
+
+    let best = null;
+    let bestScore = -Infinity;
+    due.forEach(entry => {
+        const state = entry.state || {};
+        const overdueDays = Math.max(0, (now - Number(state.dueAt || 0)) / 86400000);
+        const hardness = 1 / Math.max(0.7, Number(state.stability || 1));
+        const burnBoost = state.burned ? 1.15 : 1;
+        const base = (1 + overdueDays) * (1 + hardness) * burnBoost;
+        const jitter = (Math.random() * 2 - 1) * randomFactor * base;
+        const score = base + jitter;
+        if (score > bestScore) {
+            bestScore = score;
+            best = entry;
+        }
+    });
+    return best;
+}
+
+function awardVoidScrollRewards() {
+    ensureReminderDataModel();
+    ensureDesignSystemState(appState);
+    const voidCfg = ((((getDesignSystemConfig() || {}).economyRates || {}).sources || {}).void || {});
+    const goldPerScroll = Number(voidCfg.goldPerScroll || 1);
+    const inkEvery = Math.max(1, Number(voidCfg.inkPerScrolls || 10));
+    const scrollEvery = Math.max(1, Number(voidCfg.scrollPerScrolls || 20));
+    const voidProgress = appState.reminderRuntime.voidProgress;
+    voidProgress.scrolledCount = Number(voidProgress.scrolledCount || 0) + 1;
+    appState.progression.loops.voidScrolledLifetime = Number(appState.progression.loops.voidScrolledLifetime || 0) + 1;
+
+    appState.gold = Number(appState.gold || 0) + goldPerScroll;
+    if (voidProgress.scrolledCount % inkEvery === 0) {
+        appState.ink = Number(appState.ink || 0) + 1;
+    }
+    if (voidProgress.scrolledCount % scrollEvery === 0) {
+        if (!appState.paper || typeof appState.paper !== 'object') appState.paper = {};
+        appState.paper['Generic Scroll'] = Number(appState.paper['Generic Scroll'] || 0) + 1;
+    }
+
+    updateEconomyUI();
+}
+
+function markReminderShown(entry, options = {}) {
+    if (!entry || !entry.world || !entry.object || !entry.state) return;
+    const settings = getReminderSettings();
+    const state = entry.state;
+    const day = getTodayKey();
+
+    state.shownCount = Number(state.shownCount || 0) + 1;
+    state.lastShownDay = day;
+
+    if (state.burned) {
+        if (!options.skipBurnCycle) state.burnCycles = Number(state.burnCycles || 0) + 1;
+        state.stability = Math.max(1.1, Number(state.stability || 1) * 1.12 + 0.2);
+    } else {
+        state.stability = Math.min(42, Number(state.stability || 1) * 1.28 + 0.45);
+    }
+
+    const burnThreshold = Number(settings.burnThreshold || REMINDER_SETTINGS_DEFAULTS.burnThreshold);
+    if (!state.burned && state.shownCount >= burnThreshold) {
+        state.burned = true;
+        state.burnCycles = 0;
+        state.stability = Math.max(2, state.stability * 1.4);
+    }
+
+    const gapDays = state.burned ? Math.max(5, Math.round(state.stability * 1.4)) : Math.max(1, Math.round(state.stability));
+
+    state.dueAt = Date.now() + (gapDays * 86400000);
+    state.stability = Number(state.stability.toFixed(2));
+
+    if (!entry.world.reminderScroller) entry.world.reminderScroller = { cursor: 0, dailyShown: {} };
+    if (!entry.world.reminderScroller.dailyShown) entry.world.reminderScroller.dailyShown = {};
+    entry.world.reminderScroller.cursor = Number(entry.world.reminderScroller.cursor || 0) + 1;
+    entry.world.reminderScroller.dailyShown[day] = Number(entry.world.reminderScroller.dailyShown[day] || 0) + 1;
+
+    if (!appState.reminderRuntime) appState.reminderRuntime = { dailyShown: {} };
+    if (!appState.reminderRuntime.dailyShown) appState.reminderRuntime.dailyShown = {};
+    appState.reminderRuntime.dailyShown[day] = Number(appState.reminderRuntime.dailyShown[day] || 0) + 1;
+
+    awardVoidScrollRewards();
+    saveToStorage();
+}
+
+function burnReminderEntry(entry) {
+    if (!entry || !entry.state) return;
+    const state = entry.state;
+    const dayMs = 86400000;
+    state.burned = true;
+    state.burnCycles = Number(state.burnCycles || 0) + 1;
+    state.stability = Math.min(70, Math.max(3, Number(state.stability || 1) * 1.9 + 1));
+    state.dueAt = Date.now() + Math.max(7, Math.round(state.stability * 2)) * dayMs;
+    state.lastShownDay = getTodayKey();
+    saveToStorage();
+}
+
+function getVoidScopeLabel() {
+    if (activeVoidScope === 'world' && activeVoidWorldRef) return `The World Void - ${activeVoidWorldRef.name || 'World'}`;
+    return 'The Void - All Worlds';
+}
+
+function setVoidImmersion(active) {
+    document.body.classList.toggle('void-active', !!active);
+    if (mainHeader) mainHeader.classList.toggle('hidden', !!active);
+}
+
+function triggerVoidCardReveal(hasImage) {
+    if (reminderScrollerCard) {
+        // Clear inline styles left by swipe gesture or previous state — they beat keyframe animation
+        reminderScrollerCard.style.transform = '';
+        reminderScrollerCard.style.opacity = '';
+        reminderScrollerCard.style.transition = '';
+        reminderScrollerCard.classList.remove('card-reveal');
+        void reminderScrollerCard.offsetWidth; // force reflow to restart animation
+        reminderScrollerCard.classList.add('card-reveal');
+    }
+    if (reminderCardImageWrap) {
+        reminderCardImageWrap.classList.remove('image-focus');
+        if (hasImage) {
+            void reminderCardImageWrap.offsetWidth;
+            reminderCardImageWrap.classList.add('image-focus');
+        }
+    }
+}
+
+function closeVoidScreen() {
+    if (!voidScreen) return;
+    if (voidSceneTimer) clearTimeout(voidSceneTimer);
+    voidScreen.classList.remove('is-entering');
+    voidScreen.classList.add('is-leaving');
+    activeReminderEntry = null;
+
+    voidSceneTimer = setTimeout(() => {
+        voidScreen.classList.add('hidden');
+        voidScreen.classList.remove('is-leaving');
+        setVoidImmersion(false);
+
+        if (activeVoidOrigin === 'hub') {
+            if (hubScreen) hubScreen.classList.remove('hidden');
+        } else {
+            if (homeScreen) homeScreen.classList.remove('hidden');
+        }
+        renderHomeReminderStrip();
+    }, 240);
+}
+
+function renderHomeReminderStrip() {
+    const settings = getReminderSettings();
+    if (btnOpenReminderScroller) {
+        btnOpenReminderScroller.textContent = 'Enter the Void';
+        btnOpenReminderScroller.disabled = !settings.enabled;
+        btnOpenReminderScroller.style.opacity = settings.enabled ? '1' : '0.45';
+        btnOpenReminderScroller.style.pointerEvents = settings.enabled ? 'auto' : 'none';
+    }
+}
+
+function getHousingThemes() {
+    const cfg = getDesignSystemConfig();
+    const themes = (((cfg || {}).housingCatalog || {}).themes || []);
+    return Array.isArray(themes) ? themes : [];
+}
+
+function getHousingItems() {
+    const cfg = getDesignSystemConfig();
+    const items = (((cfg || {}).housingCatalog || {}).items || []);
+    return Array.isArray(items) ? items : [];
+}
+
+function renderHousingScreen() {
+    ensureDesignSystemState(appState);
+    const housing = appState.housing;
+    const themes = getHousingThemes();
+    const items = getHousingItems();
+
+    const selectedTheme = themes.find(t => t.id === housing.selectedTheme) || themes[0] || { id: 'obsidian-ritual', name: 'Obsidian Ritual' };
+    if (selectedTheme && selectedTheme.id && housing.selectedTheme !== selectedTheme.id) {
+        housing.selectedTheme = selectedTheme.id;
+    }
+
+    if (housingSummary) {
+        housingSummary.textContent = `Theme: ${selectedTheme.name} · Slot Capacity: ${housing.slotCapacity} · Style Score: ${housing.styleScore}`;
+    }
+
+    if (housingRoomStats) {
+        housingRoomStats.textContent = `Used Slots: ${housing.slotsUsed}/${housing.slotCapacity} · Unlock Tier: ${housing.unlockTier}`;
+    }
+
+    if (housingOwnedList) {
+        if (!housing.ownedDecorIds.length) {
+            housingOwnedList.textContent = 'Owned Decor: none yet. Buy from the catalog below.';
+        } else {
+            const names = housing.ownedDecorIds.map(id => {
+                const item = items.find(i => i.id === id);
+                return item ? item.name : id;
+            });
+            housingOwnedList.textContent = 'Owned Decor: ' + names.join(', ');
+        }
+    }
+
+    if (housingCatalog) {
+        housingCatalog.innerHTML = '';
+        items.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'housing-item';
+
+            const ownedCount = housing.ownedDecorIds.filter(id => id === item.id).length;
+            const requiresScrolls = Number(item.requiresScrolls || 0);
+            const scrollKey = 'Generic Scroll';
+            const currentScrolls = Number((appState.paper && appState.paper[scrollKey]) || 0);
+            const canAffordGold = Number(appState.gold || 0) >= Number(item.costGold || 0);
+            const canAffordScrolls = currentScrolls >= requiresScrolls;
+
+            card.innerHTML = `
+                <h4>${item.name}</h4>
+                <div class="housing-meta">${item.rarity || 'common'} · ${item.category || 'decor'} · Style +${Number(item.styleScore || 0)}</div>
+                <div class="housing-meta">Cost: ${Number(item.costGold || 0)} 🪙${requiresScrolls ? ` + ${requiresScrolls} 📜` : ''}</div>
+                <div class="housing-meta">Owned: ${ownedCount}</div>
+            `;
+
+            const buyBtn = document.createElement('button');
+            buyBtn.className = 'btn-occult';
+            buyBtn.textContent = 'Buy';
+            buyBtn.disabled = !(canAffordGold && canAffordScrolls);
+            buyBtn.style.opacity = buyBtn.disabled ? '0.5' : '1';
+            buyBtn.addEventListener('click', () => buyHousingItem(item.id));
+            card.appendChild(buyBtn);
+            housingCatalog.appendChild(card);
+        });
+    }
+}
+
+function buyHousingItem(itemId) {
+    ensureDesignSystemState(appState);
+    const item = getHousingItems().find(i => i.id === itemId);
+    if (!item) return;
+
+    const requiresScrolls = Number(item.requiresScrolls || 0);
+    const scrollKey = 'Generic Scroll';
+    const currentScrolls = Number((appState.paper && appState.paper[scrollKey]) || 0);
+    const costGold = Number(item.costGold || 0);
+
+    if (Number(appState.gold || 0) < costGold) {
+        showToast('Not enough Gold for this housing object.');
+        return;
+    }
+    if (currentScrolls < requiresScrolls) {
+        showToast('Not enough Scrolls for this housing object.');
+        return;
+    }
+
+    appState.gold = Number(appState.gold || 0) - costGold;
+    if (requiresScrolls > 0) {
+        if (!appState.paper) appState.paper = {};
+        appState.paper[scrollKey] = Math.max(0, currentScrolls - requiresScrolls);
+    }
+
+    appState.housing.ownedDecorIds.push(item.id);
+    appState.housing.styleScore = Number(appState.housing.styleScore || 0) + Number(item.styleScore || 0);
+    appState.progression.loops.housingPurchasesLifetime = Number(appState.progression.loops.housingPurchasesLifetime || 0) + 1;
+
+    saveToStorage();
+    renderHousingScreen();
+    showToast(`Added ${item.name} to your sanctuary.`);
+}
+
+function unlockHousingSlot() {
+    ensureDesignSystemState(appState);
+    const cfg = getDesignSystemConfig();
+    const sink = (((cfg || {}).economyRates || {}).sinks || {}).housing || {};
+    const base = Number(sink.slotUnlockBaseGold || 120);
+    const growth = Number(sink.slotUnlockGrowth || 1.35);
+    const nextCost = Math.round(base * Math.pow(growth, Math.max(0, Number(appState.housing.slotCapacity || 8) - 8)));
+
+    if (Number(appState.gold || 0) < nextCost) {
+        showToast(`Need ${nextCost} Gold to unlock the next room slot.`);
+        return;
+    }
+
+    appState.gold = Number(appState.gold || 0) - nextCost;
+    appState.housing.slotCapacity = Number(appState.housing.slotCapacity || 8) + 1;
+    if (appState.housing.slotCapacity >= 12) appState.housing.unlockTier = Math.max(Number(appState.housing.unlockTier || 1), 2);
+    if (appState.housing.slotCapacity >= 16) appState.housing.unlockTier = Math.max(Number(appState.housing.unlockTier || 1), 3);
+
+    saveToStorage();
+    renderHousingScreen();
+    showToast('Room slot unlocked.');
+}
+
+function cycleHousingTheme() {
+    ensureDesignSystemState(appState);
+    const cfg = getDesignSystemConfig();
+    const themes = getHousingThemes();
+    if (!themes.length) return;
+
+    const sink = (((cfg || {}).economyRates || {}).sinks || {}).housing || {};
+    const cost = Number(sink.themeSwitchGold || 40);
+    if (Number(appState.gold || 0) < cost) {
+        showToast(`Need ${cost} Gold to shift sanctuary theme.`);
+        return;
+    }
+
+    const idx = Math.max(0, themes.findIndex(t => t.id === appState.housing.selectedTheme));
+    const next = themes[(idx + 1) % themes.length];
+    appState.gold = Number(appState.gold || 0) - cost;
+    appState.housing.selectedTheme = next.id;
+    saveToStorage();
+    renderHousingScreen();
+    showToast(`Theme shifted to ${next.name}.`);
+}
+
+function renderReminderScrollerEntry(entry) {
+    if (voidModalTitle) voidModalTitle.textContent = getVoidScopeLabel();
+    if (voidScreenScope) voidScreenScope.textContent = activeVoidScope === 'world' ? 'The World Void' : 'The Void';
+
+    if (reminderScrollerMeta) {
+        reminderScrollerMeta.textContent = '';
+        reminderScrollerMeta.classList.add('hidden');
+    }
+
+    if (!entry || !entry.object || !entry.state) {
+        if (reminderScrollerEmpty) reminderScrollerEmpty.classList.remove('hidden');
+        if (reminderScrollerCard) reminderScrollerCard.classList.add('hidden');
+        if (reminderCardImageWrap) reminderCardImageWrap.classList.remove('image-focus');
+        activeReminderEntry = null;
+        return;
+    }
+
+    activeReminderEntry = entry;
+    const obj = entry.object;
+    const state = entry.state;
+    const worldName = (entry.world && entry.world.name) ? entry.world.name : 'World';
+    if (reminderScrollerEmpty) reminderScrollerEmpty.classList.add('hidden');
+    if (reminderScrollerCard) reminderScrollerCard.classList.remove('hidden');
+    if (reminderCardSection) reminderCardSection.textContent = worldName + ' • ' + (obj.section || 'Allgemein') + ' • ' + obj.type;
+    if (reminderCardBurn) {
+        reminderCardBurn.textContent = state.burned ? 'Burned: Pushed Further' : 'Fresh Track';
+        reminderCardBurn.style.color = state.burned ? '#ffd59f' : '#a9ffc5';
+        reminderCardBurn.style.borderColor = state.burned ? 'rgba(255,213,159,0.5)' : 'rgba(169,255,197,0.45)';
+    }
+    if (reminderCardText) reminderCardText.textContent = obj.text || '';
+    if (reminderCardStats) reminderCardStats.textContent = 'Shown: ' + Number(state.shownCount || 0) + ' • Stability: ' + Number(state.stability || 1).toFixed(2);
+
+    if (obj.imageData && reminderCardImage && reminderCardImageWrap) {
+        reminderCardImage.src = obj.imageData;
+        reminderCardImageWrap.classList.remove('hidden');
+    } else if (reminderCardImageWrap) {
+        reminderCardImageWrap.classList.add('hidden');
+    }
+    triggerVoidCardReveal(!!obj.imageData);
+}
+
+function openReminderScroller(scope) {
+    ensureReminderDataModel();
+    const settings = getReminderSettings();
+    if (!settings.enabled) {
+        showToast('Enable The Void in Workshop Settings first.');
+        return;
+    }
+    activeVoidScope = scope === 'world' ? 'world' : 'all';
+    activeVoidWorldRef = activeVoidScope === 'world' ? getActiveWorld() : null;
+    activeVoidOrigin = activeVoidScope === 'world' ? 'hub' : 'home';
+    if (activeVoidScope === 'world' && !activeVoidWorldRef) {
+        showToast('Open a world map first for The World Void.');
+        return;
+    }
+    if (!voidScreen) return;
+    if (homeScreen) homeScreen.classList.add('hidden');
+    if (hubScreen) hubScreen.classList.add('hidden');
+    if (universeScreen) universeScreen.classList.add('hidden');
+    if (workshopScreen) workshopScreen.classList.add('hidden');
+    setVoidImmersion(true);
+    if (voidSceneTimer) clearTimeout(voidSceneTimer);
+    // Make element visible first, then trigger animation next frame so browser paints the transition
+    voidScreen.classList.remove('hidden', 'is-leaving', 'is-entering');
+    void voidScreen.offsetWidth; // force reflow
+    requestAnimationFrame(() => {
+        voidScreen.classList.add('is-entering');
+        voidSceneTimer = setTimeout(() => {
+            if (voidScreen) voidScreen.classList.remove('is-entering');
+        }, 430);
+    });
+    renderReminderScrollerEntry(pickNextReminderEntry(activeVoidScope));
+}
+
+function advanceReminderScroller() {
+    if (activeReminderEntry) markReminderShown(activeReminderEntry);
+    renderReminderScrollerEntry(pickNextReminderEntry(activeVoidScope));
+    renderHomeReminderStrip();
+}
+
+function burnCurrentVoidEntry() {
+    if (!activeReminderEntry) return;
+    markReminderShown(activeReminderEntry, { skipBurnCycle: true });
+    burnReminderEntry(activeReminderEntry);
+    showToast('Burned and pushed further in The Void.', 1500);
+    renderReminderScrollerEntry(pickNextReminderEntry(activeVoidScope));
+    renderHomeReminderStrip();
+}
+
+function initVoidSwipe() {
+    if (!reminderScrollerCard || reminderScrollerCard.dataset.voidSwipeBound === '1') return;
+    reminderScrollerCard.dataset.voidSwipeBound = '1';
+
+    reminderScrollerCard.addEventListener('pointerdown', (e) => {
+        voidSwipe.active = true;
+        voidSwipe.startX = e.clientX;
+        voidSwipe.startY = e.clientY;
+        voidSwipe.lastDx = 0;
+        voidSwipe.lastDy = 0;
+        reminderScrollerCard.style.transition = 'none';
+    });
+    reminderScrollerCard.addEventListener('pointermove', (e) => {
+        if (!voidSwipe.active) return;
+        const dx = Math.max(0, e.clientX - voidSwipe.startX);
+        const dy = Math.min(0, e.clientY - voidSwipe.startY);
+        voidSwipe.lastDx = dx;
+        voidSwipe.lastDy = dy;
+        reminderScrollerCard.style.transform = `translate(${Math.min(160, dx)}px, ${Math.max(-140, dy)}px)`;
+        reminderScrollerCard.style.opacity = String(Math.max(0.68, 1 - (dx + Math.abs(dy) * 0.7) / 520));
+    });
+    function _resetCard() {
+        reminderScrollerCard.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
+        reminderScrollerCard.style.transform = 'translate(0px, 0px)';
+        reminderScrollerCard.style.opacity = '1';
+    }
+    reminderScrollerCard.addEventListener('pointerup', () => {
+        if (!voidSwipe.active) return;
+        const burnNow = voidSwipe.lastDx > 110 && voidSwipe.lastDx >= Math.abs(voidSwipe.lastDy);
+        const nextNow = voidSwipe.lastDy < -90 && Math.abs(voidSwipe.lastDy) > voidSwipe.lastDx;
+        voidSwipe.active = false;
+        _resetCard();
+        if (burnNow) burnCurrentVoidEntry();
+        else if (nextNow) advanceReminderScroller();
+    });
+    reminderScrollerCard.addEventListener('pointercancel', () => {
+        voidSwipe.active = false;
+        _resetCard();
+    });
+}
+
+function renderWorldObjectSettings() {
+    const world = getActiveWorld();
+    if (!world || !worldObjectSettingsList) return;
+    ensureWorldReminderSchema(world);
+    const objects = collectWorldObjects(world);
+    worldObjectSettingsList.innerHTML = '';
+
+    if (!objects.length) {
+        worldObjectSettingsList.innerHTML = '<p style="color:#777;">No objects available in this world.</p>';
+        return;
+    }
+
+    objects.forEach(obj => {
+        const flags = world.voidConfig.objectFlags[obj.key] || { void:false, quiz:false, minigame:false, image:false };
+        const row = document.createElement('div');
+        row.style.cssText = 'border:1px solid rgba(76,209,55,0.24);border-radius:8px;padding:9px 10px;background:#11181a;';
+        row.innerHTML = [
+            '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">',
+              '<div style="flex:1;min-width:0;">',
+                '<p style="margin:0;color:#cfe4da;font-size:0.9em;"><strong>'+obj.type+'</strong> • '+(obj.section||'Allgemein')+'</p>',
+                '<p style="margin:3px 0 0;color:#8ea79a;font-size:0.82em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+String(obj.text||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</p>',
+              '</div>',
+              '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">',
+                '<label style="font-size:0.78em;color:#a9ffc5;display:flex;align-items:center;gap:4px;"><input class="world-obj-flag" data-key="'+obj.key+'" data-flag="void" type="checkbox" '+(flags.void?'checked':'')+' style="accent-color:#4cd137;">Void</label>',
+                '<label style="font-size:0.78em;color:#a9ffc5;display:flex;align-items:center;gap:4px;"><input class="world-obj-flag" data-key="'+obj.key+'" data-flag="quiz" type="checkbox" '+(flags.quiz?'checked':'')+' style="accent-color:#4cd137;">Quiz</label>',
+                '<label style="font-size:0.78em;color:#a9ffc5;display:flex;align-items:center;gap:4px;"><input class="world-obj-flag" data-key="'+obj.key+'" data-flag="minigame" type="checkbox" '+(flags.minigame?'checked':'')+' style="accent-color:#4cd137;">Mini-Game</label>',
+                '<label style="font-size:0.78em;color:#a9ffc5;display:flex;align-items:center;gap:4px;"><input class="world-obj-flag" data-key="'+obj.key+'" data-flag="image" type="checkbox" '+(flags.image?'checked':'')+' style="accent-color:#4cd137;">Image</label>',
+              '</div>',
+            '</div>'
+        ].join('');
+        worldObjectSettingsList.appendChild(row);
+    });
+
+    worldObjectSettingsList.querySelectorAll('.world-obj-flag').forEach(cb => {
+        cb.addEventListener('change', (e) => {
+            const key = e.target.dataset.key;
+            const flag = e.target.dataset.flag;
+            if (!world.voidConfig.objectFlags[key]) world.voidConfig.objectFlags[key] = { void:false, quiz:false, minigame:false, image:false };
+            world.voidConfig.objectFlags[key][flag] = !!e.target.checked;
+            saveToStorage();
+            renderHomeReminderStrip();
+            renderMap();
+        });
+    });
+}
+
+function openWorldObjectSettings() {
+    const world = getActiveWorld();
+    if (!world) {
+        showToast('Open a world first.');
+        return;
+    }
+    renderWorldObjectSettings();
+    if (worldObjectSettingsModal) worldObjectSettingsModal.classList.remove('hidden');
+}
+
+if (btnOpenReminderScroller) {
+    btnOpenReminderScroller.addEventListener('click', () => openReminderScroller('all'));
+}
+if (btnOpenWorldVoid) {
+    btnOpenWorldVoid.addEventListener('click', () => openReminderScroller('world'));
+}
+if (document.getElementById('btn-reminder-next')) {
+    document.getElementById('btn-reminder-next').addEventListener('click', () => advanceReminderScroller());
+}
+if (document.getElementById('btn-reminder-exit')) {
+    document.getElementById('btn-reminder-exit').addEventListener('click', () => {
+        closeVoidScreen();
+    });
+}
+if (document.getElementById('btn-back-from-void')) {
+    document.getElementById('btn-back-from-void').addEventListener('click', () => {
+        closeVoidScreen();
+    });
+}
+
+if (document.getElementById('btn-workshop-settings')) {
+    document.getElementById('btn-workshop-settings').addEventListener('click', () => {
+        const s = getReminderSettings();
+        if (workshopReminderEnabled) workshopReminderEnabled.checked = !!s.enabled;
+        if (workshopReminderDaily) workshopReminderDaily.value = String(Number(s.dailyLimit || REMINDER_SETTINGS_DEFAULTS.dailyLimit));
+        if (workshopReminderRandom) workshopReminderRandom.value = String(Number(s.randomFactor || REMINDER_SETTINGS_DEFAULTS.randomFactor));
+        if (workshopReminderBurn) workshopReminderBurn.value = String(Number(s.burnThreshold || REMINDER_SETTINGS_DEFAULTS.burnThreshold));
+        if (workshopReminderDailyVal) workshopReminderDailyVal.textContent = String(Number(s.dailyLimit || REMINDER_SETTINGS_DEFAULTS.dailyLimit));
+        if (workshopReminderRandomVal) workshopReminderRandomVal.textContent = Number(s.randomFactor || REMINDER_SETTINGS_DEFAULTS.randomFactor).toFixed(2);
+        if (workshopReminderBurnVal) workshopReminderBurnVal.textContent = String(Number(s.burnThreshold || REMINDER_SETTINGS_DEFAULTS.burnThreshold));
+        if (workshopSettingsModal) workshopSettingsModal.classList.remove('hidden');
+    });
+}
+if (document.getElementById('btn-world-object-settings')) {
+    document.getElementById('btn-world-object-settings').addEventListener('click', () => openWorldObjectSettings());
+}
+if (document.getElementById('close-world-object-settings')) {
+    document.getElementById('close-world-object-settings').addEventListener('click', () => {
+        if (worldObjectSettingsModal) worldObjectSettingsModal.classList.add('hidden');
+    });
+}
+if (document.getElementById('close-workshop-settings')) {
+    document.getElementById('close-workshop-settings').addEventListener('click', () => {
+        if (workshopSettingsModal) workshopSettingsModal.classList.add('hidden');
+    });
+}
+if (workshopReminderDaily) {
+    workshopReminderDaily.addEventListener('input', (e) => {
+        if (workshopReminderDailyVal) workshopReminderDailyVal.textContent = String(e.target.value);
+    });
+}
+if (workshopReminderRandom) {
+    workshopReminderRandom.addEventListener('input', (e) => {
+        if (workshopReminderRandomVal) workshopReminderRandomVal.textContent = Number(e.target.value).toFixed(2);
+    });
+}
+if (workshopReminderBurn) {
+    workshopReminderBurn.addEventListener('input', (e) => {
+        if (workshopReminderBurnVal) workshopReminderBurnVal.textContent = String(e.target.value);
+    });
+}
+if (document.getElementById('btn-save-workshop-settings')) {
+    document.getElementById('btn-save-workshop-settings').addEventListener('click', () => {
+        appState.reminderSettings = {
+            enabled: !!(workshopReminderEnabled && workshopReminderEnabled.checked),
+            dailyLimit: Number((workshopReminderDaily && workshopReminderDaily.value) || REMINDER_SETTINGS_DEFAULTS.dailyLimit),
+            randomFactor: Number((workshopReminderRandom && workshopReminderRandom.value) || REMINDER_SETTINGS_DEFAULTS.randomFactor),
+            burnThreshold: Number((workshopReminderBurn && workshopReminderBurn.value) || REMINDER_SETTINGS_DEFAULTS.burnThreshold)
+        };
+        saveToStorage();
+        renderHomeReminderStrip();
+        if (workshopSettingsModal) workshopSettingsModal.classList.add('hidden');
+        showToast('Void settings saved.');
+    });
+}
+if (document.getElementById('btn-reset-workshop-settings')) {
+    document.getElementById('btn-reset-workshop-settings').addEventListener('click', () => {
+        appState.reminderSettings = Object.assign({}, REMINDER_SETTINGS_DEFAULTS);
+        if (workshopReminderEnabled) workshopReminderEnabled.checked = REMINDER_SETTINGS_DEFAULTS.enabled;
+        if (workshopReminderDaily) workshopReminderDaily.value = String(REMINDER_SETTINGS_DEFAULTS.dailyLimit);
+        if (workshopReminderRandom) workshopReminderRandom.value = String(REMINDER_SETTINGS_DEFAULTS.randomFactor);
+        if (workshopReminderBurn) workshopReminderBurn.value = String(REMINDER_SETTINGS_DEFAULTS.burnThreshold);
+        if (workshopReminderDailyVal) workshopReminderDailyVal.textContent = String(REMINDER_SETTINGS_DEFAULTS.dailyLimit);
+        if (workshopReminderRandomVal) workshopReminderRandomVal.textContent = Number(REMINDER_SETTINGS_DEFAULTS.randomFactor).toFixed(2);
+        if (workshopReminderBurnVal) workshopReminderBurnVal.textContent = String(REMINDER_SETTINGS_DEFAULTS.burnThreshold);
+        saveToStorage();
+        renderHomeReminderStrip();
+    });
+}
+initVoidSwipe();
 
 // --- WORKSHOP PDF CONVERSION ---
 if (document.getElementById('btn-convert-pdf')) {
@@ -111,6 +1141,7 @@ if (document.getElementById('btn-convert-pdf')) {
         e.preventDefault();
         // Prevent double-clicking which queues multiple file choosers on iOS
         pdfUploadBtn.style.pointerEvents = "none";
+        pdfUploadInput.value = '';
         pdfUploadInput.click();
         setTimeout(() => { pdfUploadBtn.style.pointerEvents = "auto"; }, 1000);
     });
@@ -272,6 +1303,7 @@ if (document.getElementById('btn-convert-pdf')) {
         autoForgeBtn.addEventListener('click', (e) => {
             e.preventDefault();
             autoForgeBtn.style.pointerEvents = 'none';
+            autoForgeInput.value = '';
             autoForgeInput.click();
             setTimeout(() => { autoForgeBtn.style.pointerEvents = 'auto'; }, 1000);
         });
@@ -356,6 +1388,7 @@ if (document.getElementById('btn-convert-pdf')) {
         txtSyntaxUploadBtn.addEventListener('click', (e) => {
             e.preventDefault();
             txtSyntaxUploadBtn.style.pointerEvents = "none";
+            txtSyntaxUploadInput.value = '';
             txtSyntaxUploadInput.click();
             setTimeout(() => { txtSyntaxUploadBtn.style.pointerEvents = "auto"; }, 1000);
         });
@@ -542,7 +1575,10 @@ const hlOpenBtn   = document.getElementById('btn-open-highlighter');
 const hlFileInput = document.getElementById('pdf-highlighter-input');
 
 if (hlOpenBtn && hlFileInput) {
-    hlOpenBtn.addEventListener('click', () => hlFileInput.click());
+    hlOpenBtn.addEventListener('click', () => {
+        hlFileInput.value = '';
+        hlFileInput.click();
+    });
     hlFileInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -574,6 +1610,7 @@ function purgeJunkSections() {
             world.flashcards = (world.flashcards || []).filter(fc => !junk.has(fc.section));
             world.quizzes = (world.quizzes || []).filter(q => !junk.has(q.section));
             world.exams = (world.exams || []).filter(e => !junk.has(e.section));
+            world.reminders = (world.reminders || []).filter(r => !junk.has(r.section));
             world.miniGames = (world.miniGames || []).filter(g => !junk.has(g.section));
             junk.forEach(s => { if (world.progress) delete world.progress[s]; });
             world.coordinates = generateMapCoordinates(world.sections.length);
@@ -603,6 +1640,12 @@ function loadFromStorage() {
             if (appState.scholarXP === undefined) appState.scholarXP = 0;
             if (appState.scholarLevel === undefined) appState.scholarLevel = 1;
             if (!appState.owlMentor) appState.owlMentor = { tips: [], tipIndex: 0, lastWorldName: null };
+            appState.reminderSettings = Object.assign({}, REMINDER_SETTINGS_DEFAULTS, appState.reminderSettings || {});
+            if (!appState.reminderRuntime || typeof appState.reminderRuntime !== 'object') appState.reminderRuntime = { dailyShown: {} };
+            if (!appState.reminderRuntime.dailyShown || typeof appState.reminderRuntime.dailyShown !== 'object') appState.reminderRuntime.dailyShown = {};
+            if (!appState.reminderRuntime.voidProgress || typeof appState.reminderRuntime.voidProgress !== 'object') appState.reminderRuntime.voidProgress = { scrolledCount: 0 };
+            if (!Number.isFinite(Number(appState.reminderRuntime.voidProgress.scrolledCount))) appState.reminderRuntime.voidProgress.scrolledCount = 0;
+            ensureDesignSystemState(appState);
             if (!appState.library || appState.library.length === 0) {
                 appState.library = [
                     { unlocked: true, tome: null, inkLevel: 0, timeStarted: null },
@@ -612,6 +1655,7 @@ function loadFromStorage() {
 
             appState.hubs.forEach(hub => {
                 hub.worlds.forEach(world => {
+                    ensureWorldReminderSchema(world);
                     if (!world.coordinates || world.coordinates.length !== world.sections.length) {
                         world.coordinates = generateMapCoordinates(world.sections.length);
                     }
@@ -632,6 +1676,7 @@ function loadFromStorage() {
                 if(document.getElementById('vault-card')) document.getElementById('vault-card').classList.remove('locked');
                 renderMap();
             }
+            renderHomeReminderStrip();
         } catch (error) {
             console.error("Corrupted save file detected.", error);
             localStorage.removeItem('studyQuestData');
@@ -640,7 +1685,11 @@ function loadFromStorage() {
         appState.hubs = [{ name: "Main Hub", worlds: [], currentWorldIndex: 0 }];
         appState.library = [ { unlocked: true, tome: null }, { unlocked: false, cost: 250 }, { unlocked: false, cost: 500 }, { unlocked: false, cost: 1000 } ];
         if (!appState.owlMentor) appState.owlMentor = { tips: [], tipIndex: 0, lastWorldName: null };
+        appState.reminderSettings = Object.assign({}, REMINDER_SETTINGS_DEFAULTS);
+        appState.reminderRuntime = { dailyShown: {}, voidProgress: { scrolledCount: 0 } };
+        ensureDesignSystemState(appState);
         updateHubDropdown();
+        renderHomeReminderStrip();
     }
     updateEconomyUI();
 }
@@ -711,7 +1760,7 @@ function isSectionClearedForProgression(world, sectionName) {
 
     const progress = world.progress?.[sectionName] || { quizPassed: false, examPassed: false };
     const hasExams = (world.exams || []).some(exam => exam.section === sectionName);
-    const hasQuizzes = (world.quizzes || []).some(quiz => quiz.section === sectionName);
+    const hasQuizzes = buildSectionQuizPool(world, sectionName).length > 0;
 
     if (hasExams) return !!progress.examPassed;
     if (hasQuizzes) return !!progress.quizPassed;
@@ -870,6 +1919,7 @@ if(document.getElementById('btn-new-hub')) {
 // --- MAP LOGIC ---
 function renderMap() {
     const hub = appState.hubs[appState.currentHubIndex];
+    renderHomeReminderStrip();
 
     // --- NEW VISIBILITY CHECK (BOTTOM UPLOAD) ---
     const mainUploadContainer = document.getElementById('main-hub-bottom-upload');
@@ -884,6 +1934,7 @@ function renderMap() {
 
     if (!hub || hub.worlds.length === 0) { 
         if(mapSection) mapSection.classList.add('hidden'); 
+        renderHomeReminderStrip();
         return; 
     }
 
@@ -898,6 +1949,12 @@ function renderMap() {
     if(mapSection) mapSection.classList.remove('hidden');
     const world = getActiveWorld();
     const now = Date.now();
+
+    const worldVoidBtn = document.getElementById('btn-open-world-void');
+    if (worldVoidBtn) {
+        const worldDue = getDueReminderEntries('world').length;
+        worldVoidBtn.textContent = 'Open The World Void (' + worldDue + ')';
+    }
 
     const globalDueCards = world.flashcards.filter(fc => !fc.burned && fc.nextReview <= now);
     if(document.getElementById('global-fc-count')) document.getElementById('global-fc-count').innerText = globalDueCards.length;
@@ -1031,8 +2088,8 @@ function openSectionModal(sectionName) {
     const sectionTasks = world.tasks.filter(t => t.section === sectionName);
     const sectionFlashcards = world.flashcards.filter(fc => fc.section === sectionName);
     const dueFlashcards = sectionFlashcards.filter(fc => !fc.burned && fc.nextReview <= now);
-    const sectionGames = world.miniGames.filter(g => g.section === sectionName);
-    const sectionQuizzes = (world.quizzes || []).filter(q => q.section === sectionName);
+    const sectionGames = getSectionPlayableGames(world, sectionName);
+    const sectionQuizzes = buildSectionQuizPool(world, sectionName);
     const sectionExams = (world.exams || []).filter(e => e.section === sectionName);
     const sectionProgress = world.progress[sectionName] || { quizPassed: false, examPassed: false, gameCooldowns: {} };
 
@@ -1542,7 +2599,8 @@ if (document.getElementById('close-minigame')) {
 
 function startMiniGame(gameName, sectionName) {
     const world = getActiveWorld();
-    const sectionFlashcards = world.flashcards.filter(fc => fc.section === sectionName);
+    const sectionFlashcards = buildSectionMinigameDeck(world, sectionName);
+    const worldMinigameDeck = buildWorldMinigameDeck(world);
 
     if (gameName.toLowerCase() === 'memory') {
         if (sectionFlashcards.length < 2) { showToast('Mindestens 2 Karten benötigt für Memory Match!'); return; }
@@ -1555,7 +2613,7 @@ function startMiniGame(gameName, sectionName) {
         if(sectionModal) sectionModal.classList.add('hidden'); 
         if(minigameModal) minigameModal.classList.remove('hidden');
         if(document.getElementById('minigame-title')) document.getElementById('minigame-title').innerText = "Trivia Showdown";
-        launchTriviaGame(sectionFlashcards, world.flashcards, sectionName, gameName);
+        launchTriviaGame(sectionFlashcards, worldMinigameDeck, sectionName, gameName);
     } else if (gameName.toLowerCase() === 'spellweaver') {
         if (sectionFlashcards.length < 1) { showToast('Mindestens 1 Karte benötigt für Spellweaver!'); return; }
         if(sectionModal) sectionModal.classList.add('hidden'); 
@@ -1692,6 +2750,7 @@ if (document.getElementById('bg-upload-input')) {
                 if (width > 1200) { height *= 1200 / width; width = 1200; }
                 canvas.width = width; canvas.height = height; canvas.getContext('2d').drawImage(img, 0, 0, width, height);
                 getActiveWorld().background = canvas.toDataURL('image/jpeg', 0.6); saveToStorage(); renderMap();
+                e.target.value = '';
             };
             img.src = event.target.result;
         };
@@ -1873,6 +2932,10 @@ if (document.getElementById('btn-section-read')) {
         if(document.getElementById('read-modal-title')) document.getElementById('read-modal-title').innerText = currentReadSectionTitle + " - Notes";
         
         let fullText = world.content[currentReadSectionTitle] || "No text available.";
+        const flaggedImageSnippets = buildSectionImageSnippets(world, currentReadSectionTitle);
+        if (flaggedImageSnippets.length > 0) {
+            fullText = [fullText, flaggedImageSnippets.join('\n\n')].filter(Boolean).join('\n\n');
+        }
         // Split text by !SECTION!, clean up empty whitespace
         currentReadPages = fullText.split('!SECTION!').map(page => page.trim()).filter(page => page.length > 0);
         if (currentReadPages.length === 0) currentReadPages = ["No text available."];
@@ -2694,6 +3757,7 @@ if (document.getElementById('delete-page-btn')) {
         world.flashcards = (world.flashcards || []).filter(item => item.section !== sectionToDelete);
         world.quizzes = (world.quizzes || []).filter(item => item.section !== sectionToDelete);
         world.exams = (world.exams || []).filter(item => item.section !== sectionToDelete);
+        world.reminders = (world.reminders || []).filter(item => item.section !== sectionToDelete);
         world.miniGames = (world.miniGames || []).filter(item => item.section !== sectionToDelete);
         world.rituals = (world.rituals || []).filter(item => item.section !== sectionToDelete);
         world.chronicles = (world.chronicles || []).filter(item => item.section !== sectionToDelete);
@@ -2836,6 +3900,9 @@ if (document.getElementById('btn-force-sync')) {
 // Boot Application
 async function bootApp() {
     loadFromStorage();
+    try { await loadDesignSystemConfig(); } catch (e) { console.warn('Design config bootstrap fallback', e); }
+    ensureDesignSystemState(appState);
+    try { initWorkshopItems(); } catch (e) { console.error('Workshop items init error', e); }
     // Bind Owl controls immediately so the button responds even during cloud sync fetch.
     try { initOwlMentor(); } catch(e) { console.error('Owl mentor init error', e); }
 
@@ -2843,6 +3910,8 @@ async function bootApp() {
         console.log('Auto cloud sync disabled for this browser (full empty reset mode).');
         try { renderUploadedRewards(); } catch (e) { /* ignore if DOM not ready */ }
         try { initMindMap(appState); } catch(e) { console.error("MindMap init error", e); }
+        renderHomeReminderStrip();
+        renderHousingScreen();
         return;
     }
     
@@ -2969,6 +4038,8 @@ async function bootApp() {
     // Render uploaded rewards into the store panel (if any were saved)
     try { renderUploadedRewards(); } catch (e) { /* ignore if DOM not ready */ }
     try { initMindMap(appState); } catch(e) { console.error("MindMap init error", e); }
+    renderHomeReminderStrip();
+    renderHousingScreen();
 }
 
 bootApp();
@@ -3041,7 +4112,7 @@ function classifyButtonSoundCategory(interactiveEl) {
         return 'miniGame';
     }
 
-    if (interactiveEl.closest('.map-node,#prev-map,#next-map,#btn-back-universe,#btn-speed-read,#settings-btn,#btn-edit-world,#btn-reshuffle-map,#btn-rename-world,#delete-page-btn,#delete-world-btn')) {
+    if (interactiveEl.closest('.map-node,#prev-map,#next-map,#btn-back-universe,#btn-speed-read,#btn-open-world-void,#btn-open-reminder-scroller,#settings-btn,#btn-edit-world,#btn-world-object-settings,#btn-reshuffle-map,#btn-rename-world,#delete-page-btn,#delete-world-btn')) {
         return 'world';
     }
 
@@ -3984,23 +5055,28 @@ if (srStartBtn) {
             const chunkWords = window.speedReadWords.slice(window.speedReadIndex, window.speedReadIndex + chunkSize);
             window.speedReadIndex += chunkSize;
             
-            // Standard reading page length is about 250 words
+            const speedReadCfg = ((((getDesignSystemConfig() || {}).economyRates || {}).sources || {}).speedRead || {});
+            const wordsPerPage = Number(speedReadCfg.wordsPerPage || 250);
+            const goldPerPage = Number(speedReadCfg.goldPerPages || 1);
+            const inkPerPage = Number(speedReadCfg.inkPerPages || 1);
+            const scrollPerPage = Number(speedReadCfg.scrollPerPages || 1);
+
             window.speedReadWordsSinceReward += chunkWords.length;
-            if (window.speedReadWordsSinceReward >= 250) {
-                window.speedReadWordsSinceReward -= 250;
+            if (window.speedReadWordsSinceReward >= wordsPerPage) {
+                window.speedReadWordsSinceReward -= wordsPerPage;
                 
                 // Silent Reward for 1 "Page" read
-                appState.ink = (appState.ink || 0) + 1;
-                appState.gold = (appState.gold || 0) + 1;
+                appState.ink = (appState.ink || 0) + inkPerPage;
+                appState.gold = (appState.gold || 0) + goldPerPage;
                 if (!appState.paper) appState.paper = {};
-                appState.paper['Generic Scroll'] = (appState.paper['Generic Scroll'] || 0) + 1;
+                appState.paper['Generic Scroll'] = (appState.paper['Generic Scroll'] || 0) + scrollPerPage;
                 
                 saveToStorage();
                 updateEconomyUI();
                 
                 // Show visual feedback on screen without stuttering
                 const floater = document.createElement('div');
-                floater.innerHTML = "+1 Gold, +1 Ink, +1 Generic Scroll";
+                floater.innerHTML = `+${goldPerPage} Gold, +${inkPerPage} Ink, +${scrollPerPage} Generic Scroll`;
                 floater.style.position = "fixed";
                 floater.style.bottom = "20%"; // Pop up lower on the screen
                 floater.style.left = "50%";

@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "days": [
+    {
+      "day": 1,
+      "goal": "Complete your first Void run",
+      "reward": {
+        "gold": 50
+      }
+    },
+    {
+      "day": 7,
+      "goal": "Craft first common book",
+      "reward": {
+        "ink": 3,
+        "unlockTheme": "ember-catacomb"
+      }
+    },
+    {
+      "day": 30,
+      "goal": "Reach housing style score 20",
+      "reward": {
+        "gold": 250,
+        "scroll": 1
+      }
+    },
+    {
+      "day": 60,
+      "goal": "Craft first rare book",
+      "reward": {
+        "gold": 450,
+        "ink": 10
+      }
+    },
+    {
+      "day": 90,
+      "goal": "Reach style score 45",
+      "reward": {
+        "gold": 900,
+        "scroll": 2,
+        "unlockTheme": "blood-moon-sanctum"
+      }
+    }
+  ]
+}

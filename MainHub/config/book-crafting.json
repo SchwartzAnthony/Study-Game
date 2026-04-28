@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "pageSources": {
+    "quizPass": 2,
+    "examPass": 5,
+    "voidStreak20": 1,
+    "dailyLogin": 1
+  },
+  "tiers": {
+    "common": {
+      "pagesRequired": 8,
+      "inkPerPage": 1,
+      "outputBookKey": "book_common"
+    },
+    "rare": {
+      "pagesRequired": 18,
+      "inkPerPage": 2,
+      "outputBookKey": "book_rare"
+    },
+    "legendary": {
+      "pagesRequired": 36,
+      "inkPerPage": 3,
+      "outputBookKey": "book_legendary"
+    }
+  }
+}

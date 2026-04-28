@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "themes": [
+    {
+      "id": "obsidian-ritual",
+      "name": "Obsidian Ritual",
+      "preview": "#120707"
+    },
+    {
+      "id": "ember-catacomb",
+      "name": "Ember Catacomb",
+      "preview": "#2a0707"
+    },
+    {
+      "id": "blood-moon-sanctum",
+      "name": "Blood Moon Sanctum",
+      "preview": "#3a0a0a"
+    }
+  ],
+  "items": [
+    {
+      "id": "altar_blackstone",
+      "name": "Blackstone Altar",
+      "rarity": "rare",
+      "costGold": 220,
+      "slotSize": 2,
+      "styleScore": 8,
+      "category": "furniture"
+    },
+    {
+      "id": "candle_circle_crimson",
+      "name": "Crimson Candle Circle",
+      "rarity": "common",
+      "costGold": 80,
+      "slotSize": 1,
+      "styleScore": 3,
+      "category": "ritual"
+    },
+    {
+      "id": "shelf_forbidden_tomes",
+      "name": "Shelf of Forbidden Tomes",
+      "rarity": "rare",
+      "costGold": 160,
+      "slotSize": 1,
+      "styleScore": 5,
+      "category": "library"
+    },
+    {
+      "id": "mirror_voidglass",
+      "name": "Voidglass Mirror",
+      "rarity": "legendary",
+      "costGold": 480,
+      "slotSize": 2,
+      "styleScore": 14,
+      "category": "artifact",
+      "requiresScrolls": 1
+    },
+    {
+      "id": "banner_sable_order",
+      "name": "Banner of the Sable Order",
+      "rarity": "common",
+      "costGold": 60,
+      "slotSize": 1,
+      "styleScore": 2,
+      "category": "decoration"
+    }
+  ]
+}

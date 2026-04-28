@@ -1,7 +1,7 @@
 ﻿
 // =============================================================================
 // PDF HIGHLIGHTER WIZARD v4
-// Intro Gate + 9 Stages: Images -> Chapters -> Content -> Math -> Flashcards -> Quiz -> Exam -> Tasks -> Publish
+// Intro Gate + 10 Stages: Images -> Chapters -> Content -> Math -> Flashcards -> Quiz -> Exam -> Tasks -> Reminders -> Publish
 // =============================================================================
 
 export const TYPE_CONFIG = {
@@ -19,7 +19,8 @@ const STAGES = [
     { id: 'quiz',     label: 'Quiz',            icon: '6',  mode: 'text'   },
     { id: 'exam',     label: 'Pruefung',        icon: '7',  mode: 'text'   },
     { id: 'tasks',    label: 'Tasks',           icon: '8',  mode: null     },
-    { id: 'publish',  label: 'Veroeffentlichen',icon: '9',  mode: null     },
+    { id: 'reminders',label: 'Merker',          icon: '9',  mode: 'text'   },
+    { id: 'publish',  label: 'Veroeffentlichen',icon: '10', mode: null     },
 ];
 
 const MATH_TARGET_OPTIONS = [
@@ -34,18 +35,19 @@ const MATH_TARGET_OPTIONS = [
 let hlDoc    = null;
 let hlStage  = 0;
 let hlIntroGate = true;
-let hlDraft  = { pdfName:'', images:[], chapters:[], chapterTexts:{}, mathItems:[], flashcards:[], quizzes:[], exams:[], tasks:[] };
+let hlDraft  = { pdfName:'', images:[], chapters:[], chapterTexts:{}, mathItems:[], flashcards:[], quizzes:[], exams:[], tasks:[], reminders:[] };
 let hlRenderToken = 0;
 let qaTarget = 'question';
-let pendingQA = { section:'', q:{text:'',imageId:null}, a:{text:'',imageId:null} };
+let pendingQA = { section:'', q:{text:'',imageId:null}, a:{text:'',imageId:null}, voidEnabled:true };
 let pendingQAMode = 'flashcards';
 let mathTarget = 'question';
-let pendingMath = { section:'', q:'', latex:'', a:'', category:'flashcards' };
+let pendingMath = { section:'', q:'', latex:'', a:'', category:'flashcards', voidEnabled:true };
+let pendingReminder = { section:'', text:'', imageId:null, voidEnabled:true };
 let activeChapter = '';
 let _selectedHubIndex = 0;
 let _appState=null, _saveStore=null, _renderMap=null, _genCoords=null, _showToast=null;
 
-function _emptyPending(){ return { section:'', q:{text:'',imageId:null}, a:{text:'',imageId:null} }; }
+function _emptyPending(){ return { section:'', q:{text:'',imageId:null}, a:{text:'',imageId:null}, voidEnabled:true }; }
 function _el(id){ return document.getElementById(id); }
 function _uid(){ return Date.now()+Math.random(); }
 function _esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -62,9 +64,10 @@ export async function openPdfHighlighter(file, deps) {
     _genCoords = deps.generateMapCoordinates || null;
     _showToast = deps.showToast || null;
     hlDoc = null; hlStage = 0; hlIntroGate = true;
-    hlDraft = { pdfName: file.name.replace(/\.[^.]+$/, '').trim(), images:[], chapters:[], chapterTexts:{}, mathItems:[], flashcards:[], quizzes:[], exams:[], tasks:[] };
+    hlDraft = { pdfName: file.name.replace(/\.[^.]+$/, '').trim(), images:[], chapters:[], chapterTexts:{}, mathItems:[], flashcards:[], quizzes:[], exams:[], tasks:[], reminders:[] };
     pendingQA = _emptyPending();
-    pendingMath = { section:'', q:'', latex:'', a:'', category:'flashcards' };
+    pendingMath = { section:'', q:'', latex:'', a:'', category:'flashcards', voidEnabled:true };
+    pendingReminder = { section:'', text:'', imageId:null, voidEnabled:true };
     mathTarget = 'question';
     activeChapter = '';
     _selectedHubIndex = (_appState && _appState.currentHubIndex) ? _appState.currentHubIndex : 0;
@@ -126,6 +129,7 @@ function _renderIntroGate() {
         '<li><strong>Lernkarten & Quiz:</strong> Build Q/A study pairs.</li>',
         '<li><strong>Pruefung:</strong> Add deeper exam prompts.</li>',
         '<li><strong>Tasks:</strong> Create action checklist items.</li>',
+        '<li><strong>Merker:</strong> Highlight high-value reminders and attach key images.</li>',
         '<li><strong>Veroeffentlichen:</strong> Choose hub, create world, and save.</li>',
         '</ul>',
         '</div>'
@@ -216,7 +220,8 @@ async function _renderTextPages(container, stageId, token) {
         math:'Mathe-Ausdruecke markieren. Danach rechts Kategorie waehlen und Hinzufuegen (oder Schritt ueberspringen).',
         flash:'LILA = Frage  |  BLAU = Antwort.  Modus rechts waehlen, markieren, dann Hinzufuegen.',
         quiz:'LILA = Frage  |  BLAU = Antwort.  Modus rechts waehlen, markieren, dann Hinzufuegen.',
-        exam:'Text als Pruefungsstoff markieren — oder rechts aus Lernkarten/Quiz uebernehmen.'
+        exam:'Text als Pruefungsstoff markieren — oder rechts aus Lernkarten/Quiz uebernehmen.',
+        reminders:'Markiere Kerngedanken als Reminder. Rechts Kapitel und optional ein Bild zuweisen.'
     };
     if(HINTS[stageId]){
         var h=document.createElement('p');
@@ -370,7 +375,7 @@ function _addCanvasDragSelect(overlay, canvas) {
 }
 
 function _captureImage(dataURL){
-    hlDraft.images.push({id:_uid(),dataURL:dataURL,label:''});
+    hlDraft.images.push({id:_uid(),dataURL:dataURL,label:'',voidEnabled:false});
     _renderStagePanel();
 }
 
@@ -392,6 +397,7 @@ function _onTextMouseUp() {
     else if(id==='flash')    _doQACapture(text,range);
     else if(id==='quiz')     _doQACapture(text,range);
     else if(id==='exam')     _doExamCapture(text,range);
+    else if(id==='reminders') _doReminderCapture(text,range);
     sel.removeAllRanges();
 }
 
@@ -436,7 +442,15 @@ function _doMathCapture(text,range) {
 function _doExamCapture(text,range) {
     if(!activeChapter){ alert('Bitte zuerst ein aktives Kapitel rechts auswaehlen!'); return; }
     _wrapMark(range,'#ff7675','rgba(255,118,117,0.2)');
-    hlDraft.exams.push({id:_uid(),section:activeChapter,question:text.trim(),answer:'',elaboration:'',qImageData:null,aImageData:null});
+    hlDraft.exams.push({id:_uid(),section:activeChapter,question:text.trim(),answer:'',elaboration:'',qImageData:null,aImageData:null,voidEnabled:true});
+    _renderStagePanel();
+}
+
+function _doReminderCapture(text, range) {
+    if(!activeChapter){ alert('Bitte zuerst ein aktives Kapitel rechts auswaehlen!'); return; }
+    _wrapMark(range, '#4cd137', 'rgba(76,209,55,0.2)');
+    pendingReminder.section = activeChapter;
+    pendingReminder.text = text.trim();
     _renderStagePanel();
 }
 
@@ -456,6 +470,7 @@ function _renderStagePanel() {
     else if(id==='quiz')     _renderPanelQA(panel,'quizzes');
     else if(id==='exam')     _renderPanelExam(panel);
     else if(id==='tasks')    _renderPanelTasks(panel);
+    else if(id==='reminders') _renderPanelReminders(panel);
     else if(id==='publish')  _renderPanelPublish(panel);
 }
 
@@ -488,6 +503,7 @@ function _renderPanelMath(panel) {
           '<textarea id="hl-math-atxt" rows="2" placeholder="Optional answer / explanation" style="width:100%;background:#0a0a12;border:1px solid #2a2a3a;color:#a0e8f8;border-radius:3px;padding:5px 6px;font-size:0.9em;box-sizing:border-box;resize:vertical;">'+_esc(pendingMath.a)+'</textarea>',
           '<label style="font-size:0.72em;color:#7d7899;">Category</label>',
           '<select id="hl-math-cat" style="width:100%;padding:5px;background:#111;border:1px solid rgba(255,209,102,0.35);color:#e8dbaf;border-radius:4px;font-size:0.82em;">'+catOpts+'</select>',
+                    '<label style="display:flex;align-items:center;gap:8px;font-size:0.78em;color:#a7f3c3;"><input id="hl-math-void" type="checkbox" '+(pendingMath.voidEnabled?'checked':'')+' style="accent-color:#4cd137;">Add this object to The Void</label>',
           '<div style="display:flex;gap:6px;">',
             '<button id="btn-math-add" '+(canAdd?'':'disabled')+' style="flex:1;padding:7px;background:'+(canAdd?'rgba(102,255,153,0.15)':'#141414')+';border:1px solid '+(canAdd?'#66ff99':'#2a2a2a')+';color:'+(canAdd?'#66ff99':'#444')+';border-radius:5px;cursor:'+(canAdd?'pointer':'not-allowed')+';font-weight:bold;font-size:0.84em;">+ Add Math Item</button>',
             '<button id="btn-math-skip" style="padding:7px 11px;background:#1c1c28;border:1px solid #333;color:#aaa;border-radius:5px;cursor:pointer;font-size:0.82em;">Skip</button>',
@@ -516,6 +532,7 @@ function _renderPanelMath(panel) {
     var latexTxt = _el('hl-math-latex'); if (latexTxt) latexTxt.addEventListener('input', function(e){ pendingMath.latex = e.target.value; });
     var aTxt = _el('hl-math-atxt'); if (aTxt) aTxt.addEventListener('input', function(e){ pendingMath.a = e.target.value; });
     var catSel = _el('hl-math-cat'); if (catSel) catSel.addEventListener('change', function(e){ pendingMath.category = e.target.value; });
+    var voidSel = _el('hl-math-void'); if (voidSel) voidSel.addEventListener('change', function(e){ pendingMath.voidEnabled = !!e.target.checked; });
 
     var addBtn = _el('btn-math-add');
     if (addBtn) addBtn.addEventListener('click', function(){
@@ -527,11 +544,13 @@ function _renderPanelMath(panel) {
             q: q,
             latex: (pendingMath.latex || '').trim(),
             a: (pendingMath.a || '').trim(),
-            category: pendingMath.category || 'flashcards'
+            category: pendingMath.category || 'flashcards',
+            voidEnabled: !!pendingMath.voidEnabled
         });
         pendingMath.q = '';
         pendingMath.latex = '';
         pendingMath.a = '';
+        pendingMath.voidEnabled = true;
         mathTarget = 'question';
         _renderStagePanel();
     });
@@ -561,7 +580,8 @@ function _renderPanelMath(panel) {
             '<label style="color:#9fd8e3;font-size:0.86em;">Answer / Note</label>',
             '<textarea class="hl-math-ae" data-idx="'+i+'" rows="2" style="width:100%;background:#0a0a12;border:1px solid #2a2a3a;color:#9fd8e3;border-radius:3px;padding:4px 5px;font-size:0.95em;box-sizing:border-box;resize:vertical;">'+_esc(item.a||'')+'</textarea>',
             '<label style="color:#7d7899;font-size:0.8em;">Category</label>',
-            '<select class="hl-math-cat-e" data-idx="'+i+'" style="width:100%;padding:5px;background:#111;border:1px solid rgba(255,209,102,0.35);color:#e8dbaf;border-radius:4px;font-size:0.82em;">'+catOptions+'</select>'
+            '<select class="hl-math-cat-e" data-idx="'+i+'" style="width:100%;padding:5px;background:#111;border:1px solid rgba(255,209,102,0.35);color:#e8dbaf;border-radius:4px;font-size:0.82em;">'+catOptions+'</select>',
+            '<label style="display:flex;align-items:center;gap:7px;color:#a7f3c3;font-size:0.78em;margin-top:4px;"><input class="hl-math-void-e" data-idx="'+i+'" type="checkbox" '+(item.voidEnabled===false?'':'checked')+' style="accent-color:#4cd137;">In The Void</label>'
         ].join('');
         list.appendChild(row);
     });
@@ -597,6 +617,12 @@ function _renderPanelMath(panel) {
             if (hlDraft.mathItems[idx]) hlDraft.mathItems[idx].category = e.target.value;
         });
     });
+    list.querySelectorAll('.hl-math-void-e').forEach(function(cb){
+        cb.addEventListener('change', function(e){
+            var idx = parseInt(e.target.dataset.idx);
+            if (hlDraft.mathItems[idx]) hlDraft.mathItems[idx].voidEnabled = !!e.target.checked;
+        });
+    });
 }
 
 function _renderPanelImages(panel) {
@@ -618,6 +644,7 @@ function _renderPanelImages(panel) {
         div.innerHTML=[
             '<img src="'+img.dataURL+'" style="width:100%;max-height:80px;object-fit:contain;border-radius:3px;margin-bottom:5px;">',
             '<input type="text" class="hl-img-label" data-id="'+img.id+'" value="'+_esc(img.label)+'" placeholder="Beschriftung..." style="width:100%;padding:4px 7px;background:#0a0a12;border:1px solid #2a2a3a;color:#bbb;border-radius:4px;font-size:0.78em;box-sizing:border-box;">',
+            '<label style="display:flex;align-items:center;gap:6px;color:#a7f3c3;font-size:0.76em;margin-top:4px;"><input type="checkbox" class="hl-img-void" data-id="'+img.id+'" '+(img.voidEnabled===true?'checked':'')+' style="accent-color:#4cd137;">Add image object to The Void</label>',
             '<button class="hl-img-del" data-id="'+img.id+'" style="margin-top:4px;width:100%;background:none;border:1px solid #f66;color:#f66;border-radius:4px;cursor:pointer;font-size:0.78em;padding:2px 0;">Entfernen</button>',
         ].join('');
         list.appendChild(div);
@@ -633,6 +660,12 @@ function _renderPanelImages(panel) {
             var id=e.target.dataset.id;
             hlDraft.images=hlDraft.images.filter(function(x){return String(x.id)!==id;});
             _renderStagePanel();
+        });
+    });
+    list.querySelectorAll('.hl-img-void').forEach(function(inp){
+        inp.addEventListener('change', function(e){
+            var img = hlDraft.images.find(function(x){ return String(x.id) === String(e.target.dataset.id); });
+            if (img) img.voidEnabled = !!e.target.checked;
         });
     });
 }
@@ -732,11 +765,22 @@ function _renderPanelQA(panel,target) {
     var aImg=pendingQA.a.imageId?hlDraft.images.find(function(x){return String(x.id)===String(pendingQA.a.imageId);}):null;
     var canAdd=(pendingQA.q.text||qImg)&&(pendingQA.a.text||aImg);
     var label=qaStoreKey==='flashcards'?'Lernkarte(n)':'Quiz-Frage(n)';
+    var flashSources = qaStoreKey==='quizzes'
+        ? hlDraft.flashcards.filter(function(fc){ return fc.section===pendingQA.section; })
+        : [];
 
     panel.innerHTML=[
         '<div style="padding:10px 12px;border-bottom:1px solid #1a1a2e;display:flex;flex-direction:column;gap:7px;">',
           '<p style="margin:0;font-size:0.7em;color:#666;text-transform:uppercase;letter-spacing:1px;">Kapitel</p>',
           '<select id="hl-qa-ch" style="width:100%;padding:5px;background:#111;border:1px solid #2a2a3a;color:#bbb;border-radius:4px;font-size:0.82em;">'+chOpts+'</select>',
+                    (qaStoreKey==='quizzes'
+                        ? (flashSources.length
+                                ? [
+                                        '<p style="margin:4px 0 2px;font-size:0.7em;color:#666;text-transform:uppercase;letter-spacing:1px;">Aus Flashcards uebernehmen:</p>',
+                                        '<div id="hl-quiz-src-list" style="max-height:100px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;"></div>'
+                                    ].join('')
+                                : '<p style="margin:2px 0 0;font-size:0.74em;color:#555;">Keine Flashcards in diesem Kapitel zum Uebernehmen.</p>')
+                        : ''),
           '<div style="display:flex;gap:5px;">',
             '<button id="btn-qa-q" style="flex:1;padding:6px;border-radius:4px;cursor:pointer;font-size:0.82em;font-weight:bold;'
               +'background:'+(isQ?'rgba(179,157,254,0.35)':'#181820')
@@ -760,6 +804,7 @@ function _renderPanelQA(panel,target) {
             '<button id="btn-clr-a" style="margin-top:3px;padding:1px 7px;background:none;border:1px solid #333;color:#555;border-radius:3px;cursor:pointer;font-size:0.72em;">&#x2715; leeren</button>',
           '</div>',
           hlDraft.images.length?'<div><p style="margin:0 0 4px;font-size:0.7em;color:#666;">Bild als Frage/Antwort:</p><div id="hl-qa-imglib" style="display:flex;flex-wrap:wrap;gap:4px;"></div></div>':'',
+          '<label style="display:flex;align-items:center;gap:8px;font-size:0.78em;color:#a7f3c3;"><input id="hl-qa-void" type="checkbox" '+(pendingQA.voidEnabled===false?'':'checked')+' style="accent-color:#4cd137;">Add this object to The Void</label>',
           '<button id="btn-qa-add" '+(canAdd?'':'disabled')+' style="padding:7px;background:'+(canAdd?'rgba(102,255,153,0.15)':'#141414')+';border:1px solid '+(canAdd?'#66ff99':'#2a2a2a')+';color:'+(canAdd?'#66ff99':'#444')+';border-radius:5px;cursor:'+(canAdd?'pointer':'not-allowed')+';font-weight:bold;font-size:0.88em;">+ Hinzufuegen</button>',
         '</div>',
         '<div id="hl-qa-list" style="flex:1;overflow-y:auto;padding:10px;">',
@@ -789,6 +834,7 @@ function _renderPanelQA(panel,target) {
     }
     if(pQ) pQ.addEventListener('input',function(e){ pendingQA.q.text=e.target.value; _refreshAddBtnState(); });
     if(pA) pA.addEventListener('input',function(e){ pendingQA.a.text=e.target.value; _refreshAddBtnState(); });
+    var qVoid = _el('hl-qa-void'); if (qVoid) qVoid.addEventListener('change', function(e){ pendingQA.voidEnabled = !!e.target.checked; });
 
     var imgLib=_el('hl-qa-imglib');
     if(imgLib){
@@ -802,6 +848,27 @@ function _renderPanelQA(panel,target) {
                 _renderStagePanel();
             });
             imgLib.appendChild(thumb);
+        });
+    }
+
+    var srcList=_el('hl-quiz-src-list');
+    if(srcList){
+        flashSources.forEach(function(fc){
+            var btn=document.createElement('button');
+            btn.style.cssText='padding:4px 8px;background:#111;border:1px solid rgba(103,232,249,0.35);color:#a0e8f8;border-radius:4px;cursor:pointer;font-size:0.75em;text-align:left;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+            btn.title=(fc.q && fc.q.text ? fc.q.text : '[Bild]');
+            btn.textContent='🟡 '+((fc.q && fc.q.text ? fc.q.text : '[Bild]').slice(0,55));
+            btn.addEventListener('click',function(){
+                hlDraft.quizzes.push({
+                    id:_uid(),
+                    section:pendingQA.section||(hlDraft.chapters[0]?hlDraft.chapters[0].name:'Allgemein'),
+                    q:{text:(fc.q&&fc.q.text)||'',imageData:(fc.q&&fc.q.imageData)||null},
+                    a:{text:(fc.a&&fc.a.text)||'',imageData:(fc.a&&fc.a.imageData)||null},
+                    voidEnabled: fc.voidEnabled !== false,
+                });
+                _renderStagePanel();
+            });
+            srcList.appendChild(btn);
         });
     }
 
@@ -820,8 +887,9 @@ function _renderPanelQA(panel,target) {
                 section:pendingQA.section||(hlDraft.chapters[0]?hlDraft.chapters[0].name:'Allgemein'),
                 q:{text:pendingQA.q.text,imageData:qImgObj?qImgObj.dataURL:null},
                 a:{text:pendingQA.a.text,imageData:aImgObj?aImgObj.dataURL:null},
+                voidEnabled: pendingQA.voidEnabled !== false,
             });
-            pendingQA={section:pendingQA.section,q:{text:'',imageId:null},a:{text:'',imageId:null}};
+            pendingQA={section:pendingQA.section,q:{text:'',imageId:null},a:{text:'',imageId:null},voidEnabled:true};
             _renderStagePanel();
         });
     }
@@ -841,6 +909,7 @@ function _renderPanelQA(panel,target) {
             '<p style="margin:4px 0 2px;color:#67e8f9;font-weight:bold;font-size:0.9em;">&#128161;</p>',
             item.a.imageData?'<img src="'+item.a.imageData+'" style="max-width:100%;max-height:40px;object-fit:contain;border-radius:2px;margin-bottom:2px;display:block;">':'',
             '<textarea class="hl-qa-at" data-target="'+qaStoreKey+'" data-idx="'+i+'" rows="2" style="width:100%;background:#0a0a12;border:1px solid #2a2a3a;color:#a0e8f8;border-radius:3px;padding:3px 5px;font-size:0.95em;box-sizing:border-box;resize:vertical;">'+_esc(item.a.text)+'</textarea>',
+            '<label style="display:flex;align-items:center;gap:7px;color:#a7f3c3;font-size:0.78em;margin-top:4px;"><input class="hl-qa-void-e" data-target="'+qaStoreKey+'" data-idx="'+i+'" type="checkbox" '+(item.voidEnabled===false?'':'checked')+' style="accent-color:#4cd137;">In The Void</label>',
         ].join('');
         listEl.appendChild(div);
     });
@@ -855,6 +924,13 @@ function _renderPanelQA(panel,target) {
     });
     listEl.querySelectorAll('.hl-qa-at').forEach(function(ta){
         ta.addEventListener('input',function(e){ hlDraft[e.target.dataset.target][parseInt(e.target.dataset.idx)].a.text=e.target.value; });
+    });
+    listEl.querySelectorAll('.hl-qa-void-e').forEach(function(cb){
+        cb.addEventListener('change', function(e){
+            var t = e.target.dataset.target;
+            var idx = parseInt(e.target.dataset.idx);
+            if (hlDraft[t] && hlDraft[t][idx]) hlDraft[t][idx].voidEnabled = !!e.target.checked;
+        });
     });
 }
 
@@ -895,7 +971,7 @@ function _renderPanelExam(panel) {
             btn.title=(src.q.text||'[Bild]');
             btn.textContent=(src._type==='flash'?'🟡 ':'🟢 ')+(src.q.text||'[Bild]').slice(0,55);
             btn.addEventListener('click',function(){
-                hlDraft.exams.push({id:_uid(),section:activeChapter,question:src.q.text||'',answer:src.a.text||'',elaboration:'',qImageData:src.q.imageData||null,aImageData:src.a.imageData||null});
+                hlDraft.exams.push({id:_uid(),section:activeChapter,question:src.q.text||'',answer:src.a.text||'',elaboration:'',qImageData:src.q.imageData||null,aImageData:src.a.imageData||null,voidEnabled:true});
                 _renderStagePanel();
             });
             srcEl.appendChild(btn);
@@ -917,6 +993,7 @@ function _renderPanelExam(panel) {
             '<textarea class="hl-ex-q" data-gidx="'+globalIdx+'" rows="2" style="width:100%;background:#0a0a0a;border:1px solid #2a1a1a;color:#ffb8b8;border-radius:3px;padding:3px 5px;font-size:0.95em;box-sizing:border-box;resize:vertical;margin-bottom:4px;">'+_esc(ex.question)+'</textarea>',
             '<label style="color:#ff9999;font-size:0.9em;">Ausfuehrliche Antwort:</label>',
             '<textarea class="hl-ex-el" data-gidx="'+globalIdx+'" rows="4" style="width:100%;background:#0a0a0a;border:1px solid #2a1a1a;color:#ffe0e0;border-radius:3px;padding:3px 5px;font-size:0.95em;box-sizing:border-box;resize:vertical;">'+_esc(ex.elaboration||ex.answer)+'</textarea>',
+            '<label style="display:flex;align-items:center;gap:7px;color:#a7f3c3;font-size:0.78em;margin-top:4px;"><input class="hl-ex-void" data-gidx="'+globalIdx+'" type="checkbox" '+(ex.voidEnabled===false?'':'checked')+' style="accent-color:#4cd137;">In The Void</label>',
         ].join('');
         listEl.appendChild(div);
     });
@@ -932,6 +1009,9 @@ function _renderPanelExam(panel) {
     });
     listEl.querySelectorAll('.hl-ex-el').forEach(function(ta){
         ta.addEventListener('input',function(e){ var g=parseInt(e.target.dataset.gidx); if(hlDraft.exams[g]) hlDraft.exams[g].elaboration=e.target.value; });
+    });
+    listEl.querySelectorAll('.hl-ex-void').forEach(function(cb){
+        cb.addEventListener('change', function(e){ var g=parseInt(e.target.dataset.gidx); if(hlDraft.exams[g]) hlDraft.exams[g].voidEnabled = !!e.target.checked; });
     });
 }
 
@@ -952,6 +1032,7 @@ function _renderPanelTasks(panel) {
             ? ('<select id="hl-task-ch" style="width:100%;padding:5px;background:#111;border:1px solid #2a2a3a;color:#bbb;border-radius:4px;font-size:0.82em;">'+chOpts+'</select>')
             : '<p style="font-size:0.78em;color:#666;margin:0;">Erst Kapitel im vorherigen Schritt markieren.</p>',
           '<p style="margin:0;font-size:0.75em;color:#666;">Format: [ ] Task Text (oder einfach Text eingeben).</p>',
+                    '<label style="display:flex;align-items:center;gap:7px;font-size:0.78em;color:#a7f3c3;"><input id="hl-task-void" type="checkbox" checked style="accent-color:#4cd137;">Add new tasks to The Void</label>',
           '<div style="display:flex;gap:6px;">',
             '<input id="hl-task-text" type="text" placeholder="[ ] Read section summary" style="flex:1;padding:6px 8px;background:#111;border:1px solid #2a2a3a;color:#ddd;border-radius:4px;font-size:0.82em;box-sizing:border-box;">',
             '<button id="btn-task-add" style="padding:6px 10px;background:rgba(102,255,153,0.15);border:1px solid #66ff99;color:#66ff99;border-radius:4px;cursor:pointer;font-size:0.8em;">+ Add</button>',
@@ -972,7 +1053,8 @@ function _renderPanelTasks(panel) {
         if(!raw) return;
         var cleaned=raw.replace(/^\[(?:\s|x|X)?\]\s*/, '').trim();
         if(!cleaned) return;
-        hlDraft.tasks.push({ id:_uid(), section:activeChapter, text:cleaned, completed:false });
+        var addToVoid = !!(_el('hl-task-void') && _el('hl-task-void').checked);
+        hlDraft.tasks.push({ id:_uid(), section:activeChapter, text:cleaned, completed:false, voidEnabled:addToVoid });
         if(inp) inp.value='';
         _renderStagePanel();
     });
@@ -991,6 +1073,7 @@ function _renderPanelTasks(panel) {
         row.innerHTML=[
             '<input class="hl-task-done" data-gidx="'+gidx+'" type="checkbox" '+(task.completed?'checked':'')+' style="accent-color:#66ff99;cursor:pointer;">',
             '<input class="hl-task-edit" data-gidx="'+gidx+'" type="text" value="'+_esc(task.text)+'" style="flex:1;padding:4px 6px;background:#0a0a12;border:1px solid #2a2a3a;color:#ddd;border-radius:4px;font-size:0.8em;box-sizing:border-box;">',
+            '<input class="hl-task-void" data-gidx="'+gidx+'" type="checkbox" '+(task.voidEnabled===false?'':'checked')+' title="In The Void" style="accent-color:#4cd137;cursor:pointer;">',
             '<button class="hl-task-del" data-gidx="'+gidx+'" style="background:none;border:none;color:#f66;cursor:pointer;font-size:0.9em;">&#x1F5D1;</button>',
         ].join('');
         taskList.appendChild(row);
@@ -1009,12 +1092,134 @@ function _renderPanelTasks(panel) {
             hlDraft.tasks[g].text=e.target.value.replace(/^\[(?:\s|x|X)?\]\s*/, '').trimStart();
         });
     });
+    taskList.querySelectorAll('.hl-task-void').forEach(function(cb){
+        cb.addEventListener('change', function(e){
+            var g=parseInt(e.target.dataset.gidx);
+            if(hlDraft.tasks[g]) hlDraft.tasks[g].voidEnabled=!!e.target.checked;
+        });
+    });
     taskList.querySelectorAll('.hl-task-del').forEach(function(btn){
         btn.addEventListener('click', function(e){
             var g=parseInt(e.target.dataset.gidx);
             if(isNaN(g)||!hlDraft.tasks[g]) return;
             hlDraft.tasks.splice(g,1);
             _renderStagePanel();
+        });
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Reminders panel (Stage 9)
+// ---------------------------------------------------------------------------
+function _renderPanelReminders(panel) {
+    var chapters = hlDraft.chapters.map(function(c){ return c.name; });
+    if(!activeChapter && chapters.length) activeChapter = chapters[0];
+    if(!pendingReminder.section && activeChapter) pendingReminder.section = activeChapter;
+    var chOpts = chapters.map(function(c){ return '<option value="'+_esc(c)+'"'+(c===pendingReminder.section?' selected':'')+'>'+_esc(c)+'</option>'; }).join('');
+    var imgOptions = ['<option value="">Ohne Bild</option>'].concat(
+        hlDraft.images.map(function(img, i){
+            var label = (img.label || ('Bild '+(i+1))).slice(0, 36);
+            return '<option value="'+_esc(String(img.id))+'"'+(String(img.id)===String(pendingReminder.imageId)?' selected':'')+'>'+_esc(label)+'</option>';
+        })
+    ).join('');
+    var canAdd = (pendingReminder.text || '').trim().length > 0;
+
+    panel.innerHTML = [
+        '<div style="padding:10px 12px;border-bottom:1px solid #1a1a2e;display:flex;flex-direction:column;gap:7px;">',
+          '<p style="margin:0;font-size:0.7em;color:#666;text-transform:uppercase;letter-spacing:1px;">Wichtige Merker fuers Endless Scroller System</p>',
+          chapters.length
+            ? ('<select id="hl-reminder-ch" style="width:100%;padding:5px;background:#111;border:1px solid #2a2a3a;color:#bbb;border-radius:4px;font-size:0.82em;">'+chOpts+'</select>')
+            : '<p style="font-size:0.78em;color:#666;margin:0;">Erst Kapitel markieren.</p>',
+          '<textarea id="hl-reminder-text" rows="3" placeholder="Wichtige Notiz / Kernidee..." style="width:100%;background:#0a0a12;border:1px solid rgba(76,209,55,0.35);color:#c9ffd8;border-radius:3px;padding:5px 6px;font-size:0.9em;box-sizing:border-box;resize:vertical;">'+_esc(pendingReminder.text||'')+'</textarea>',
+                    '<label style="display:flex;align-items:center;gap:7px;font-size:0.78em;color:#a7f3c3;"><input id="hl-reminder-void" type="checkbox" '+(pendingReminder.voidEnabled===false?'':'checked')+' style="accent-color:#4cd137;">Add this object to The Void</label>',
+          '<div style="display:flex;gap:6px;align-items:center;">',
+            '<select id="hl-reminder-img" style="flex:1;padding:5px;background:#111;border:1px solid rgba(76,209,55,0.35);color:#c9ffd8;border-radius:4px;font-size:0.82em;">'+imgOptions+'</select>',
+            '<button id="btn-reminder-add" '+(canAdd?'':'disabled')+' style="padding:7px 10px;background:'+(canAdd?'rgba(102,255,153,0.15)':'#141414')+';border:1px solid '+(canAdd?'#66ff99':'#2a2a2a')+';color:'+(canAdd?'#66ff99':'#444')+';border-radius:5px;cursor:'+(canAdd?'pointer':'not-allowed')+';font-weight:bold;font-size:0.84em;">+ Add</button>',
+          '</div>',
+        '</div>',
+        '<div id="hl-reminder-list" style="flex:1;overflow-y:auto;padding:10px;">',
+          '<p style="margin:0 0 6px;font-size:0.7em;color:#555;text-transform:uppercase;letter-spacing:1px;">'+(hlDraft.reminders||[]).length+' Reminder(s)</p>',
+        '</div>'
+    ].join('');
+
+    var chSel = _el('hl-reminder-ch');
+    if (chSel) chSel.addEventListener('change', function(e){
+        pendingReminder.section = e.target.value;
+        activeChapter = e.target.value;
+    });
+    var txt = _el('hl-reminder-text');
+    if (txt) txt.addEventListener('input', function(e){
+        pendingReminder.text = e.target.value;
+        var b = _el('btn-reminder-add');
+        if (b) {
+            var ok = (pendingReminder.text || '').trim().length > 0;
+            b.disabled = !ok;
+            b.style.background = ok ? 'rgba(102,255,153,0.15)' : '#141414';
+            b.style.borderColor = ok ? '#66ff99' : '#2a2a2a';
+            b.style.color = ok ? '#66ff99' : '#444';
+            b.style.cursor = ok ? 'pointer' : 'not-allowed';
+        }
+    });
+    var imgSel = _el('hl-reminder-img');
+    if (imgSel) imgSel.addEventListener('change', function(e){
+        pendingReminder.imageId = e.target.value || null;
+    });
+    var remVoidSel = _el('hl-reminder-void');
+    if (remVoidSel) remVoidSel.addEventListener('change', function(e){ pendingReminder.voidEnabled = !!e.target.checked; });
+
+    var addBtn = _el('btn-reminder-add');
+    if (addBtn) addBtn.addEventListener('click', function(){
+        var text = (pendingReminder.text || '').trim();
+        if (!text) return;
+        hlDraft.reminders.push({
+            id: _uid(),
+            section: pendingReminder.section || activeChapter || (hlDraft.chapters[0] ? hlDraft.chapters[0].name : 'Allgemein'),
+            text: text,
+            imageId: pendingReminder.imageId || null,
+            voidEnabled: pendingReminder.voidEnabled !== false
+        });
+        pendingReminder.text = '';
+        pendingReminder.imageId = null;
+        pendingReminder.voidEnabled = true;
+        _renderStagePanel();
+    });
+
+    var list = _el('hl-reminder-list');
+    (hlDraft.reminders || []).forEach(function(rem, i){
+        var image = rem.imageId ? hlDraft.images.find(function(img){ return String(img.id) === String(rem.imageId); }) : null;
+        var row = document.createElement('div');
+        row.style.cssText = 'margin-bottom:9px;border:1px solid rgba(76,209,55,0.32);border-radius:6px;padding:8px;background:#0d1a12;font-size:0.76em;';
+        row.innerHTML = [
+            '<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:5px;">',
+              '<span style="color:#8fe8ac;">'+_esc(rem.section||'Allgemein')+'</span>',
+              '<button class="hl-rem-del" data-idx="'+i+'" style="background:none;border:none;color:#f66;cursor:pointer;font-size:0.9em;">&#x1F5D1;</button>',
+            '</div>',
+            image ? ('<img src="'+image.dataURL+'" style="max-width:100%;max-height:44px;object-fit:contain;border-radius:2px;margin-bottom:4px;display:block;">') : '',
+            '<textarea class="hl-rem-text" data-idx="'+i+'" rows="2" style="width:100%;background:#0a0a12;border:1px solid rgba(76,209,55,0.35);color:#c9ffd8;border-radius:3px;padding:4px 5px;font-size:0.95em;box-sizing:border-box;resize:vertical;">'+_esc(rem.text||'')+'</textarea>',
+            '<label style="display:flex;align-items:center;gap:7px;color:#a7f3c3;font-size:0.78em;margin-top:4px;"><input class="hl-rem-void" data-idx="'+i+'" type="checkbox" '+(rem.voidEnabled===false?'':'checked')+' style="accent-color:#4cd137;">In The Void</label>',
+        ].join('');
+        list.appendChild(row);
+    });
+
+    list.querySelectorAll('.hl-rem-del').forEach(function(btn){
+        btn.addEventListener('click', function(e){
+            var idx = parseInt(e.target.dataset.idx);
+            if (!isNaN(idx)) {
+                hlDraft.reminders.splice(idx, 1);
+                _renderStagePanel();
+            }
+        });
+    });
+    list.querySelectorAll('.hl-rem-text').forEach(function(inp){
+        inp.addEventListener('input', function(e){
+            var idx = parseInt(e.target.dataset.idx);
+            if (hlDraft.reminders[idx]) hlDraft.reminders[idx].text = e.target.value;
+        });
+    });
+    list.querySelectorAll('.hl-rem-void').forEach(function(cb){
+        cb.addEventListener('change', function(e){
+            var idx = parseInt(e.target.dataset.idx);
+            if (hlDraft.reminders[idx]) hlDraft.reminders[idx].voidEnabled = !!e.target.checked;
         });
     });
 }
@@ -1044,7 +1249,7 @@ function _renderPanelPublish(panel) {
             '<span style="color:#a29bfe;">Zusammenfassung:</span><br>',
             hlDraft.chapters.length+' Kapitel &nbsp; '+hlDraft.images.length+' Bilder<br>',
                         hlDraft.flashcards.length+' Lernkarten &nbsp; '+hlDraft.quizzes.length+' Quiz-Fragen &nbsp; '+hlDraft.exams.length+' Pruefungsaufgaben<br>',
-                        (hlDraft.tasks||[]).length+' Task(s) &nbsp; '+(hlDraft.mathItems||[]).length+' Math item(s)',
+                        (hlDraft.tasks||[]).length+' Task(s) &nbsp; '+(hlDraft.mathItems||[]).length+' Math item(s) &nbsp; '+(hlDraft.reminders||[]).length+' Reminder(s)',
           '</div>',
           '<button id="btn-pub-go" style="padding:12px;background:linear-gradient(135deg,#5e4bb0,#a29bfe);border:none;color:#fff;border-radius:7px;cursor:pointer;font-size:0.95em;font-weight:bold;font-family:Cinzel,serif;letter-spacing:0.5px;margin-top:auto;">Welt erstellen &amp; speichern</button>',
         '</div>',
@@ -1102,6 +1307,8 @@ function _buildWorldFromDraft(worldName) {
         tasks:[],miniGames:[],rituals:[],chronicles:[],
         content:{},progress:{},background:null,coordinates:[],
         imageLibrary:hlDraft.images.slice(),
+        reminders:[],
+        reminderScroller:{ cursor:0, dailyShown:{} },
     };
     sections.forEach(function(sec){
         world.content[sec]=(hlDraft.chapterTexts[sec]||[]).join('\n\n');
@@ -1115,6 +1322,7 @@ function _buildWorldFromDraft(worldName) {
             imageData:fc.q.imageData||null,
             questionImageData:fc.q.imageData||null,
             answerImageData:fc.a.imageData||null,
+            voidEnabled: fc.voidEnabled !== false,
             interval:0,ease:2.5,nextReview:0,burned:false,
         });
     });
@@ -1126,6 +1334,7 @@ function _buildWorldFromDraft(worldName) {
             imageData:q.q.imageData||null,
             questionImageData:q.q.imageData||null,
             answerImageData:q.a.imageData||null,
+            voidEnabled: q.voidEnabled !== false,
         });
     });
     hlDraft.exams.forEach(function(ex){
@@ -1136,6 +1345,7 @@ function _buildWorldFromDraft(worldName) {
             imageData:ex.qImageData||null,
             questionImageData:ex.qImageData||null,
             answerImageData:ex.aImageData||null,
+            voidEnabled: ex.voidEnabled !== false,
         });
     });
     world.tasks=(hlDraft.tasks||[]).map(function(t){
@@ -1143,6 +1353,7 @@ function _buildWorldFromDraft(worldName) {
             section:t.section||sections[0]||'Allgemein',
             text:(t.text||'').trim(),
             completed:!!t.completed,
+            voidEnabled: t.voidEnabled !== false,
         };
     }).filter(function(t){ return !!t.text; });
     var DEFAULT_GAMES=['Flash Match','Spellweaver','Cloze Trial'];
@@ -1159,23 +1370,23 @@ function _buildWorldFromDraft(worldName) {
         if (!q) return;
 
         if (cat === 'flashcards') {
-            world.flashcards.push({ section:sec, question:q, rawQuestion:rawQ, mathLatex:latexQ||q, answer:a||'Review this equation.', interval:0,ease:2.5,nextReview:0,burned:false, isMath:true });
+            world.flashcards.push({ section:sec, question:q, rawQuestion:rawQ, mathLatex:latexQ||q, answer:a||'Review this equation.', interval:0,ease:2.5,nextReview:0,burned:false, isMath:true, voidEnabled: m.voidEnabled !== false });
             return;
         }
         if (cat === 'quizzes') {
-            world.quizzes.push({ section:sec, question:q, rawQuestion:rawQ, mathLatex:latexQ||q, answer:a||'See notes/solution.', isMath:true });
+            world.quizzes.push({ section:sec, question:q, rawQuestion:rawQ, mathLatex:latexQ||q, answer:a||'See notes/solution.', isMath:true, voidEnabled: m.voidEnabled !== false });
             return;
         }
         if (cat === 'exams') {
-            world.exams.push({ section:sec, question:q, rawQuestion:rawQ, mathLatex:latexQ||q, answer:a||'Provide a full derivation.', isMath:true });
+            world.exams.push({ section:sec, question:q, rawQuestion:rawQ, mathLatex:latexQ||q, answer:a||'Provide a full derivation.', isMath:true, voidEnabled: m.voidEnabled !== false });
             return;
         }
         if (cat === 'tasks') {
-            world.tasks.push({ section:sec, text:'Solve: '+q+(a?(' -> '+a):''), rawQuestion:rawQ, mathLatex:latexQ||q, completed:false, isMath:true });
+            world.tasks.push({ section:sec, text:'Solve: '+q+(a?(' -> '+a):''), rawQuestion:rawQ, mathLatex:latexQ||q, completed:false, isMath:true, voidEnabled: m.voidEnabled !== false });
             return;
         }
         if (cat === 'minigames') {
-            world.flashcards.push({ section:sec, question:q, rawQuestion:rawQ, mathLatex:latexQ||q, answer:a||'Review this equation.', interval:0,ease:2.5,nextReview:0,burned:false, isMath:true });
+            world.flashcards.push({ section:sec, question:q, rawQuestion:rawQ, mathLatex:latexQ||q, answer:a||'Review this equation.', interval:0,ease:2.5,nextReview:0,burned:false, isMath:true, voidEnabled: m.voidEnabled !== false });
             if (!world.miniGames.some(function(g){ return g.section===sec && (String(g.name||'').toLowerCase()==='cloze trial'); })) {
                 world.miniGames.push({ section:sec, name:'Cloze Trial' });
             }
@@ -1183,6 +1394,25 @@ function _buildWorldFromDraft(worldName) {
         }
         if (!world.content[sec]) world.content[sec] = '';
         world.content[sec] += '\n\n[MATH] '+q+(rawQ && rawQ !== q ? ('\nSource Text: '+rawQ) : '')+(a?('\nSolution: '+a):'');
+    });
+    (hlDraft.reminders||[]).forEach(function(rem){
+        var sec = rem.section || sections[0] || 'Allgemein';
+        var txt = (rem.text || '').trim();
+        if (!txt) return;
+        var image = rem.imageId ? hlDraft.images.find(function(img){ return String(img.id) === String(rem.imageId); }) : null;
+        world.reminders.push({
+            id: rem.id || _uid(),
+            section: sec,
+            text: txt,
+            imageData: image ? image.dataURL : null,
+            shownCount: 0,
+            burned: false,
+            stability: 1,
+            dueAt: 0,
+            lastShownDay: '',
+            burnCycles: 0,
+            voidEnabled: rem.voidEnabled !== false
+        });
     });
     if(_genCoords) world.coordinates=_genCoords(sections.length);
     return world;

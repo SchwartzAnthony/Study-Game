@@ -81,6 +81,196 @@
     font-style: italic;
 }
 
+/* ─── ASSET IMPORT SYSTEM ─────────────────────────────────────────────── */
+
+/* Drop zone shared by all 3 modals */
+.asset-drop-zone {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    border: 2px dashed rgba(155, 89, 182, 0.45);
+    border-radius: 10px;
+    padding: 20px 16px;
+    color: var(--muted, #888);
+    font-size: 0.88em;
+    background: rgba(155, 89, 182, 0.04);
+    transition: border-color 0.2s, background 0.2s;
+    cursor: pointer;
+}
+.asset-drop-zone.asset-drop-active {
+    border-color: #9b59b6;
+    background: rgba(155, 89, 182, 0.12);
+}
+
+/* Detection bar (sprite sheet) */
+.asset-detection-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: rgba(155, 89, 182, 0.1);
+    border: 1px solid rgba(155, 89, 182, 0.25);
+    font-size: 0.88em;
+    color: #d7a7ff;
+}
+.asset-confidence-badge {
+    font-size: 0.75em;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    color: #fff;
+    background: #27ae60;
+    white-space: nowrap;
+}
+
+/* Canvas wrapper — scrollable if image is larger than viewport */
+.asset-canvas-wrap {
+    overflow: auto;
+    border: 1px solid rgba(155, 89, 182, 0.25);
+    border-radius: 8px;
+    background: #0b0b14;
+    max-height: 400px;
+    display: flex;
+    align-items: flex-start;
+}
+.asset-canvas-wrap canvas {
+    display: block;
+    image-rendering: pixelated;
+}
+
+/* Thumbnail grid — used by both sprite extraction and multi-file imports */
+.asset-thumb-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: 8px;
+}
+.asset-thumb-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(155,89,182,0.2);
+    border-radius: 6px;
+    padding: 5px;
+    cursor: default;
+}
+.asset-thumb-item img {
+    width: 58px;
+    height: 58px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    border-radius: 4px;
+    background: rgba(0,0,0,0.3);
+}
+.asset-thumb-label {
+    font-size: 0.65em;
+    color: #d7a7ff;
+    text-align: center;
+}
+
+/* Assignment list (sprite → reward) */
+.asset-assignment-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+.asset-assign-row {
+    display: grid;
+    grid-template-columns: 44px 64px 1fr 1fr;
+    gap: 8px;
+    align-items: center;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 8px;
+    padding: 6px 10px;
+}
+.asset-assign-thumb {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    border-radius: 4px;
+    background: rgba(0,0,0,0.3);
+}
+.asset-assign-select {
+    background: rgba(20, 10, 30, 0.9);
+    border: 1px solid rgba(155, 89, 182, 0.4);
+    border-radius: 6px;
+    color: #d7a7ff;
+    font-size: 0.8em;
+    padding: 4px 6px;
+    width: 100%;
+}
+.asset-assign-select:focus {
+    outline: none;
+    border-color: #9b59b6;
+}
+
+/* Name input shared */
+.asset-name-input {
+    background: rgba(20, 10, 30, 0.9);
+    border: 1px solid rgba(155, 89, 182, 0.35);
+    border-radius: 6px;
+    color: #f0e0ff;
+    font-size: 0.82em;
+    padding: 4px 8px;
+    width: 100%;
+    box-sizing: border-box;
+}
+.asset-name-input:focus {
+    outline: none;
+    border-color: #9b59b6;
+}
+.asset-number-input {
+    background: rgba(20, 10, 30, 0.9);
+    border: 1px solid rgba(155, 89, 182, 0.35);
+    border-radius: 6px;
+    color: #f0e0ff;
+    font-size: 0.85em;
+    padding: 4px 8px;
+    width: 60px;
+    text-align: center;
+    box-sizing: border-box;
+}
+.asset-number-input:focus {
+    outline: none;
+    border-color: #9b59b6;
+}
+
+/* Card used by wallpaper + image reward previews */
+.asset-card {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(155,89,182,0.2);
+    border-radius: 10px;
+    padding: 10px;
+    gap: 4px;
+}
+.asset-card-thumb {
+    width: 100%;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 6px;
+    background: rgba(0,0,0,0.4);
+}
+
+/* Override: asset-thumb-grid used as wallpaper/image-reward card container */
+#wallpaper-preview-grid.asset-thumb-grid,
+#image-rewards-preview-grid.asset-thumb-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+
+/* ─── END ASSET IMPORT SYSTEM ──────────────────────────────────────────── */
+
 /* =====================================================================
    GAME VIBE LAYER — interaction animation + ambient toggle
    ===================================================================== */
@@ -2236,6 +2426,306 @@ button:hover {
     text-align: center;
 }
 
+#home-reminder-strip {
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#home-reminder-strip:hover {
+    border-color: rgba(200, 40, 40, 0.7);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), inset 0 0 40px rgba(150, 10, 10, 0.14);
+}
+
+#home-reminder-preview {
+    max-width: 78ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#housing-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 6900;
+    width: 100%;
+    padding: 18px 14px calc(18px + env(safe-area-inset-bottom));
+    overflow-y: auto;
+    box-sizing: border-box;
+    background:
+        radial-gradient(circle at 52% 14%, rgba(95, 12, 12, 0.20), transparent 32%),
+        radial-gradient(circle at 28% 84%, rgba(70, 8, 8, 0.12), transparent 35%),
+        linear-gradient(180deg, #090202 0%, #140404 42%, #090202 100%);
+}
+
+#housing-shell {
+    padding: 20px 18px;
+}
+
+#housing-catalog .housing-item {
+    border: 1px solid rgba(164, 45, 45, 0.35);
+    border-radius: 10px;
+    background: linear-gradient(180deg, rgba(29, 8, 8, 0.96), rgba(13, 3, 3, 0.98));
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#housing-catalog .housing-item h4 {
+    margin: 0;
+    font-family: 'Cinzel', serif;
+    font-size: 0.94em;
+    color: #dc8f8f;
+}
+
+#housing-catalog .housing-item .housing-meta {
+    color: #d0bbbb;
+    font-size: 0.82em;
+}
+
+#housing-catalog .housing-item button {
+    margin-top: auto;
+}
+
+#reminder-scroller-card {
+    animation: reminderCardFadeIn 220ms ease;
+}
+
+#void-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 7000;
+    width: 100%;
+    padding: 18px 14px calc(18px + env(safe-area-inset-bottom));
+    overflow-y: auto;
+    background:
+        radial-gradient(circle at 50% 18%, rgba(80, 10, 10, 0.18), transparent 28%),
+        radial-gradient(circle at 50% 85%, rgba(40, 5, 5, 0.10), transparent 36%),
+        linear-gradient(180deg, #010101 0%, #060202 22%, #080202 58%, #010101 100%);
+    box-sizing: border-box;
+}
+
+/* Ambient drift layer — real element so it stacks reliably on iOS */
+#void-ambient {
+    position: fixed;
+    inset: 0;
+    z-index: 7001;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+#void-ambient::before,
+#void-ambient::after {
+    content: '';
+    position: absolute;
+    inset: -14%;
+}
+
+#void-ambient::before {
+    background:
+        radial-gradient(circle at 30% 28%, rgba(120, 15, 15, 0.22), transparent 22%),
+        radial-gradient(circle at 72% 62%, rgba(80, 8, 8, 0.16), transparent 26%),
+        radial-gradient(circle at 58% 82%, rgba(100, 10, 10, 0.10), transparent 24%);
+    opacity: 0.42;
+    animation: voidDrift 18s ease-in-out infinite alternate;
+}
+
+#void-ambient::after {
+    background:
+        radial-gradient(circle at 62% 18%, rgba(200, 60, 60, 0.06), transparent 18%),
+        radial-gradient(circle at 42% 70%, rgba(140, 20, 20, 0.12), transparent 30%);
+    mix-blend-mode: screen;
+    opacity: 0.20;
+    animation: voidPulse 11s ease-in-out infinite;
+}
+
+#void-screen.is-entering {
+    animation: voidSceneFadeIn 420ms cubic-bezier(0.16, 0.84, 0.24, 1) both;
+}
+
+#void-screen.is-leaving {
+    animation: voidSceneFadeOut 240ms ease both;
+}
+
+body.void-active {
+    background: #010101;
+    overflow: hidden;
+}
+
+body.void-active .main-header {
+    display: none !important;
+}
+
+#void-screen-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding-bottom: 12px;
+    backdrop-filter: blur(12px);
+    background: linear-gradient(180deg, rgba(1, 1, 1, 0.92), rgba(1, 1, 1, 0.15));
+}
+
+#void-screen-panel {
+    width: min(760px, 100%);
+    min-height: calc(100vh - 96px - env(safe-area-inset-bottom));
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 22px 18px 18px;
+    background:
+        linear-gradient(180deg, rgba(14, 4, 4, 0.98), rgba(4, 1, 1, 0.995));
+    border-color: rgba(130, 30, 30, 0.22);
+    box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.76), 0 30px 80px rgba(0, 0, 0, 0.65);
+}
+
+#void-screen-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background: radial-gradient(circle at 50% 30%, rgba(255,255,255,0.028), transparent 42%);
+    opacity: 0.9;
+}
+
+#reminder-scroller-card {
+    background: linear-gradient(180deg, rgba(16, 4, 4, 0.98), rgba(6, 2, 2, 0.99));
+    border-color: rgba(150, 30, 30, 0.22);
+    box-shadow: inset 0 0 30px rgba(180, 20, 20, 0.04), 0 20px 44px rgba(0, 0, 0, 0.60);
+}
+
+#reminder-scroller-card.card-reveal {
+    animation: voidCardRise 360ms cubic-bezier(0.18, 0.8, 0.24, 1) both;
+}
+
+#reminder-card-text {
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.04);
+}
+
+#reminder-card-image {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+#reminder-card-image-wrap.image-focus img {
+    animation: voidImageFocus 520ms cubic-bezier(0.16, 0.84, 0.24, 1) both;
+}
+
+#void-action-bar {
+    position: sticky;
+    bottom: 0;
+    padding-top: 12px;
+    padding-bottom: max(4px, env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, rgba(1, 1, 1, 0), rgba(1, 1, 1, 0.94) 48%);
+}
+
+@keyframes voidSceneFadeIn {
+    0% {
+        opacity: 0;
+        transform: scale(1.04);
+    }
+    35% {
+        opacity: 0.7;
+        transform: scale(1.015);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes voidSceneFadeOut {
+    0% {
+        opacity: 1;
+        filter: brightness(1);
+    }
+    100% {
+        opacity: 0;
+        filter: brightness(0.08);
+    }
+}
+
+@keyframes voidCardRise {
+    0% {
+        opacity: 0;
+        transform: translateY(34px) scale(0.985);
+        box-shadow: 0 0 0 rgba(0,0,0,0);
+    }
+    55% {
+        opacity: 1;
+        transform: translateY(-3px) scale(1.005);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes voidImageFocus {
+    0% {
+        opacity: 0;
+        transform: scale(0.94);
+        filter: brightness(0.86) blur(2px);
+    }
+    60% {
+        opacity: 1;
+        transform: scale(1.035);
+        filter: brightness(1.05) blur(0);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1.018);
+        filter: brightness(1) blur(0);
+    }
+}
+
+@keyframes voidDrift {
+    0% {
+        transform: translate3d(-1.5%, -1%, 0) scale(1.02);
+        opacity: 0.24;
+    }
+    50% {
+        transform: translate3d(1.2%, 1.6%, 0) scale(1.05);
+        opacity: 0.36;
+    }
+    100% {
+        transform: translate3d(0.6%, -1.4%, 0) scale(1.03);
+        opacity: 0.28;
+    }
+}
+
+@keyframes voidPulse {
+    0% {
+        transform: scale(1);
+        opacity: 0.09;
+    }
+    50% {
+        transform: scale(1.045);
+        opacity: 0.19;
+    }
+    100% {
+        transform: scale(1.01);
+        opacity: 0.1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #void-screen::before,
+    #void-screen::after,
+    #void-screen.is-entering,
+    #void-screen.is-leaving,
+    #reminder-scroller-card.card-reveal,
+    #reminder-card-image-wrap.image-focus img,
+    #void-ambient::before,
+    #void-ambient::after {
+        animation: none !important;
+    }
+}
+
+@keyframes reminderCardFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 .carousel-header {
     display: flex;
     justify-content: space-between;
@@ -3396,6 +3886,44 @@ button:hover {
         min-width: 100% !important;
         padding: 15px !important;
     }
+
+    #home-reminder-strip {
+        width: 95% !important;
+        padding: 10px !important;
+        align-items: flex-start !important;
+        flex-direction: column !important;
+    }
+
+    #home-reminder-preview {
+        white-space: normal;
+    }
+
+    #void-screen .card {
+        width: 100% !important;
+        padding: 18px 14px !important;
+    }
+
+    #housing-screen .card {
+        width: 100% !important;
+        padding: 16px 12px !important;
+    }
+
+    #reminder-scroller-card {
+        min-height: 56vh !important;
+    }
+
+    #void-screen {
+        padding: 12px 10px calc(14px + env(safe-area-inset-bottom));
+    }
+
+    #void-screen-panel {
+        min-height: calc(100vh - 44px - env(safe-area-inset-bottom));
+        padding: 16px 12px 12px;
+    }
+
+    #void-action-bar {
+        gap: 8px;
+    }
     
     /* Main buttons expand to be tap-friendly */
     .btn-occult, .btn-primary, .btn-secondary { 
@@ -3895,6 +4423,11 @@ button, .btn-occult, .btn-primary, .btn-secondary, .nav-btn { font-family: 'Cinz
         gap: 10px !important; 
         text-align: left !important;
         min-height: 90px !important;
+    }
+
+    #home-reminder-strip {
+        width: 100% !important;
+        padding: 10px 9px !important;
     }
     
     /* Hide the paragraph so flat cards fit cleanly */

@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "currencies": {
+    "gold": {
+      "role": "abundant-primary"
+    },
+    "ink": {
+      "role": "progress-fuel"
+    },
+    "scroll": {
+      "paperKey": "Generic Scroll",
+      "role": "rare-catalyst"
+    }
+  },
+  "sources": {
+    "void": {
+      "goldPerScroll": 1,
+      "inkPerScrolls": 10,
+      "scrollPerScrolls": 20
+    },
+    "speedRead": {
+      "goldPerPages": 1,
+      "inkPerPages": 1,
+      "scrollPerPages": 1,
+      "wordsPerPage": 250
+    }
+  },
+  "sinks": {
+    "housing": {
+      "slotUnlockBaseGold": 120,
+      "slotUnlockGrowth": 1.35,
+      "themeSwitchGold": 40
+    },
+    "crafting": {
+      "inkPerPageInscription": 1
+    }
+  }
+}

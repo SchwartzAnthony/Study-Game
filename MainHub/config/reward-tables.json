@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "bookTradeIn": {
+    "common": {
+      "gold": 80,
+      "ink": 2,
+      "scrollChance": 0.1
+    },
+    "rare": {
+      "gold": 220,
+      "ink": 6,
+      "scrollChance": 0.25
+    },
+    "legendary": {
+      "gold": 500,
+      "ink": 12,
+      "scrollChance": 0.5
+    }
+  },
+  "milestoneRewards": {
+    "housingStyle10": {
+      "gold": 120,
+      "unlock": "theme_ember_vault"
+    },
+    "housingStyle25": {
+      "gold": 300,
+      "ink": 5,
+      "unlock": "music_sable_whispers"
+    }
+  }
+}

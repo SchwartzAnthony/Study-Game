@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "inkTiers": {
+    "black":    { "label": "Black Ink",    "emoji": "🖤", "goldCost": 10,  "dailyLimit": 20, "rarityWeight": 5500 },
+    "silver":   { "label": "Silver Ink",   "emoji": "🩶", "goldCost": 30,  "dailyLimit": 10, "rarityWeight": 2500 },
+    "gold":     { "label": "Gold Ink",     "emoji": "💛", "goldCost": 80,  "dailyLimit": 5,  "rarityWeight": 1200 },
+    "platinum": { "label": "Platinum Ink", "emoji": "🤍", "goldCost": 180, "dailyLimit": 3,  "rarityWeight": 500  },
+    "crimson":  { "label": "Crimson Ink",  "emoji": "❤️", "goldCost": 350, "dailyLimit": 2,  "rarityWeight": 299  },
+    "mythic":   { "label": "Mythic Ink",   "emoji": "🔮", "goldCost": 999, "dailyLimit": 1,  "rarityWeight": 1    }
+  },
+  "rarityTotalWeight": 10000,
+  "craftingRecipes": {
+    "lightScroll": {
+      "label": "Light Scroll",
+      "emoji": "📜",
+      "description": "A basic scroll inscribed with black ink.",
+      "materials": { "blackInk": 10 },
+      "output": { "scrolls": 1, "scrollRarity": "light" }
+    },
+    "silverScroll": {
+      "label": "Silver Scroll",
+      "emoji": "📜",
+      "description": "A refined scroll of silver inscription.",
+      "materials": { "silverInk": 8 },
+      "output": { "scrolls": 1, "scrollRarity": "silver" }
+    },
+    "owlBook": {
+      "label": "Owl Book",
+      "emoji": "📚",
+      "description": "An ancient tome bound from inscribed pages. Requires 3 pages, each needing 15 Gold Ink.",
+      "materials": { "pages": 3, "goldInk": 45 },
+      "output": { "books": 1, "bookRarity": "common" }
+    },
+    "rareCodex": {
+      "label": "Rare Codex",
+      "emoji": "📖",
+      "description": "A platinum-inscribed codex of rare knowledge.",
+      "materials": { "pages": 5, "platinumInk": 20 },
+      "output": { "books": 1, "bookRarity": "rare" }
+    },
+    "crimsonGrimoire": {
+      "label": "Crimson Grimoire",
+      "emoji": "📕",
+      "description": "A forbidden grimoire bound in crimson. Extremely rare.",
+      "materials": { "pages": 8, "crimsonInk": 12 },
+      "output": { "books": 1, "bookRarity": "legendary" }
+    },
+    "mythicTome": {
+      "label": "Mythic Tome",
+      "emoji": "🌌",
+      "description": "A mythic tome that defies time itself. Only the chosen may craft one.",
+      "materials": { "pages": 12, "mythicInk": 3 },
+      "output": { "books": 1, "bookRarity": "mythic" }
+    }
+  },
+  "shopOfferCount": 6,
+  "backlogCount": 1000,
+  "uploadTypes": {
+    "image":   { "label": "Image",         "emoji": "🖼️",  "unlockRewardId": "upload_image_gate"   },
+    "icon":    { "label": "Icon",          "emoji": "⚜️",   "unlockRewardId": "upload_icon_gate"    },
+    "sound":   { "label": "Sound Effect",  "emoji": "🔊",   "unlockRewardId": "upload_sound_gate"   },
+    "music":   { "label": "Music Track",   "emoji": "🎵",   "unlockRewardId": "upload_music_gate"   },
+    "housing": { "label": "Housing Object","emoji": "🏛️",  "unlockRewardId": "upload_housing_gate" }
+  },
+  "backlogItemTemplates": [
+    { "type": "cosmetic",   "namePrefix": "Arcane Sigil",   "descPrefix": "A rare cosmetic glyph",   "baseCost": 50  },
+    { "type": "scroll",     "namePrefix": "Void Scroll",    "descPrefix": "A forbidden scroll",       "baseCost": 120 },
+    { "type": "book",       "namePrefix": "Ancient Tome",   "descPrefix": "A tome of hidden lore",    "baseCost": 200 },
+    { "type": "relic",      "namePrefix": "Lost Relic",     "descPrefix": "An artifact of power",     "baseCost": 300 },
+    { "type": "housing",    "namePrefix": "Vault Ornament", "descPrefix": "A housing decoration",     "baseCost": 180 },
+    { "type": "ink",        "namePrefix": "Ink Vial",       "descPrefix": "A vial of concentrated ink","baseCost": 60 },
+    { "type": "map",        "namePrefix": "Map Fragment",   "descPrefix": "A piece of the cosmic map", "baseCost": 90 },
+    { "type": "sound",      "namePrefix": "Echo Chime",     "descPrefix": "A resonant sound effect",  "baseCost": 75 }
+  ]
+}

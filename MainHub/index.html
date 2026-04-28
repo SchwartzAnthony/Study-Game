@@ -16,7 +16,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cormorant+Garamond:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 
-    <link rel="stylesheet" href="style.css?v=2.4">
+    <link rel="stylesheet" href="style.css?v=2.7">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -78,6 +78,10 @@
         </header>
 
         <div id="home-screen" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 70vh; gap: 30px;">
+            <div id="home-reminder-strip" style="width: 80%; max-width: 1000px; display: flex; gap: 12px; align-items: center; justify-content: center; padding: 12px 14px; border: 1px solid rgba(150, 20, 20, 0.45); border-radius: 10px; background: linear-gradient(180deg, rgba(18, 4, 4, 0.97), rgba(8, 2, 2, 0.97)); box-shadow: 0 6px 24px rgba(0,0,0,0.65), inset 0 0 32px rgba(120,10,10,0.08); box-sizing: border-box;">
+                <button id="btn-open-reminder-scroller" class="btn-occult" style="white-space: nowrap; border-color: rgba(160,30,30,0.75); color: #e08080; letter-spacing: 0.06em; font-family: 'Cinzel', serif;">Enter the Void</button>
+                <button id="btn-goto-housing" class="btn-occult" style="white-space: nowrap; border-color: rgba(170,40,40,0.7); color: #f0b0b0; letter-spacing: 0.06em; font-family: 'Cinzel', serif;">Arcane Housing</button>
+            </div>
             <div class="card" style="width: 80%; max-width: 1000px; height: 60vh; position: relative; border-radius: 12px; overflow: hidden; padding: 0;">
                 <canvas id="mindmap-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: auto;"></canvas>
             </div>
@@ -98,6 +102,78 @@
                     <h3 style="font-family: 'Cinzel', serif; font-size: 1.5em; color: #aaffcc; text-transform: uppercase; margin-bottom: 20px; text-shadow: 0 0 10px rgba(100, 255, 150, 0.5);">workshop</h3>
                     <p class="library-desc" style="font-size: 1.1em; line-height: 1.4; margin-bottom: 25px; color: #e0e0e0; font-family: 'Georgia', serif;">Pdf to text, formatting tools, and more</p>
                     <button id="btn-goto-workshop" style="background: linear-gradient(180deg, #2b7a4b, #194d2f); color: white; font-family: 'Open Sans', sans-serif; font-size: 1.2em; font-weight: 500; cursor: pointer; padding: 12px 30px; border-radius: 6px; border: 1px solid #1c4228; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); transition: filter 0.2s; width: 100%;">Enter Workshop</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="housing-screen" class="hidden" style="display: flex; flex-direction: column; min-height: calc(100vh - 100px);">
+            <div class="world-header-controls hub-header-mobile-override" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <button id="btn-back-home-from-housing" class="btn-occult" style="font-size: 0.9em; display: flex; align-items: center; gap: 5px;"><span>⭠</span> Home</button>
+                <div class="hub-controls" style="display: flex; gap: 10px; align-items: center;">
+                    <span style="font-family: 'Cinzel', serif; color: #cf6767; letter-spacing: 0.8px; font-size: 0.95em; text-transform: uppercase;">Arcane Housing</span>
+                </div>
+            </div>
+
+            <div id="housing-shell" class="card" style="width: 100%; max-width: 980px; margin: 0 auto; border: 1px solid rgba(160,30,30,0.35); background: linear-gradient(180deg, rgba(16,4,4,0.98), rgba(6,2,2,0.99)); box-shadow: inset 0 0 36px rgba(0,0,0,0.72), 0 12px 28px rgba(0,0,0,0.45);">
+                <h2 style="margin: 0 0 12px; font-family: 'Cinzel', serif; color: #d97979; text-align: left;">Your Sanctuary</h2>
+                <p id="housing-summary" style="margin: 0 0 14px; color: #cfb7b7; font-size: 0.92em; text-align: left;">Theme, slot capacity and style score overview.</p>
+
+                <div id="housing-actions" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+                    <button id="btn-housing-expand-slot" class="btn-occult" style="border-color: rgba(170,40,40,0.7); color: #ef9b9b;">Unlock Room Slot</button>
+                    <button id="btn-housing-cycle-theme" class="btn-secondary">Cycle Theme</button>
+                </div>
+
+                <div id="housing-room-preview" style="border:1px solid rgba(150,30,30,0.35); border-radius:10px; min-height:180px; padding:12px; margin-bottom:14px; background: linear-gradient(180deg, rgba(20,5,5,0.92), rgba(10,2,2,0.95)); color:#f1e0e0;">
+                    <div style="font-family:'Cinzel',serif; color:#d88686; margin-bottom:8px;">Room Preview</div>
+                    <div id="housing-room-stats" style="font-size:0.9em; color:#d7c1c1;">Slots and style score will appear here.</div>
+                    <div id="housing-owned-list" style="margin-top:8px; font-size:0.88em; color:#e8dada;"></div>
+                </div>
+
+                <div>
+                    <h3 style="margin: 0 0 10px; font-family: 'Cinzel', serif; color:#d97979; font-size:1.05em;">Occult Catalog</h3>
+                    <div id="housing-catalog" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="void-screen" class="hidden" style="display: flex; flex-direction: column; min-height: calc(100vh - 100px);">
+            <div id="void-ambient" aria-hidden="true"></div>
+            <div id="void-screen-topbar" class="world-header-controls hub-header-mobile-override" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <button id="btn-back-from-void" class="btn-occult" style="font-size: 0.9em; display: flex; align-items: center; gap: 5px;"><span>⭠</span> Back</button>
+                <div class="hub-controls" style="display: flex; gap: 10px; align-items: center;">
+                    <span id="void-screen-scope" style="font-family: 'Cinzel', serif; color: #c0534a; letter-spacing: 0.8px; font-size: 0.95em; text-transform: uppercase;">The Void</span>
+                </div>
+            </div>
+
+            <div id="void-screen-panel" class="card" style="width: 100%; max-width: 760px; margin: 0 auto; border: 1px solid rgba(150,25,25,0.35); background: linear-gradient(180deg, rgba(14,4,4,0.98), rgba(6,2,2,0.98)); box-shadow: inset 0 0 28px rgba(0,0,0,0.55), 0 12px 28px rgba(0,0,0,0.45);">
+                <h2 id="void-modal-title" style="margin: 0 0 6px; font-family: 'Cinzel', serif; color: #c0534a; text-align: left;">The Void</h2>
+                <p id="reminder-scroller-meta" class="hidden" style="margin: 0 0 14px; color: #a8b2d1; font-size: 0.92em; text-align: left;"></p>
+
+                <div id="reminder-scroller-empty" class="hidden" style="padding: 22px; border-radius: 10px; border: 1px solid rgba(150,25,25,0.35); background: rgba(20,5,5,0.45); color: #e8d0d0; text-align: left;">
+                    No due Void objects right now. Come back later or mark objects for The Void.
+                </div>
+
+                <div id="reminder-scroller-card" style="border: 1px solid rgba(150,25,25,0.4); border-radius: 12px; background: linear-gradient(180deg, rgba(16,4,4,0.96), rgba(6,2,2,0.98)); padding: 16px; box-shadow: 0 12px 28px rgba(0,0,0,0.45); text-align: left; min-height: 48vh; display: flex; flex-direction: column; justify-content: flex-start;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px;">
+                        <span id="reminder-card-section" style="font-family: 'Cinzel', serif; color: #c06060; font-size: 0.86em; letter-spacing: 0.6px;">Section</span>
+                        <span id="reminder-card-burn" style="font-size: 0.76em; color: #ffcc8f; border: 1px solid rgba(255,204,143,0.45); border-radius: 999px; padding: 2px 8px;">Fresh</span>
+                    </div>
+
+                    <div id="reminder-card-text" style="font-family: 'Cormorant Garamond', serif; font-size: 1.55em; line-height: 1.24; color: #f5eeee; margin-bottom: 12px; flex: 1;">
+                        Reminder text
+                    </div>
+
+                    <div id="reminder-card-image-wrap" class="hidden" style="margin-bottom: 10px; text-align: center;">
+                        <img id="reminder-card-image" alt="Reminder" style="max-width: 100%; max-height: 280px; object-fit: contain; border-radius: 8px; border: 1px solid rgba(150,25,25,0.35);">
+                    </div>
+
+                    <p id="reminder-card-stats" style="margin: 0; color: #a8b2d1; font-size: 0.85em;">Stability</p>
+                    <p style="margin: 7px 0 0; color: #a06060; font-size: 0.78em;">Swipe up for next. Swipe right to burn and push it further out.</p>
+                </div>
+
+                <div id="void-action-bar" style="display: flex; gap: 10px; margin-top: 14px;">
+                    <button id="btn-reminder-next" class="btn-occult" style="flex: 1; border-color: rgba(160,30,30,0.75); color: #e08080;">Next</button>
+                    <button id="btn-reminder-exit" class="btn-secondary" style="flex: 1;">Back</button>
                 </div>
             </div>
         </div>
@@ -160,6 +236,16 @@
                         </details>
 
                         <button id="btn-edit-syntax-rules" class="btn-occult" style="width: 100%; padding: 15px; font-size: 1.2em; border-color: #2b7a4b; color: #aaffcc;">Edit Syntax Rules</button>
+
+                        <details class="workshop-bench-group">
+                            <summary class="btn-occult workshop-bench-toggle" style="border-color: #9b59b6; color: #d7a7ff;">Items / Objects / Rewards</summary>
+                            <div class="workshop-bench-panel">
+                                <p class="workshop-bench-note">Import sprite sheets, wallpapers, and image rewards. Assign them to game items and housing themes.</p>
+                                <button id="btn-open-sprite-sheet" class="btn-occult workshop-bench-action" style="border-color: #9b59b6; color: #d7a7ff;">🎴 Upload Sprite Sheets</button>
+                                <button id="btn-open-wallpaper-upload" class="btn-occult workshop-bench-action" style="border-color: #9b59b6; color: #d7a7ff;">🖼️ Upload Temple Wallpaper</button>
+                                <button id="btn-open-image-rewards" class="btn-occult workshop-bench-action" style="border-color: #9b59b6; color: #d7a7ff;">🏅 Upload Image Rewards</button>
+                            </div>
+                        </details>
                     </div>
                 </div>
             </div>
@@ -185,6 +271,9 @@
                 <!-- Speed Read Button -->
                 <button id="btn-speed-read" style="width: 100%; font-size: 1.25em; font-family: 'Cinzel', serif; padding: 15px; margin-top: 15px; border-radius: 8px; border: 1px solid rgba(210, 41, 48, 0.4); background: linear-gradient(180deg, #181818, #050505); color: #ffebaa; cursor: pointer; box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 0 6px 16px rgba(0, 0, 0, 0.6); transition: filter 0.2s;">
                     Speed Read Full Text
+                </button>
+                <button id="btn-open-world-void" class="btn-occult" style="width: 100%; font-size: 1.05em; font-family: 'Cinzel', serif; padding: 12px; margin-top: 10px; border-radius: 8px; border-color: rgba(76,209,55,0.5); color: #a9ffc5;">
+                    Open The World Void
                 </button>
             </section>
 
@@ -474,6 +563,7 @@
 
             <p>Manage your current loaded world.</p>
             <button id="btn-edit-world" class="btn-occult" style="margin-bottom: 10px; width: 100%;">✏️ Edit Current World</button>
+            <button id="btn-world-object-settings" class="btn-occult" style="margin-bottom: 10px; width: 100%; border-color: rgba(76,209,55,0.55); color: #a9ffc5;">🌀 World Object Settings</button>
             <button id="btn-reshuffle-map" class="btn-secondary" style="margin-bottom: 10px; width: 100%;">🎲 Reshuffle Map Layout</button>
 
             <div style="margin-bottom: 12px; background: #202020; padding: 15px; border-radius: 8px; border: 1px solid rgba(210,41,48,0.3);">
@@ -489,6 +579,50 @@
             <p style="color: #ff2400; font-weight: bold;">Danger Zone</p>
             <button id="reset-app-btn" class="btn-danger" style="background: #550000; width: 100%;">Factory Reset</button>
             <button id="reset-empty-btn" class="btn-danger" style="background: #2a0000; width: 100%; margin-top: 10px;">Full Reset (Empty Start)</button>
+        </div>
+    </div>
+
+    <div id="workshop-settings-modal" class="modal hidden">
+        <div class="modal-content section-content" style="max-width: 560px; max-height: 85vh; overflow-y: auto; text-align: left;">
+            <span id="close-workshop-settings" class="close-btn">&times;</span>
+            <h2 style="margin-bottom: 8px;">Workshop Void Settings</h2>
+            <p style="color: #a8b2d1; margin-bottom: 14px;">Configure The Void scroller behavior.</p>
+
+            <div style="display: flex; flex-direction: column; gap: 14px; border: 1px solid rgba(76,209,55,0.35); border-radius: 10px; padding: 14px; background: rgba(11, 24, 14, 0.45);">
+                <label style="display: flex; justify-content: space-between; align-items: center; gap: 10px; color: #d7e8dd;">
+                    <span>Enable The Void</span>
+                    <input id="workshop-reminders-enabled" type="checkbox" style="accent-color: #4cd137; width: 18px; height: 18px;">
+                </label>
+
+                <label style="display: flex; flex-direction: column; gap: 6px; color: #d7e8dd;">
+                    <span>Daily shown limit: <strong id="workshop-reminders-daily-val">12</strong></span>
+                    <input id="workshop-reminders-daily" type="range" min="3" max="40" step="1" value="12">
+                </label>
+
+                <label style="display: flex; flex-direction: column; gap: 6px; color: #d7e8dd;">
+                    <span>Randomness factor: <strong id="workshop-reminders-random-val">0.65</strong></span>
+                    <input id="workshop-reminders-random" type="range" min="0.2" max="1" step="0.05" value="0.65">
+                </label>
+
+                <label style="display: flex; flex-direction: column; gap: 6px; color: #d7e8dd;">
+                    <span>Burn threshold (shows): <strong id="workshop-reminders-burn-val">8</strong></span>
+                    <input id="workshop-reminders-burn" type="range" min="4" max="20" step="1" value="8">
+                </label>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 14px;">
+                <button id="btn-save-workshop-settings" class="btn-occult" style="flex: 1; border-color: rgba(76,209,55,0.55); color: #a9ffc5;">Save Settings</button>
+                <button id="btn-reset-workshop-settings" class="btn-secondary" style="flex: 1;">Reset Defaults</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="world-object-settings-modal" class="modal hidden" style="z-index: 10007;">
+        <div class="modal-content section-content" style="max-width: 920px; max-height: 85vh; overflow-y: auto; text-align: left;">
+            <span id="close-world-object-settings" class="close-btn">&times;</span>
+            <h2 style="margin: 0 0 8px; color: #a9ffc5;">World Object Settings</h2>
+            <p style="margin: 0 0 12px; color: #a8b2d1;">Choose where each created wizard object belongs (The Void, Quiz, Mini-Game, Image).</p>
+            <div id="world-object-settings-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
         </div>
     </div>
 
@@ -555,8 +689,109 @@
         </div>
     </div>
 
+    <!-- ═══════════════ SPRITE SHEET MODAL ═══════════════ -->
+    <div id="sprite-sheet-modal" class="modal hidden">
+        <div class="modal-content section-content occult-modal" style="max-width:900px;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:16px;">
+            <span id="close-sprite-sheet" class="close-btn" title="Close">&times;</span>
+            <h2 class="occult-title" style="color:#d7a7ff;">🎴 Sprite Sheet Importer</h2>
+            <p class="muted">Import Kenney or any PNG sprite sheet. The system detects sprites automatically — adjust the grid before extracting.</p>
+
+            <!-- Upload zone -->
+            <div id="sprite-drop-zone" class="asset-drop-zone">
+                <span>Drop a sprite sheet PNG here, or</span>
+                <label for="sprite-sheet-file-input" class="upload-btn" style="margin-left:8px;">Browse File</label>
+                <input type="file" id="sprite-sheet-file-input" accept="image/*" style="display:none;">
+            </div>
+
+            <!-- Detection summary (shown after file load) -->
+            <div id="sprite-detection-summary" class="asset-detection-bar hidden">
+                <span id="sprite-detection-text">Detected: — sprites</span>
+                <span id="sprite-detection-confidence" class="asset-confidence-badge"></span>
+            </div>
+
+            <!-- Canvas preview + grid controls -->
+            <div id="sprite-preview-area" class="hidden" style="display:flex;flex-direction:column;gap:12px;">
+                <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+                    <label style="color:#d7a7ff;font-size:0.9em;">Columns:
+                        <input type="number" id="sprite-cols-input" min="1" max="64" value="4" class="asset-number-input">
+                    </label>
+                    <label style="color:#d7a7ff;font-size:0.9em;">Rows:
+                        <input type="number" id="sprite-rows-input" min="1" max="64" value="4" class="asset-number-input">
+                    </label>
+                    <button id="btn-sprite-redetect" class="btn-secondary" style="padding:6px 14px;font-size:0.85em;">🔍 Re-detect</button>
+                    <button id="btn-sprite-extract" class="btn-primary" style="padding:6px 16px;font-size:0.85em;">✂️ Extract Sprites</button>
+                </div>
+                <div class="asset-canvas-wrap">
+                    <canvas id="sprite-preview-canvas"></canvas>
+                </div>
+            </div>
+
+            <!-- Extracted thumbnails grid -->
+            <div id="sprite-extracted-area" class="hidden" style="display:flex;flex-direction:column;gap:12px;">
+                <h4 style="color:#d7a7ff;margin:0;">Extracted Sprites (<span id="sprite-count-label">0</span>)</h4>
+                <div id="sprite-thumbnails-grid" class="asset-thumb-grid"></div>
+            </div>
+
+            <!-- Assignment panel -->
+            <div id="sprite-assignment-area" class="hidden" style="display:flex;flex-direction:column;gap:10px;">
+                <h4 style="color:#d7a7ff;margin:0;">Assign Sprites to Rewards</h4>
+                <p class="muted" style="font-size:0.82em;">Each sprite can be linked to a game reward or item. Unassigned sprites are saved to the library anyway.</p>
+                <div id="sprite-assignment-list" class="asset-assignment-list"></div>
+            </div>
+
+            <!-- Footer -->
+            <div style="display:flex;justify-content:flex-end;gap:10px;border-top:1px solid rgba(255,255,255,0.06);padding-top:12px;">
+                <button id="btn-sprite-cancel" class="btn-secondary">Cancel</button>
+                <button id="btn-sprite-confirm" class="btn-primary" disabled>Import <span id="sprite-import-count">0</span> Sprites</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ WALLPAPER UPLOAD MODAL ═══════════════ -->
+    <div id="wallpaper-upload-modal" class="modal hidden">
+        <div class="modal-content section-content occult-modal" style="max-width:700px;max-height:88vh;overflow-y:auto;display:flex;flex-direction:column;gap:16px;">
+            <span id="close-wallpaper-upload" class="close-btn" title="Close">&times;</span>
+            <h2 class="occult-title" style="color:#d7a7ff;">🖼️ Temple Wallpaper Import</h2>
+            <p class="muted">Upload PNG/JPG images to use as housing room backgrounds. Assign each to one or more housing themes.</p>
+
+            <div id="wallpaper-drop-zone" class="asset-drop-zone">
+                <span>Drop images here, or</span>
+                <label for="wallpaper-file-input" class="upload-btn" style="margin-left:8px;">Browse Files</label>
+                <input type="file" id="wallpaper-file-input" accept="image/*" multiple style="display:none;">
+            </div>
+
+            <div id="wallpaper-preview-grid" class="asset-thumb-grid" style="min-height:60px;"></div>
+
+            <div style="display:flex;justify-content:flex-end;gap:10px;border-top:1px solid rgba(255,255,255,0.06);padding-top:12px;">
+                <button id="btn-wallpaper-cancel" class="btn-secondary">Cancel</button>
+                <button id="btn-wallpaper-confirm" class="btn-primary" disabled>Save Wallpapers</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ IMAGE REWARDS MODAL ═══════════════ -->
+    <div id="image-rewards-modal" class="modal hidden">
+        <div class="modal-content section-content occult-modal" style="max-width:700px;max-height:88vh;overflow-y:auto;display:flex;flex-direction:column;gap:16px;">
+            <span id="close-image-rewards" class="close-btn" title="Close">&times;</span>
+            <h2 class="occult-title" style="color:#d7a7ff;">🏅 Image Rewards Import</h2>
+            <p class="muted">Upload PNG images as visual rewards. Set a name, cost, and link them to existing reward entries.</p>
+
+            <div id="image-rewards-drop-zone" class="asset-drop-zone">
+                <span>Drop images here, or</span>
+                <label for="image-rewards-file-input" class="upload-btn" style="margin-left:8px;">Browse Files</label>
+                <input type="file" id="image-rewards-file-input" accept="image/*" multiple style="display:none;">
+            </div>
+
+            <div id="image-rewards-preview-grid" class="asset-thumb-grid" style="min-height:60px;"></div>
+
+            <div style="display:flex;justify-content:flex-end;gap:10px;border-top:1px solid rgba(255,255,255,0.06);padding-top:12px;">
+                <button id="btn-image-rewards-cancel" class="btn-secondary">Cancel</button>
+                <button id="btn-image-rewards-confirm" class="btn-primary" disabled>Save Image Rewards</button>
+            </div>
+        </div>
+    </div>
+
     <div id="minigame-modal" class="modal hidden">
-        <div class="modal-content section-content" style="max-width: 800px; text-align: center; background: #0b0b14;">
             <span id="close-minigame" class="close-btn">&times;</span>
             <h2 id="minigame-title" style="color: #00a8ff; font-size: 2em; margin-bottom: 5px;">Mini-Game</h2>
             <p id="minigame-stats" style="color: #ffd700; font-weight: bold; margin-bottom: 20px;">Matches: 0</p>
@@ -963,7 +1198,7 @@
         </div>
     </div>
 
-    <script type="module" src="app.js?v=3.6"></script>
+    <script type="module" src="app.js?v=4.4"></script>
 </body>
 </html>
 

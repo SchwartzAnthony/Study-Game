@@ -2,6 +2,7 @@ import { appState } from './state.js';
 import { saveToStorage } from './storage.js';
 import { getActiveWorld, renderMap } from '../app.js';
 import { generateMapCoordinates } from './mapRenderer.js';
+import { renderStore, renderUploadedRewards } from './store.js';
 
 // DOM Elements Required
 const editor = document.getElementById('markdown-editor');
@@ -14,6 +15,9 @@ const hubScreen = document.getElementById('hub-screen');
 const excelUploadInput = document.getElementById('excelUpload');
 
 if (excelUploadInput) {
+    excelUploadInput.addEventListener('click', function() {
+        excelUploadInput.value = '';
+    });
     excelUploadInput.addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -77,6 +81,10 @@ if (excelUploadInput) {
             if (!document.getElementById('store-modal').classList.contains('hidden')) {
                 renderStore();
             }
+            e.target.value = '';
+        };
+        reader.onerror = function() {
+            e.target.value = '';
         };
 
         reader.readAsArrayBuffer(file);
@@ -422,7 +430,9 @@ function parseWorldFromSyntax(finalContent, worldName) {
         name: worldName || tempFilename,
         sections: new Set(),
         flashcards: [], quizzes: [], exams: [], tasks: [], miniGames: [], rituals: [], chronicles: [],
-        content: {}, progress: {}, background: null, coordinates: []
+        content: {}, progress: {}, background: null, coordinates: [],
+        reminders: [],
+        reminderScroller: { cursor: 0, dailyShown: {} }
     };
 
     const lines = String(finalContent || '').split('\n');
@@ -512,7 +522,11 @@ function loadFileToEditor() {
     const reader = new FileReader();
     reader.onload = function(event) {
         editor.value = event.target.result;
+        fileInput.value = '';
         hubScreen.classList.add('hidden'); editorScreen.classList.remove('hidden');
+    };
+    reader.onerror = function() {
+        fileInput.value = '';
     };
     reader.readAsText(file);
 }
@@ -600,6 +614,7 @@ if (mainHubUploadBtn && mainHubFileInput) {
     // 1. Clicking the button opens your computer's file explorer
     mainHubUploadBtn.addEventListener('click', () => {
         setEditorMode('create');
+        mainHubFileInput.value = '';
         mainHubFileInput.click();
     });
 
