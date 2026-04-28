@@ -11,6 +11,7 @@ import { openPdfHighlighter, initHighlighterUI } from './scripts/pdfHighlighter.
 import { hasMathSyntax, renderMathString, setRenderedText } from './scripts/mathRenderer.js';
 import { ensureDesignSystemState, loadDesignSystemConfig, getDesignSystemConfig } from './scripts/designSystem.js';
 import { initWorkshopItems } from './scripts/workshop.js';
+import { initRewardsDisplay, earnReward } from './scripts/rewards-display.js';
 
 function sanitizeRewardImages() {
     if (!appState || !Array.isArray(appState.customRewards)) return;
@@ -31,6 +32,37 @@ function showToast(message, duration = 3000) {
     setTimeout(() => { toast.style.transition = 'opacity 0.7s'; toast.style.opacity = '0'; setTimeout(() => toast.remove(), 700); }, duration);
 }
 
+function normalizeHeaderActionButtonSizes() {
+    const buttons = Array.from(document.querySelectorAll('.header-action-buttons .btn-occult'));
+    if (!buttons.length) return;
+
+    // On mobile, icon-only CSS sizing takes over — clear any JS inline widths and bail
+    if (window.innerWidth <= 700) {
+        buttons.forEach(btn => {
+            btn.style.removeProperty('width');
+            btn.style.removeProperty('min-width');
+        });
+        return;
+    }
+
+    buttons.forEach(btn => {
+        btn.style.removeProperty('width');
+        btn.style.removeProperty('min-width');
+    });
+
+    let maxWidth = 0;
+    buttons.forEach(btn => {
+        const w = Math.ceil(btn.getBoundingClientRect().width);
+        if (w > maxWidth) maxWidth = w;
+    });
+
+    if (!maxWidth) return;
+    buttons.forEach(btn => {
+        btn.style.setProperty('width', `${maxWidth}px`, 'important');
+        btn.style.setProperty('min-width', `${maxWidth}px`, 'important');
+    });
+}
+
 // UI Elements
 const universeScreen = document.getElementById('universe-screen');
 const hubScreen = document.getElementById('hub-screen');
@@ -47,6 +79,8 @@ const mapContainer = document.getElementById('map-container');
 const worldTitle = document.getElementById('world-title');
 const hubSelector = document.getElementById('hub-selector');
 const btnOpenReminderScroller = document.getElementById('btn-open-reminder-scroller');
+const voidScrollerContent = document.getElementById('void-scroller-content');
+const homeVoidFeedScroll = document.getElementById('home-void-feed-scroll');
 const btnOpenWorldVoid = document.getElementById('btn-open-world-void');
 const voidScreenScope = document.getElementById('void-screen-scope');
 const voidModalTitle = document.getElementById('void-modal-title');
@@ -92,6 +126,8 @@ let activeVoidWorldRef = null;
 let activeVoidOrigin = 'home';
 let voidSwipe = { active:false, startX:0, startY:0, lastDx:0, lastDy:0 };
 let voidSceneTimer = null;
+let homeVoidFeedEntries = [];
+let homeVoidFeedCursor = 0;
 
 if (document.getElementById('btn-goto-worlds')) {
     document.getElementById('btn-goto-worlds').addEventListener('click', () => {
@@ -140,6 +176,18 @@ if (document.getElementById('btn-back-home-from-workshop')) {
         if (housingScreen) housingScreen.classList.add('hidden');
         homeScreen.classList.remove('hidden');
         renderHomeReminderStrip();
+    });
+}
+
+// Workshop gear button from header
+if (document.getElementById('btn-open-workshop-modal')) {
+    document.getElementById('btn-open-workshop-modal').addEventListener('click', () => {
+        homeScreen.classList.add('hidden');
+        universeScreen.classList.add('hidden');
+        hubScreen.classList.add('hidden');
+        if (voidScreen) voidScreen.classList.add('hidden');
+        if (housingScreen) housingScreen.classList.add('hidden');
+        workshopScreen.classList.remove('hidden');
     });
 }
 if (document.getElementById('btn-back-universe')) {
@@ -547,6 +595,85 @@ function pickNextReminderEntry(scope) {
     return best;
 }
 
+function getHomeVoidFeedEntries() {
+    ensureReminderDataModel();
+    const dueEntries = getDueReminderEntries('all');
+    const source = dueEntries.length ? dueEntries : getVoidEntries('all');
+    return [...source].sort((a, b) => {
+        const dueA = Number((a.state && a.state.dueAt) || 0);
+        const dueB = Number((b.state && b.state.dueAt) || 0);
+        return dueA - dueB;
+    });
+}
+
+function buildHomeVoidFeedCard(entry) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.cssText = 'padding:14px;border:1px solid rgba(140,70,30,0.5);background:linear-gradient(180deg,rgba(22,10,6,0.96),rgba(8,4,3,0.98));box-shadow:inset 0 0 18px rgba(0,0,0,0.45);';
+
+    const worldName = (entry.world && entry.world.name) ? entry.world.name : 'World';
+    const object = entry.object || {};
+    const state = entry.state || {};
+    const safeImage = getSafeImageSrc(object.imageData);
+
+    const header = document.createElement('div');
+    header.style.cssText = 'font-family:Cinzel,serif;color:#d7a7ff;font-size:0.9em;letter-spacing:0.04em;margin-bottom:8px;';
+    header.textContent = `${worldName} • ${object.section || 'Allgemein'} • ${object.type || 'item'}`;
+
+    const text = document.createElement('div');
+    text.style.cssText = 'color:#e7d3c6;line-height:1.45;font-size:0.98em;';
+    text.textContent = String(object.text || '').trim() || 'Image memory fragment';
+
+    const stats = document.createElement('div');
+    stats.style.cssText = 'margin-top:8px;font-size:0.82em;color:#bfaea0;';
+    stats.textContent = `Shown: ${Number(state.shownCount || 0)} • Stability: ${Number(state.stability || 1).toFixed(2)}`;
+
+    card.appendChild(header);
+    if (safeImage) {
+        const img = document.createElement('img');
+        img.src = safeImage;
+        img.alt = 'Void memory image';
+        img.style.cssText = 'width:100%;max-height:220px;object-fit:cover;border-radius:8px;border:1px solid rgba(170,120,80,0.4);margin-bottom:10px;';
+        card.appendChild(img);
+    }
+    card.appendChild(text);
+    card.appendChild(stats);
+    return card;
+}
+
+function renderHomeVoidFeed(reset = false) {
+    if (!voidScrollerContent) return;
+    const settings = getReminderSettings();
+
+    if (reset) {
+        homeVoidFeedEntries = getHomeVoidFeedEntries();
+        homeVoidFeedCursor = 0;
+        voidScrollerContent.innerHTML = '';
+    }
+
+    if (!settings.enabled) {
+        voidScrollerContent.innerHTML = '<div class="card" style="padding:14px;color:#bda7a7;">The Void is disabled in Workshop Settings.</div>';
+        return;
+    }
+
+    if (!homeVoidFeedEntries.length) {
+        voidScrollerContent.innerHTML = '<div class="card" style="padding:14px;color:#bda7a7;">No Void entries yet. Tag objects for Void in a world to fill this feed.</div>';
+        return;
+    }
+
+    let appended = 0;
+    while (appended < 8) {
+        if (homeVoidFeedCursor >= homeVoidFeedEntries.length) homeVoidFeedCursor = 0;
+        const entry = homeVoidFeedEntries[homeVoidFeedCursor++];
+        voidScrollerContent.appendChild(buildHomeVoidFeedCard(entry));
+        appended++;
+    }
+
+    while (voidScrollerContent.children.length > 40) {
+        voidScrollerContent.removeChild(voidScrollerContent.firstChild);
+    }
+}
+
 function awardVoidScrollRewards() {
     ensureReminderDataModel();
     ensureDesignSystemState(appState);
@@ -674,13 +801,7 @@ function closeVoidScreen() {
 }
 
 function renderHomeReminderStrip() {
-    const settings = getReminderSettings();
-    if (btnOpenReminderScroller) {
-        btnOpenReminderScroller.textContent = 'Enter the Void';
-        btnOpenReminderScroller.disabled = !settings.enabled;
-        btnOpenReminderScroller.style.opacity = settings.enabled ? '1' : '0.45';
-        btnOpenReminderScroller.style.pointerEvents = settings.enabled ? 'auto' : 'none';
-    }
+    renderHomeVoidFeed(true);
 }
 
 function getHousingThemes() {
@@ -1025,6 +1146,12 @@ function openWorldObjectSettings() {
 
 if (btnOpenReminderScroller) {
     btnOpenReminderScroller.addEventListener('click', () => openReminderScroller('all'));
+}
+if (homeVoidFeedScroll) {
+    homeVoidFeedScroll.addEventListener('scroll', () => {
+        const nearBottom = (homeVoidFeedScroll.scrollTop + homeVoidFeedScroll.clientHeight) >= (homeVoidFeedScroll.scrollHeight - 120);
+        if (nearBottom) renderHomeVoidFeed(false);
+    });
 }
 if (btnOpenWorldVoid) {
     btnOpenWorldVoid.addEventListener('click', () => openReminderScroller('world'));
@@ -3903,6 +4030,7 @@ async function bootApp() {
     try { await loadDesignSystemConfig(); } catch (e) { console.warn('Design config bootstrap fallback', e); }
     ensureDesignSystemState(appState);
     try { initWorkshopItems(); } catch (e) { console.error('Workshop items init error', e); }
+    try { initRewardsDisplay(); } catch (e) { console.error('Rewards display init error', e); }
     // Bind Owl controls immediately so the button responds even during cloud sync fetch.
     try { initOwlMentor(); } catch(e) { console.error('Owl mentor init error', e); }
 
@@ -4040,9 +4168,14 @@ async function bootApp() {
     try { initMindMap(appState); } catch(e) { console.error("MindMap init error", e); }
     renderHomeReminderStrip();
     renderHousingScreen();
+    normalizeHeaderActionButtonSizes();
 }
 
 bootApp();
+
+window.addEventListener('resize', () => {
+    normalizeHeaderActionButtonSizes();
+});
 
 let vibeAudioCtx = null;
 let vibeMasterGain = null;

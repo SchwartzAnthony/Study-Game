@@ -54,7 +54,28 @@ export const appState = {
         // Uploaded temple/room wallpapers for housing backgrounds
         wallpapers: [],
         // Uploaded PNG images linked to one or many game reward entries
-        imageRewards: []
+        imageRewards: [],
+        // Uploaded sound effects (base64 audio files)
+        soundRewards: [],
+        // Uploaded music tracks (base64 audio files)
+        musicRewards: [],
+        // Achievement definitions
+        achievements: []
+    },
+    earnedRewards: {
+        // Reward IDs earned by the user
+        sounds: [],
+        music: [],
+        temples: [],
+        buttons: [],
+        wallpapers: [],
+        objects: []
+    },
+    earnedAchievements: {
+        // Achievement IDs completed by the user
+        completed: [],
+        // Achievement IDs not yet completed
+        available: []
     }
 };
 

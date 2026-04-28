@@ -157,4 +157,27 @@ export function ensureDesignSystemState(appState) {
   if (!Array.isArray(al.spriteSheets)) al.spriteSheets = [];
   if (!Array.isArray(al.wallpapers))   al.wallpapers   = [];
   if (!Array.isArray(al.imageRewards)) al.imageRewards = [];
+  if (!Array.isArray(al.soundRewards)) al.soundRewards = [];
+  if (!Array.isArray(al.musicRewards)) al.musicRewards = [];
+  if (!Array.isArray(al.achievements)) al.achievements = [];
+
+  // Earned rewards state guard
+  if (!appState.earnedRewards || typeof appState.earnedRewards !== 'object') {
+    appState.earnedRewards = { sounds: [], music: [], temples: [], buttons: [], wallpapers: [], objects: [] };
+  }
+  const er = appState.earnedRewards;
+  if (!Array.isArray(er.sounds))     er.sounds     = [];
+  if (!Array.isArray(er.music))      er.music      = [];
+  if (!Array.isArray(er.temples))    er.temples    = [];
+  if (!Array.isArray(er.buttons))    er.buttons    = [];
+  if (!Array.isArray(er.wallpapers)) er.wallpapers = [];
+  if (!Array.isArray(er.objects))    er.objects    = [];
+
+  // Earned achievements state guard
+  if (!appState.earnedAchievements || typeof appState.earnedAchievements !== 'object') {
+    appState.earnedAchievements = { completed: [], available: [] };
+  }
+  const ea = appState.earnedAchievements;
+  if (!Array.isArray(ea.completed)) ea.completed = [];
+  if (!Array.isArray(ea.available)) ea.available = [];
 }

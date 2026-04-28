@@ -24,6 +24,13 @@
       "materials": { "silverInk": 8 },
       "output": { "scrolls": 1, "scrollRarity": "silver" }
     },
+    "goldScroll": {
+      "label": "Gold Scroll",
+      "emoji": "📜",
+      "description": "A gilded scroll inscribed with gold ink.",
+      "materials": { "goldInk": 6 },
+      "output": { "scrolls": 1, "scrollRarity": "gold" }
+    },
     "owlBook": {
       "label": "Owl Book",
       "emoji": "📚",
@@ -71,5 +78,11 @@
     { "type": "ink",        "namePrefix": "Ink Vial",       "descPrefix": "A vial of concentrated ink","baseCost": 60 },
     { "type": "map",        "namePrefix": "Map Fragment",   "descPrefix": "A piece of the cosmic map", "baseCost": 90 },
     { "type": "sound",      "namePrefix": "Echo Chime",     "descPrefix": "A resonant sound effect",  "baseCost": 75 }
-  ]
+  ],
+  "soundMilestones": {
+    "light_scroll_sound":  { "name": "Echo of First Light",  "file": "assets/sounds/rewards/click2.ogg",    "obtain": "Craft 1 Light Scroll"            },
+    "silver_scroll_sound": { "name": "Silver Resonance",     "file": "assets/sounds/rewards/switch12.ogg",  "obtain": "Craft 1 Silver Scroll"           },
+    "gold_scroll_sound":   { "name": "Gilded Chime",         "file": "assets/sounds/rewards/switch30.ogg",  "obtain": "Craft 1 Gold Scroll"             },
+    "gold_500_sound":      { "name": "The Treasurer's Toll", "file": "assets/sounds/rewards/rollover6.ogg", "obtain": "Spend 500 Gold total (cumulative)"}
+  }
 }

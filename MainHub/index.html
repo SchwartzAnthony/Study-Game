@@ -69,39 +69,32 @@
                 <span style="color: #d22930;" title="Ink (from Flashcards)">🖋️ <span id="ink-count">0</span></span>
                 <span style="color: #8b1d0c;" title="Paper (from Quizzes & Exams)">📜 <span id="paper-count">0</span></span>
                 
-                <div class="header-action-buttons" style="display: flex; gap: 10px;">
-                    <button id="btn-open-library" class="btn-occult">📜 Scrolls</button>
-                    <button id="btn-open-store" class="btn-occult">🛒 Store</button>
+                <div class="header-action-buttons" style="display: flex; gap: 10px; align-items: center;">
+                    <button id="btn-open-library" class="btn-occult" title="Scrolls">📜<span class="btn-label"> Scrolls</span></button>
+                    <button id="btn-open-store" class="btn-occult" title="Store">🛒<span class="btn-label"> Store</span></button>
+                    <button id="btn-goto-housing" class="btn-occult" title="The Temple">🏛️<span class="btn-label"> The Temple</span></button>
+                    <button id="btn-open-achievements" class="btn-occult" title="Achievements">🏆<span class="btn-label"> Achievements</span></button>
+                    <button id="btn-open-workshop-modal" class="btn-occult" title="Settings">⚙️<span class="btn-label"> Settings</span></button>
                     <span id="scholar-badge" class="scholar-badge" title="Scholar Level — earned by reading" style="display:none;">🎓 Lv.<span id="scholar-level">1</span></span>
                 </div>
             </div>
         </header>
 
-        <div id="home-screen" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 70vh; gap: 30px;">
-            <div id="home-reminder-strip" style="width: 80%; max-width: 1000px; display: flex; gap: 12px; align-items: center; justify-content: center; padding: 12px 14px; border: 1px solid rgba(150, 20, 20, 0.45); border-radius: 10px; background: linear-gradient(180deg, rgba(18, 4, 4, 0.97), rgba(8, 2, 2, 0.97)); box-shadow: 0 6px 24px rgba(0,0,0,0.65), inset 0 0 32px rgba(120,10,10,0.08); box-sizing: border-box;">
-                <button id="btn-open-reminder-scroller" class="btn-occult" style="white-space: nowrap; border-color: rgba(160,30,30,0.75); color: #e08080; letter-spacing: 0.06em; font-family: 'Cinzel', serif;">Enter the Void</button>
-                <button id="btn-goto-housing" class="btn-occult" style="white-space: nowrap; border-color: rgba(170,40,40,0.7); color: #f0b0b0; letter-spacing: 0.06em; font-family: 'Cinzel', serif;">Arcane Housing</button>
-            </div>
-            <div class="card" style="width: 80%; max-width: 1000px; height: 60vh; position: relative; border-radius: 12px; overflow: hidden; padding: 0;">
-                <canvas id="mindmap-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: auto;"></canvas>
-            </div>
-            <div class="library-cards-wrapper" style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; width: 90%; max-width: 900px; z-index: 10;">
-                <div class="card library-choice-card" style="flex: 1; min-width: 300px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 30px; background: url(data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAwIDIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjEiIG51bU9jdGF2ZXM9IjMiIHN0aXRjaFRpbGVzPSJzdGl0Y2giLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjbm9pc2UpIiBvcGFjaXR5PSIwLjEyIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIi8+PC9zdmc+), linear-gradient(180deg, #181818, #050505); border-radius: 8px; text-align: center; color: #ffffff; border: 1px solid rgba(210, 41, 48, 0.4); box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 0 6px 16px rgba(0, 0, 0, 0.6);">
-                    <h3 style="font-family: 'Cinzel', serif; font-size: 1.5em; color: #ffebaa; text-transform: uppercase; margin-bottom: 20px; text-shadow: 0 0 10px rgba(255, 150, 50, 0.5);">personal library</h3>
-                    <p class="library-desc" style="font-size: 1.1em; line-height: 1.4; margin-bottom: 25px; color: #e0e0e0; font-family: 'Georgia', serif;">View your collections and manage your created worlds.</p>
-                    <button id="btn-goto-worlds" style="background: linear-gradient(180deg, #c53030, #9b2c2c); color: white; font-family: 'Open Sans', sans-serif; font-size: 1.2em; font-weight: 500; cursor: pointer; padding: 12px 30px; border-radius: 6px; border: 1px solid #742a2a; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); transition: filter 0.2s; width: 100%;">Enter Personal Library</button>
+        <div id="home-screen" style="display: flex; flex-direction: row; min-height: calc(100vh - 100px); gap: 0;">
+            <div style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+                <!-- Mind-Map Section -->
+                <div style="display: flex; flex-direction: column; align-items: center; padding: 20px; flex-shrink: 0; border-bottom: 1px solid rgba(155, 89, 182, 0.2);">
+                    <div class="card" style="width: 95%; max-width: 1100px; height: 45vh; position: relative; border-radius: 12px; overflow: hidden; padding: 0;">
+                        <canvas id="mindmap-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: auto;"></canvas>
+                    </div>
                 </div>
 
-                <div class="card library-choice-card" style="flex: 1; min-width: 300px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 30px; background: url(data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAwIDIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjEiIG51bU9jdGF2ZXM9IjMiIHN0aXRjaFRpbGVzPSJzdGl0Y2giLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjbm9pc2UpIiBvcGFjaXR5PSIwLjEyIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIi8+PC9zdmc+), linear-gradient(180deg, #181818, #050505); border-radius: 8px; text-align: center; color: #ffffff; border: 1px solid rgba(210, 41, 48, 0.4); box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 0 6px 16px rgba(0, 0, 0, 0.6);">
-                    <h3 style="font-family: 'Cinzel', serif; font-size: 1.5em; color: #bbaaff; text-transform: uppercase; margin-bottom: 20px; text-shadow: 0 0 10px rgba(150, 150, 255, 0.5);">universal library</h3>
-                    <p class="library-desc" style="font-size: 1.1em; line-height: 1.4; margin-bottom: 25px; color: #e0e0e0; font-family: 'Georgia', serif;">Discover and download public grimoires from other scholars.</p>
-                    <button id="btn-goto-global" style="background: linear-gradient(180deg, #304cb5, #2c299b); color: white; font-family: 'Open Sans', sans-serif; font-size: 1.2em; font-weight: 500; cursor: pointer; padding: 12px 30px; border-radius: 6px; border: 1px solid #2a3474; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); transition: filter 0.2s; width: 100%;">Enter Universal Library</button>
-                </div>
-
-                <div class="card library-choice-card" style="flex: 1; min-width: 300px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 30px; background: url(data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAwIDIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjEiIG51bU9jdGF2ZXM9IjMiIHN0aXRjaFRpbGVzPSJzdGl0Y2giLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjbm9pc2UpIiBvcGFjaXR5PSIwLjEyIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIi8+PC9zdmc+), linear-gradient(180deg, #181818, #050505); border-radius: 8px; text-align: center; color: #ffffff; border: 1px solid rgba(210, 41, 48, 0.4); box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 0 6px 16px rgba(0, 0, 0, 0.6);">
-                    <h3 style="font-family: 'Cinzel', serif; font-size: 1.5em; color: #aaffcc; text-transform: uppercase; margin-bottom: 20px; text-shadow: 0 0 10px rgba(100, 255, 150, 0.5);">workshop</h3>
-                    <p class="library-desc" style="font-size: 1.1em; line-height: 1.4; margin-bottom: 25px; color: #e0e0e0; font-family: 'Georgia', serif;">Pdf to text, formatting tools, and more</p>
-                    <button id="btn-goto-workshop" style="background: linear-gradient(180deg, #2b7a4b, #194d2f); color: white; font-family: 'Open Sans', sans-serif; font-size: 1.2em; font-weight: 500; cursor: pointer; padding: 12px 30px; border-radius: 6px; border: 1px solid #1c4228; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); transition: filter 0.2s; width: 100%;">Enter Workshop</button>
+                <!-- Void Endless Scroller Section -->
+                <div id="home-void-feed-scroll" style="display: flex; flex-direction: column; align-items: center; padding: 20px; flex: 1; overflow-y: auto;">
+                    <div id="void-scroller-container" style="width: 95%; max-width: 760px; display: flex; flex-direction: column; gap: 14px;">
+                        <h3 style="font-family: 'Cinzel', serif; color: #d7a7ff; text-align: center; margin: 0 0 10px 0; font-size: 1.1em;">The Void - Endless Review</h3>
+                        <div id="void-scroller-content" style="display: flex; flex-direction: column; gap: 12px;"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -240,10 +233,13 @@
                         <details class="workshop-bench-group">
                             <summary class="btn-occult workshop-bench-toggle" style="border-color: #9b59b6; color: #d7a7ff;">Items / Objects / Rewards</summary>
                             <div class="workshop-bench-panel">
-                                <p class="workshop-bench-note">Import sprite sheets, wallpapers, and image rewards. Assign them to game items and housing themes.</p>
+                                <p class="workshop-bench-note">Import sprite sheets, wallpapers, image rewards, sounds, music, and achievements.</p>
                                 <button id="btn-open-sprite-sheet" class="btn-occult workshop-bench-action" style="border-color: #9b59b6; color: #d7a7ff;">🎴 Upload Sprite Sheets</button>
                                 <button id="btn-open-wallpaper-upload" class="btn-occult workshop-bench-action" style="border-color: #9b59b6; color: #d7a7ff;">🖼️ Upload Temple Wallpaper</button>
                                 <button id="btn-open-image-rewards" class="btn-occult workshop-bench-action" style="border-color: #9b59b6; color: #d7a7ff;">🏅 Upload Image Rewards</button>
+                                <button id="btn-open-sound-rewards" class="btn-occult workshop-bench-action" style="border-color: #9b59b6; color: #d7a7ff;">🔊 Upload Sound Rewards</button>
+                                <button id="btn-open-music-rewards" class="btn-occult workshop-bench-action" style="border-color: #9b59b6; color: #d7a7ff;">🎵 Upload Music Rewards</button>
+                                <button id="btn-open-achievements" class="btn-occult workshop-bench-action" style="border-color: #9b59b6; color: #d7a7ff;">🏆 Upload Achievements</button>
                             </div>
                         </details>
                     </div>
@@ -791,6 +787,101 @@
         </div>
     </div>
 
+    <!-- ═══════════════ SOUND REWARDS MODAL ═══════════════ -->
+    <div id="sound-rewards-modal" class="modal hidden">
+        <div class="modal-content section-content occult-modal" style="max-width:700px;max-height:88vh;overflow-y:auto;display:flex;flex-direction:column;gap:16px;">
+            <span id="close-sound-rewards" class="close-btn" title="Close">&times;</span>
+            <h2 class="occult-title" style="color:#d7a7ff;">🔊 Sound Rewards Import</h2>
+            <p class="muted">Upload MP3/WAV audio files as button click sounds or reward sounds. Set a name and link them to reward types.</p>
+
+            <div id="sound-rewards-drop-zone" class="asset-drop-zone">
+                <span>Drop audio files here, or</span>
+                <label for="sound-rewards-file-input" class="upload-btn" style="margin-left:8px;">Browse Files</label>
+                <input type="file" id="sound-rewards-file-input" accept="audio/*" multiple style="display:none;">
+            </div>
+
+            <div id="sound-rewards-preview-grid" class="asset-audio-grid" style="min-height:60px;"></div>
+
+            <div style="display:flex;justify-content:flex-end;gap:10px;border-top:1px solid rgba(255,255,255,0.06);padding-top:12px;">
+                <button id="btn-sound-rewards-cancel" class="btn-secondary">Cancel</button>
+                <button id="btn-sound-rewards-confirm" class="btn-primary" disabled>Save Sound Rewards</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ MUSIC REWARDS MODAL ═══════════════ -->
+    <div id="music-rewards-modal" class="modal hidden">
+        <div class="modal-content section-content occult-modal" style="max-width:700px;max-height:88vh;overflow-y:auto;display:flex;flex-direction:column;gap:16px;">
+            <span id="close-music-rewards" class="close-btn" title="Close">&times;</span>
+            <h2 class="occult-title" style="color:#d7a7ff;">🎵 Music Rewards Import</h2>
+            <p class="muted">Upload MP3/WAV music tracks to be added to the music player and available as rewards. Set a title, artist, and duration.</p>
+
+            <div id="music-rewards-drop-zone" class="asset-drop-zone">
+                <span>Drop music files here, or</span>
+                <label for="music-rewards-file-input" class="upload-btn" style="margin-left:8px;">Browse Files</label>
+                <input type="file" id="music-rewards-file-input" accept="audio/*" multiple style="display:none;">
+            </div>
+
+            <div id="music-rewards-preview-grid" class="asset-audio-grid" style="min-height:60px;"></div>
+
+            <div style="display:flex;justify-content:flex-end;gap:10px;border-top:1px solid rgba(255,255,255,0.06);padding-top:12px;">
+                <button id="btn-music-rewards-cancel" class="btn-secondary">Cancel</button>
+                <button id="btn-music-rewards-confirm" class="btn-primary" disabled>Save Music Rewards</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ ACHIEVEMENTS MODAL ═══════════════ -->
+    <div id="achievements-modal" class="modal hidden">
+        <div class="modal-content section-content occult-modal" style="max-width:700px;max-height:88vh;overflow-y:auto;display:flex;flex-direction:column;gap:16px;">
+            <span id="close-achievements" class="close-btn" title="Close">&times;</span>
+            <h2 class="occult-title" style="color:#d7a7ff;">🏆 Achievements Import</h2>
+            <p class="muted">Define achievements that players can earn. Set conditions, rewards, and display settings for each achievement.</p>
+
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <h4 style="color:#d7a7ff;margin:0;">Quick Add Achievement</h4>
+                <input type="text" id="achievement-name-input" placeholder="Achievement name" class="asset-name-input" style="width:100%;">
+                <textarea id="achievement-desc-input" placeholder="Description" class="asset-name-input" style="width:100%;min-height:60px;resize:vertical;"></textarea>
+                <button id="btn-add-achievement" class="btn-primary" style="padding:8px 16px;">➕ Add Achievement</button>
+            </div>
+
+            <div id="achievements-preview-grid" class="asset-audio-grid" style="min-height:80px;"></div>
+
+            <div style="display:flex;justify-content:flex-end;gap:10px;border-top:1px solid rgba(255,255,255,0.06);padding-top:12px;">
+                <button id="btn-achievements-cancel" class="btn-secondary">Cancel</button>
+                <button id="btn-achievements-confirm" class="btn-primary" disabled>Save Achievements</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ ACHIEVEMENTS & REWARDS MODAL ═══════════════ -->
+    <div id="achievements-rewards-modal" class="modal hidden">
+        <div class="modal-content section-content occult-modal" style="max-width:700px;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;gap:16px;">
+            <span id="close-achievements-rewards" class="close-btn" title="Close">&times;</span>
+            <h2 class="occult-title" style="color:#d7a7ff;">🏆 Your Rewards & Achievements</h2>
+
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                <button id="btn-view-sound-rewards" class="btn-secondary" style="border-color: rgba(155, 89, 182, 0.4); color: #d7a7ff; padding: 6px 12px; font-size: 0.85em;">🔊 Sounds (<span id="count-sound-rewards">0</span>)</button>
+                <button id="btn-view-music-rewards" class="btn-secondary" style="border-color: rgba(155, 89, 182, 0.4); color: #d7a7ff; padding: 6px 12px; font-size: 0.85em;">🎵 Music (<span id="count-music-rewards">0</span>)</button>
+                <button id="btn-view-temple-rewards" class="btn-secondary" style="border-color: rgba(155, 89, 182, 0.4); color: #d7a7ff; padding: 6px 12px; font-size: 0.85em;">🏛️ Temples (<span id="count-temple-rewards">0</span>)</button>
+                <button id="btn-view-button-rewards" class="btn-secondary" style="border-color: rgba(155, 89, 182, 0.4); color: #d7a7ff; padding: 6px 12px; font-size: 0.85em;">🔘 Buttons (<span id="count-button-rewards">0</span>)</button>
+                <button id="btn-view-wallpaper-rewards" class="btn-secondary" style="border-color: rgba(155, 89, 182, 0.4); color: #d7a7ff; padding: 6px 12px; font-size: 0.85em;">🖼️ Wallpapers (<span id="count-wallpaper-rewards">0</span>)</button>
+                <button id="btn-view-object-rewards" class="btn-secondary" style="border-color: rgba(155, 89, 182, 0.4); color: #d7a7ff; padding: 6px 12px; font-size: 0.85em;">🎁 Objects (<span id="count-object-rewards">0</span>)</button>
+            </div>
+
+            <div style="border-top: 1px solid rgba(155, 89, 182, 0.25); padding-top: 12px;">
+                <h4 style="margin: 0 0 8px; color: #d7a7ff; font-size: 0.95em;">🏆 Achievements</h4>
+                <div id="achievements-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto;">
+                    <p style="color: #bfd2c5; font-size: 0.85em; margin: 0;">No achievements yet. Complete tasks to earn them!</p>
+                </div>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;border-top:1px solid rgba(255,255,255,0.06);padding-top:12px;">
+                <button id="btn-close-achievements-rewards" class="btn-primary">Close</button>
+            </div>
+        </div>
+    </div>
+
     <div id="minigame-modal" class="modal hidden">
             <span id="close-minigame" class="close-btn">&times;</span>
             <h2 id="minigame-title" style="color: #00a8ff; font-size: 2em; margin-bottom: 5px;">Mini-Game</h2>
@@ -1165,7 +1256,11 @@
     </div>
 
     <div id="owl-mentor" class="owl-mentor-wrap" aria-live="polite">
-        <button id="owl-toggle" class="owl-toggle-btn" title="Owl Mentor">🦉</button>
+        <div class="owl-fab-row">
+            <button id="btn-goto-worlds" class="owl-toggle-btn owl-shortcut-btn" title="Personal Library">📖</button>
+            <button id="btn-goto-global" class="owl-toggle-btn owl-shortcut-btn" title="Universal Library">📚</button>
+            <button id="owl-toggle" class="owl-toggle-btn" title="Owl Mentor">🦉</button>
+        </div>
         <div id="owl-panel" class="owl-panel hidden">
             <h3 class="owl-title">Aset's Owl Mentor</h3>
             <p id="owl-message" class="owl-message">Upload a PDF in the Workshop and I will forge a full world offline.</p>

@@ -58,6 +58,89 @@ export function ensureRewardSystemState(state) {
   if (!rs.craftedItems || typeof rs.craftedItems !== 'object') {
     rs.craftedItems = {};
   }
+
+  // Cumulative gold spent (for sound milestone tracking)
+  if (typeof rs.cumulativeGoldSpent !== 'number') rs.cumulativeGoldSpent = 0;
+}
+
+// ─── SOUND MILESTONE CATALOG ─────────────────────────────────────────────
+
+/**
+ * Static catalog mapping reward IDs to display info.
+ * Mirrors the soundMilestones block in reward-system.json.
+ */
+export const SOUND_REWARD_CATALOG = {
+  light_scroll_sound:  { name: 'Echo of First Light',  file: 'assets/sounds/rewards/click2.ogg',    obtain: 'Craft 1 Light Scroll' },
+  silver_scroll_sound: { name: 'Silver Resonance',     file: 'assets/sounds/rewards/switch12.ogg',  obtain: 'Craft 1 Silver Scroll' },
+  gold_scroll_sound:   { name: 'Gilded Chime',         file: 'assets/sounds/rewards/switch30.ogg',  obtain: 'Craft 1 Gold Scroll' },
+  gold_500_sound:      { name: "The Treasurer's Toll", file: 'assets/sounds/rewards/rollover6.ogg', obtain: 'Spend 500 Gold total (cumulative)' }
+};
+
+// Lazy-loaded earnReward to avoid circular imports
+let _earnReward = null;
+async function getEarnReward() {
+  if (!_earnReward) {
+    const mod = await import('./rewards-display.js');
+    _earnReward = mod.earnReward;
+  }
+  return _earnReward;
+}
+
+/**
+ * Check and grant sound rewards triggered by scroll crafting.
+ * @param {string} recipeKey - the crafted recipe key
+ */
+async function checkScrollMilestoneRewards(recipeKey) {
+  const earn = await getEarnReward();
+  const earned = appState.earnedRewards;
+  if (!earned) return;
+
+  const scrollMap = {
+    lightScroll:  'light_scroll_sound',
+    silverScroll: 'silver_scroll_sound',
+    goldScroll:   'gold_scroll_sound'
+  };
+
+  const rewardId = scrollMap[recipeKey];
+  if (!rewardId) return;
+
+  if (!earned.sounds.includes(rewardId)) {
+    earn('sounds', rewardId);
+    saveToStorage();
+    _playMilestoneSound(SOUND_REWARD_CATALOG[rewardId].file);
+  }
+}
+
+/**
+ * Check and grant gold-spend sound reward.
+ * @param {number} goldAmount - amount of gold just spent
+ */
+async function checkGoldSpentMilestones(goldAmount) {
+  const rs = appState.rewardSystem;
+  if (!rs) return;
+  rs.cumulativeGoldSpent = (rs.cumulativeGoldSpent || 0) + goldAmount;
+
+  const earn = await getEarnReward();
+  const earned = appState.earnedRewards;
+  if (!earned) return;
+
+  if (rs.cumulativeGoldSpent >= 500 && !earned.sounds.includes('gold_500_sound')) {
+    earn('sounds', 'gold_500_sound');
+    saveToStorage();
+    _playMilestoneSound(SOUND_REWARD_CATALOG.gold_500_sound.file);
+  }
+}
+
+/**
+ * Play a brief milestone unlock sound effect.
+ * @param {string} filePath - relative path from app root
+ */
+function _playMilestoneSound(filePath) {
+  try {
+    const audio = new Audio(filePath);
+    audio.volume = 0.5;
+    audio.play().catch(() => {});
+  } catch (_) {}
 }
 
 // ─── RARITY ROLL ──────────────────────────────────────────────────────────
@@ -131,6 +214,9 @@ export function buyInkWithGold(tier, config) {
   saveToStorage();
   updateEconomyUI();
 
+  // Track gold spent for milestone rewards
+  checkGoldSpentMilestones(goldCost);
+
   return { ok: true, message: `Purchased 1 ${tierCfg?.label ?? tier} ink for ${goldCost} 🪙.` };
 }
 
@@ -199,6 +285,9 @@ export function craftItem(recipeKey, config) {
 
   saveToStorage();
   updateEconomyUI();
+
+  // Check for sound milestone rewards
+  checkScrollMilestoneRewards(recipeKey);
 
   return { ok: true, message: `${recipe.emoji ?? '✅'} Crafted: ${recipe.label}!` };
 }
@@ -293,6 +382,9 @@ export function buyShopOffer(offerId, config) {
   rs.shopOffers.splice(idx, 1);
   saveToStorage();
   updateEconomyUI();
+
+  // Track gold spent for milestone rewards
+  checkGoldSpentMilestones(offer.cost);
 
   return { ok: true, message: `Purchased: ${offer.name}!` };
 }

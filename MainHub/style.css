@@ -32,6 +32,7 @@
     width: 100%;
     padding: 15px;
     font-size: 1.15em;
+    box-sizing: border-box;
 }
 
 .workshop-bench-toggle {
@@ -39,6 +40,9 @@
     list-style: none;
     margin-top: 0;
     display: block;
+    width: calc(100% - 8px);
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .workshop-bench-toggle::-webkit-details-marker {
@@ -267,6 +271,13 @@
 #wallpaper-preview-grid.asset-thumb-grid,
 #image-rewards-preview-grid.asset-thumb-grid {
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+
+/* Audio grid for sounds and music */
+.asset-audio-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
 }
 
 /* ─── END ASSET IMPORT SYSTEM ──────────────────────────────────────────── */
@@ -632,6 +643,16 @@
     flex-direction: column;
     align-items: flex-end;
     gap: 8px;
+}
+
+.owl-fab-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.owl-shortcut-btn {
+    font-size: 1.55em;
 }
 
 .owl-toggle-btn {
@@ -2040,6 +2061,70 @@ h1, h2, h3, .occult-title {
 }
 
 .btn-occult:active {
+        transform: translateY(1px);
+        box-shadow: 1px 1px 3px rgba(0,0,0,0.6), inset 0 0 15px rgba(0,0,0,0.5);
+    }
+
+.header-action-buttons {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: nowrap;
+}
+
+.header-action-buttons .btn-occult {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    min-height: 42px;
+}
+
+/* Mobile: hide text labels, show icon-only compact buttons */
+@media (max-width: 700px) {
+    .header-action-buttons .btn-label {
+        display: none;
+    }
+    .header-action-buttons .btn-occult {
+        width: 42px !important;
+        min-width: 42px !important;
+        max-width: 42px !important;
+        height: 42px !important;
+        min-height: 42px !important;
+        padding: 0 !important;
+        flex: 0 0 42px !important;
+        font-size: 1.2em !important;
+        justify-content: center !important;
+    }
+    .header-action-buttons {
+        gap: 6px;
+        justify-content: flex-end;
+    }
+}
+
+    /* Library sidebar icon buttons */
+    .library-icon-btn {
+        border-radius: 10px !important;
+        font-size: 2.5em !important;
+        padding: 12px !important;
+        width: 100% !important;
+        aspect-ratio: 1 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: all 0.3s ease !important;
+        cursor: pointer !important;
+        color: #fff !important;
+    }
+
+    .library-icon-btn:hover {
+        transform: scale(1.1) !important;
+        filter: brightness(1.2) !important;
+        box-shadow: 0 0 16px rgba(215, 167, 255, 0.5) !important;
+    }
+
+    .library-icon-btn:active {
+        transform: scale(0.95) !important;
     transform: translateY(1px);
     box-shadow: 1px 1px 3px rgba(0,0,0,0.6), inset 0 0 15px rgba(0,0,0,0.5);
 }
@@ -4476,14 +4561,15 @@ button, .btn-occult, .btn-primary, .btn-secondary, .nav-btn { font-family: 'Cinz
     .header-action-buttons {
         width: 100% !important;
         display: flex !important;
-        justify-content: space-between !important;
-        gap: 10px !important;
+        justify-content: space-around !important;
+        gap: 6px !important;
         margin-top: 5px !important;
         order: 10 !important; /* Push beneath resources on very small screens */
+        flex-wrap: nowrap !important;
     }
     .header-action-buttons button {
-        flex: 1 1 0 !important;
-        width: 50% !important;
+        flex: 0 0 42px !important;
+        width: 42px !important;
         margin: 0 !important;
     }
     

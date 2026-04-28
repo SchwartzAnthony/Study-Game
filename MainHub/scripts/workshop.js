@@ -2,10 +2,13 @@
  * workshop.js
  * Handles the "Items / Objects / Rewards" section of the Workshop screen.
  *
- * Three upload flows:
+ * Six upload flows:
  *   1. Sprite Sheet — detect grid, preview on canvas, extract sprites, assign to rewards
  *   2. Temple Wallpaper — upload images tied to housing themes
- *   3. Image Rewards — upload PNGs linked to one or many game reward entries
+ *   3. Image Rewards — upload PNGs linked to game reward entries
+ *   4. Sound Rewards — upload audio files as button sounds
+ *   5. Music Rewards — upload music tracks for the music player
+ *   6. Achievements — define achievements that players can earn
  *
  * All data persisted in appState.assetLibrary via storage.js.
  */
@@ -821,6 +824,385 @@ function confirmImageRewardImport() {
     closeImageRewardsModal();
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION 4 — SOUND REWARDS IMPORTER
+// ═══════════════════════════════════════════════════════════════════════════
+
+let _pendingSoundRewards = [];
+
+function initSoundRewards() {
+    const btnOpen   = document.getElementById('btn-open-sound-rewards');
+    const modal     = document.getElementById('sound-rewards-modal');
+    const closeBtn  = document.getElementById('close-sound-rewards');
+    const cancelBtn = document.getElementById('btn-sound-rewards-cancel');
+    const confirmBtn = document.getElementById('btn-sound-rewards-confirm');
+    const fileInput = document.getElementById('sound-rewards-file-input');
+    const dropZone  = document.getElementById('sound-rewards-drop-zone');
+
+    if (btnOpen)   btnOpen.onclick    = openSoundRewardsModal;
+    if (closeBtn)  closeBtn.onclick   = closeSoundRewardsModal;
+    if (cancelBtn) cancelBtn.onclick  = closeSoundRewardsModal;
+    if (confirmBtn) confirmBtn.onclick = confirmSoundRewardImport;
+
+    if (fileInput) fileInput.addEventListener('change', e => {
+        handleSoundRewardFiles(Array.from(e.target.files));
+        e.target.value = '';
+    });
+    if (dropZone) {
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('asset-drop-active'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('asset-drop-active'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('asset-drop-active');
+            const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('audio/'));
+            handleSoundRewardFiles(files);
+        });
+    }
+}
+
+function openSoundRewardsModal() {
+    _pendingSoundRewards = [];
+    const grid = document.getElementById('sound-rewards-preview-grid');
+    if (grid) grid.innerHTML = '';
+    const btn = document.getElementById('btn-sound-rewards-confirm');
+    if (btn) btn.disabled = true;
+    const modal = document.getElementById('sound-rewards-modal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeSoundRewardsModal() {
+    const modal = document.getElementById('sound-rewards-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function handleSoundRewardFiles(files) {
+    if (!files || files.length === 0) return;
+    let loaded = 0;
+    const grid = document.getElementById('sound-rewards-preview-grid');
+
+    files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const src = e.target.result;
+            const entry = {
+                id:        uid(),
+                name:      file.name.replace(/\.[^.]+$/, ''),
+                src:       src,
+                duration:  0,
+                rewardType: 'sound'
+            };
+            _pendingSoundRewards.push(entry);
+            loaded++;
+
+            if (grid) {
+                const card = buildSoundRewardCard(entry);
+                grid.appendChild(card);
+            }
+
+            if (loaded === files.length) {
+                const btn = document.getElementById('btn-sound-rewards-confirm');
+                if (btn) btn.disabled = false;
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function buildSoundRewardCard(entry) {
+    const card = document.createElement('div');
+    card.className = 'asset-card';
+    card.dataset.entryId = entry.id;
+
+    const player = document.createElement('audio');
+    player.controls = true;
+    player.src = entry.src;
+    player.style.width = '100%';
+    player.style.borderRadius = '4px';
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = entry.name;
+    nameInput.placeholder = 'Sound name';
+    nameInput.className = 'asset-name-input';
+    nameInput.style.marginTop = '6px';
+    nameInput.addEventListener('input', () => { entry.name = nameInput.value.trim() || entry.name; });
+
+    card.appendChild(player);
+    card.appendChild(nameInput);
+    return card;
+}
+
+function confirmSoundRewardImport() {
+    if (!_pendingSoundRewards.length) return;
+    appState.assetLibrary = appState.assetLibrary || { sprites: [], spriteSheets: [], wallpapers: [], imageRewards: [], soundRewards: [], musicRewards: [], achievements: [] };
+
+    _pendingSoundRewards.forEach(entry => {
+        appState.assetLibrary.soundRewards.push(entry);
+    });
+
+    saveToStorage();
+    alert(`✅ Saved ${_pendingSoundRewards.length} sound reward(s) to the Asset Library!`);
+    closeSoundRewardsModal();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION 5 — MUSIC REWARDS IMPORTER
+// ═══════════════════════════════════════════════════════════════════════════
+
+let _pendingMusicRewards = [];
+
+function initMusicRewards() {
+    const btnOpen   = document.getElementById('btn-open-music-rewards');
+    const modal     = document.getElementById('music-rewards-modal');
+    const closeBtn  = document.getElementById('close-music-rewards');
+    const cancelBtn = document.getElementById('btn-music-rewards-cancel');
+    const confirmBtn = document.getElementById('btn-music-rewards-confirm');
+    const fileInput = document.getElementById('music-rewards-file-input');
+    const dropZone  = document.getElementById('music-rewards-drop-zone');
+
+    if (btnOpen)   btnOpen.onclick    = openMusicRewardsModal;
+    if (closeBtn)  closeBtn.onclick   = closeMusicRewardsModal;
+    if (cancelBtn) cancelBtn.onclick  = closeMusicRewardsModal;
+    if (confirmBtn) confirmBtn.onclick = confirmMusicRewardImport;
+
+    if (fileInput) fileInput.addEventListener('change', e => {
+        handleMusicRewardFiles(Array.from(e.target.files));
+        e.target.value = '';
+    });
+    if (dropZone) {
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('asset-drop-active'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('asset-drop-active'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('asset-drop-active');
+            const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('audio/'));
+            handleMusicRewardFiles(files);
+        });
+    }
+}
+
+function openMusicRewardsModal() {
+    _pendingMusicRewards = [];
+    const grid = document.getElementById('music-rewards-preview-grid');
+    if (grid) grid.innerHTML = '';
+    const btn = document.getElementById('btn-music-rewards-confirm');
+    if (btn) btn.disabled = true;
+    const modal = document.getElementById('music-rewards-modal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeMusicRewardsModal() {
+    const modal = document.getElementById('music-rewards-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function handleMusicRewardFiles(files) {
+    if (!files || files.length === 0) return;
+    let loaded = 0;
+    const grid = document.getElementById('music-rewards-preview-grid');
+
+    files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const src = e.target.result;
+            const entry = {
+                id:     uid(),
+                title:  file.name.replace(/\.[^.]+$/, ''),
+                artist: 'Unknown',
+                src:    src,
+                duration: 0,
+                rewardType: 'music'
+            };
+            _pendingMusicRewards.push(entry);
+            loaded++;
+
+            if (grid) {
+                const card = buildMusicRewardCard(entry);
+                grid.appendChild(card);
+            }
+
+            if (loaded === files.length) {
+                const btn = document.getElementById('btn-music-rewards-confirm');
+                if (btn) btn.disabled = false;
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function buildMusicRewardCard(entry) {
+    const card = document.createElement('div');
+    card.className = 'asset-card';
+    card.dataset.entryId = entry.id;
+
+    const player = document.createElement('audio');
+    player.controls = true;
+    player.src = entry.src;
+    player.style.width = '100%';
+    player.style.borderRadius = '4px';
+
+    const titleInput = document.createElement('input');
+    titleInput.type = 'text';
+    titleInput.value = entry.title;
+    titleInput.placeholder = 'Song title';
+    titleInput.className = 'asset-name-input';
+    titleInput.style.marginTop = '6px';
+    titleInput.addEventListener('input', () => { entry.title = titleInput.value.trim() || entry.title; });
+
+    const artistInput = document.createElement('input');
+    artistInput.type = 'text';
+    artistInput.value = entry.artist;
+    artistInput.placeholder = 'Artist name';
+    artistInput.className = 'asset-name-input';
+    artistInput.style.marginTop = '6px';
+    artistInput.addEventListener('input', () => { entry.artist = artistInput.value.trim() || entry.artist; });
+
+    card.appendChild(player);
+    card.appendChild(titleInput);
+    card.appendChild(artistInput);
+    return card;
+}
+
+function confirmMusicRewardImport() {
+    if (!_pendingMusicRewards.length) return;
+    appState.assetLibrary = appState.assetLibrary || { sprites: [], spriteSheets: [], wallpapers: [], imageRewards: [], soundRewards: [], musicRewards: [], achievements: [] };
+
+    _pendingMusicRewards.forEach(entry => {
+        appState.assetLibrary.musicRewards.push(entry);
+    });
+
+    saveToStorage();
+    alert(`✅ Saved ${_pendingMusicRewards.length} music track(s) to the Asset Library!`);
+    closeMusicRewardsModal();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION 6 — ACHIEVEMENTS IMPORTER
+// ═══════════════════════════════════════════════════════════════════════════
+
+let _pendingAchievements = [];
+
+function initAchievements() {
+    const btnOpen   = document.getElementById('btn-open-achievements');
+    const modal     = document.getElementById('achievements-modal');
+    const closeBtn  = document.getElementById('close-achievements');
+    const cancelBtn = document.getElementById('btn-achievements-cancel');
+    const confirmBtn = document.getElementById('btn-achievements-confirm');
+    const addBtn    = document.getElementById('btn-add-achievement');
+
+    if (btnOpen)   btnOpen.onclick    = openAchievementsModal;
+    if (closeBtn)  closeBtn.onclick   = closeAchievementsModal;
+    if (cancelBtn) cancelBtn.onclick  = closeAchievementsModal;
+    if (confirmBtn) confirmBtn.onclick = confirmAchievementsImport;
+    if (addBtn)    addBtn.onclick     = addNewAchievement;
+}
+
+function openAchievementsModal() {
+    _pendingAchievements = [];
+    const grid = document.getElementById('achievements-preview-grid');
+    if (grid) grid.innerHTML = '';
+    const btn = document.getElementById('btn-achievements-confirm');
+    if (btn) btn.disabled = true;
+    const modal = document.getElementById('achievements-modal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeAchievementsModal() {
+    const modal = document.getElementById('achievements-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function addNewAchievement() {
+    const nameInput = document.getElementById('achievement-name-input');
+    const descInput = document.getElementById('achievement-desc-input');
+
+    const name = nameInput ? nameInput.value.trim() : '';
+    const desc = descInput ? descInput.value.trim() : '';
+
+    if (!name) {
+        alert('Please enter an achievement name.');
+        return;
+    }
+
+    const achievement = {
+        id:          uid(),
+        name:        name,
+        description: desc,
+        icon:        '🏆',
+        completed:   false,
+        createdAt:   new Date().toISOString()
+    };
+
+    _pendingAchievements.push(achievement);
+
+    if (nameInput) nameInput.value = '';
+    if (descInput) descInput.value = '';
+
+    renderAchievementsList();
+
+    const confirmBtn = document.getElementById('btn-achievements-confirm');
+    if (confirmBtn) confirmBtn.disabled = false;
+}
+
+function renderAchievementsList() {
+    const grid = document.getElementById('achievements-preview-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    _pendingAchievements.forEach((achievement, i) => {
+        const card = document.createElement('div');
+        card.className = 'asset-card';
+        card.dataset.index = i;
+
+        const iconSpan = document.createElement('span');
+        iconSpan.style.cssText = 'font-size:2.5em;text-align:center;';
+        iconSpan.textContent = achievement.icon;
+
+        const nameSpan = document.createElement('div');
+        nameSpan.style.cssText = 'font-weight:700;color:#d7a7ff;font-size:0.95em;';
+        nameSpan.textContent = achievement.name;
+
+        const descSpan = document.createElement('div');
+        descSpan.style.cssText = 'font-size:0.75em;color:#bfd2c5;margin-top:4px;line-height:1.3;';
+        descSpan.textContent = achievement.description;
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'btn-secondary';
+        removeBtn.style.cssText = 'margin-top:8px;width:100%;padding:4px;font-size:0.8em;';
+        removeBtn.textContent = 'Remove';
+        removeBtn.onclick = () => {
+            _pendingAchievements.splice(i, 1);
+            renderAchievementsList();
+            if (_pendingAchievements.length === 0) {
+                const confirmBtn = document.getElementById('btn-achievements-confirm');
+                if (confirmBtn) confirmBtn.disabled = true;
+            }
+        };
+
+        card.appendChild(iconSpan);
+        card.appendChild(nameSpan);
+        card.appendChild(descSpan);
+        card.appendChild(removeBtn);
+        grid.appendChild(card);
+    });
+}
+
+function confirmAchievementsImport() {
+    if (!_pendingAchievements.length) return;
+    appState.assetLibrary = appState.assetLibrary || { sprites: [], spriteSheets: [], wallpapers: [], imageRewards: [], soundRewards: [], musicRewards: [], achievements: [] };
+
+    _pendingAchievements.forEach(achievement => {
+        appState.assetLibrary.achievements.push(achievement);
+        // Initialize achievement as available (not yet completed)
+        if (!appState.earnedAchievements) appState.earnedAchievements = { completed: [], available: [] };
+        appState.earnedAchievements.available.push(achievement.id);
+    });
+
+    saveToStorage();
+    alert(`✅ Saved ${_pendingAchievements.length} achievement(s) to the Asset Library!`);
+    closeAchievementsModal();
+}
+
 // ─── SHARED HELPERS ────────────────────────────────────────────────────────
 
 /** Set element visibility by toggling the 'hidden' class */
@@ -847,10 +1229,13 @@ function patchRewardImage(rewardName, src) {
 
 /**
  * Main init called from app.js after ensureDesignSystemState.
- * Wires up all three upload flows.
+ * Wires up all six upload flows.
  */
 export function initWorkshopItems() {
     initSpriteSheet();
     initWallpaperUpload();
     initImageRewards();
+    initSoundRewards();
+    initMusicRewards();
+    initAchievements();
 }
